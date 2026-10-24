@@ -1,8 +1,9 @@
 'use server'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import { getViewer } from '@/lib/auth'
+import { ASANA_TAG, completeDamageTask } from '@/lib/asana'
 
-/** Pridá opravu do zoznamu údržby (ktokoľvek aktívny v tíme). */
+/** Pridá ručnú opravu do zoznamu údržby (ktokoľvek aktívny v tíme). */
 export async function addIssue(prev, formData) {
   const { s, user, me } = await getViewer()
   if (!user || !me) return { ok: false, error: 'Nie si prihlásený/á.' }
@@ -19,12 +20,18 @@ export async function addIssue(prev, formData) {
   return { ok: true, n: Date.now() }
 }
 
-/** Označí opravu ako hotovú. */
+/** Označí opravu ako hotovú: úlohu v Asane uzavrie (s komentárom, kto), ručnú opravu v appke. */
 export async function closeIssue(formData) {
   const { s, user, me } = await getViewer()
   if (!user || !me) return
   const id = String(formData.get('id') || '')
+  const source = String(formData.get('source') || 'app')
   if (!id) return
-  await s.rpc('close_maintenance_issue', { p_id: id })
+  if (source === 'asana') {
+    await completeDamageTask(id, me.name)
+    revalidateTag(ASANA_TAG)
+  } else {
+    await s.rpc('close_maintenance_issue', { p_id: id })
+  }
   revalidatePath('/')
 }
