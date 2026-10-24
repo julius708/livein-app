@@ -8,6 +8,7 @@ import PinnedNoteForm from '@/components/PinnedNoteForm'
 import FactTicker from '@/components/FactTicker'
 import TodayBoard from '@/components/TodayBoard'
 import MaintenanceBoard from '@/components/MaintenanceBoard'
+import { buildMaintenance, todayBA } from '@/lib/maintenance'
 import './home.css'
 
 const CDN = 'https://d2ol7oe51mr4n9.cloudfront.net/user_3FzChznIQ3gbpo8z6ko8CWTOlI0/'
@@ -36,36 +37,14 @@ export default async function Home({ searchParams }) {
     s.rpc('home_dashboard'),
     s.rpc('home_work'),
   ])
-  // Údržba: voľné byty a byty, ktoré sa čoskoro uvoľnia (len čítanie, bežné práva prihláseného člena tímu)
-  let mnt = { free: [], vacating: [], total: 0 }
+  // Údržba: otvorené opravy + okná, kedy je byt voľný na opravu (len čítanie cez RPC pre aktívnych členov tímu)
+  let mnt = { issues: [], flats: [] }
   try {
-    const ymd = (d) => d.toLocaleDateString('sv-SE', { timeZone: 'Europe/Bratislava' })
-    const t0 = new Date(), today = ymd(t0)
-    const plus = (n) => ymd(new Date(t0.getTime() + n * 864e5))
-    const [{ data: ls }, { data: rs }] = await Promise.all([
-      s.from('listings').select('guesty_id,name,title,city').eq('active', true).eq('in_scope', true).limit(1000),
-      s.from('reservations').select('listing_id,check_in_date,check_out_date').eq('status', 'confirmed').gte('check_out_date', today).lte('check_in_date', plus(14)).limit(1000),
+    const [{ data: md }, { data: iss }] = await Promise.all([
+      s.rpc('maintenance_data'),
+      s.from('maintenance_issues').select('id,listing_id,listing_name,text,priority,created_at,created_by_name').eq('status', 'open').order('created_at', { ascending: false }).limit(200),
     ])
-    const by = {}
-    for (const r of rs || []) (by[r.listing_id] = by[r.listing_id] || []).push(r)
-    const d3 = plus(3)
-    for (const l of ls || []) {
-      const list = by[l.guesty_id] || []
-      const cur = list.find((r) => r.check_in_date <= today && r.check_out_date > today)
-      const outToday = list.some((r) => r.check_out_date === today)
-      const name = l.title || l.name || 'Byt'
-      if (!cur) {
-        const next = list.filter((r) => r.check_in_date > today).map((r) => r.check_in_date).sort()[0] || null
-        if (outToday) mnt.vacating.push({ name, city: l.city || '', out: today, next, sort: today })
-        else mnt.free.push({ name, city: l.city || '', next })
-      } else if (cur.check_out_date <= d3) {
-        const next = list.filter((r) => r.check_in_date >= cur.check_out_date && r !== cur).map((r) => r.check_in_date).sort()[0] || null
-        if (!next || next > cur.check_out_date) mnt.vacating.push({ name, city: l.city || '', out: cur.check_out_date, next, sort: cur.check_out_date })
-      }
-    }
-    mnt.total = (ls || []).length
-    mnt.free.sort((a, b) => (a.next || '9').localeCompare(b.next || '9'))
-    mnt.vacating.sort((a, b) => a.sort.localeCompare(b.sort))
+    if (md) mnt = buildMaintenance({ listings: md.listings, reservations: md.reservations, issues: iss || [], today: md.today || todayBA() })
   } catch {}
   const urls = (cfg && cfg.value) || {}
   const first = (me.name || '').split(' ')[0] || 'tím'
@@ -210,7 +189,7 @@ export default async function Home({ searchParams }) {
           </section>
         </div>
       )}
-      {mnt.total > 0 && <MaintenanceBoard free={mnt.free} vacating={mnt.vacating} total={mnt.total} />}
+      {mnt.flats.length > 0 && <MaintenanceBoard issues={mnt.issues} flats={mnt.flats} />}
       {ov && ov.city && (
         <div className="hint" style={{ marginTop: 8 }}>Tvoje mesto ({ov.city}): {ov.arrivals} príchodov, {ov.departures} odchodov, {ov.staying} ubytovaných.</div>
       )}
