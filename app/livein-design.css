@@ -1,0 +1,44 @@
+/* LIVE-IN design system v1 — single source copied into each deployment. */
+:root {
+  --li-green:#173E2C; --li-green-deep:#0F2E20; --li-sage:#E8ECE4;
+  --li-orange:#F46D16; --li-orange-text:#A8420B; --li-cream:#F6F2EA;
+  --li-ink:#1E3328; --li-muted:#58665D; --li-line:#DCE2D9;
+  --li-card:#FFFFFF; --li-radius:20px;
+  --li-shadow:0 2px 4px rgb(23 62 44 / 3%),0 12px 30px rgb(23 62 44 / 5%);
+  --bg:var(--li-cream); --cream:var(--li-cream); --paper:var(--li-cream);
+  --ch:var(--li-green); --green:var(--li-green); --ink:var(--li-ink); --txt:var(--li-ink);
+  --o:var(--li-orange); --orange:var(--li-orange); --o-dark:var(--li-orange-text);
+  --o2:var(--li-orange-text); --orange-text:var(--li-orange-text);
+  --card:var(--li-card); --muted:var(--li-muted); --line:var(--li-line);
+  --sh:var(--li-shadow); --shadow:var(--li-shadow); --radius:var(--li-radius);
+  color-scheme:light;
+}
+html,body {font-family:'Figtree',system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--li-cream);color:var(--li-ink)}
+button,input,select,textarea {font-family:inherit}
+h1,h2,h3 {letter-spacing:-.025em}
+.card,.panel,.metric,.login-card {border-radius:var(--li-radius);box-shadow:var(--li-shadow)}
+button,a,input,textarea,select { -webkit-tap-highlight-color:transparent }
+:focus-visible {outline:3px solid var(--li-orange);outline-offset:3px}
+button:disabled {cursor:not-allowed}
+.li-home {display:inline-flex;align-items:center;min-height:44px;padding:8px 14px;border:1px solid rgb(255 255 255 / 25%);border-radius:999px;color:#fff;text-decoration:none;font-size:14px;font-weight:600}
+.li-home:hover {background:rgb(255 255 255 / 12%)}
+.li-privacy {color:var(--li-muted);font-size:12px;line-height:1.6;margin:24px auto;max-width:1140px;padding:0 20px}
+.li-admin .hero2,.li-admin .admin-hero {background:var(--li-green-deep)}
+.admin-hero {margin-top:24px;padding:28px;border-radius:24px;color:var(--li-cream);background:var(--li-green);border-top:3px solid var(--li-orange)}
+.admin-hero p {max-width:760px;line-height:1.6;color:#D3E0D3}
+.li-metrics {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin:20px 0}
+.li-metric {padding:22px;border:1px solid var(--li-line);border-radius:20px;background:white}
+.li-metric strong {display:block;font-size:32px;margin-top:8px;font-variant-numeric:tabular-nums}
+.li-metric small {color:var(--li-muted)}
+.li-table-wrap {overflow-x:auto;background:white;border-radius:20px;padding:20px;margin:20px 0;border:1px solid var(--li-line)}
+.li-table {width:100%;border-collapse:collapse;text-align:left}
+.li-table th,.li-table td {padding:12px;border-bottom:1px solid var(--li-line);font-size:14px;vertical-align:top}
+.li-table th {font-weight:700;color:var(--li-muted)}
+.li-empty {padding:24px;color:var(--li-muted);line-height:1.6}
+.li-error {padding:16px;border-radius:12px;color:#8C231B;background:#FFF0ED}
+@media(max-width:760px){.li-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.admin-hero{padding:22px}.li-home{font-size:13px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+.li-section{padding:24px;margin:20px 0}.li-section h2{margin-top:0}.li-table table{width:100%;border-collapse:collapse;text-align:left}.li-table th,.li-table td{padding:13px 16px;border-bottom:1px solid var(--li-line);font-size:14px}.li-table th{color:var(--li-muted);font-size:12px;text-transform:uppercase;letter-spacing:.05em}.li-table tr:last-child td{border-bottom:0}.li-table{overflow-x:auto}.li-metrics article{background:white;border:1px solid var(--li-line);padding:22px;border-radius:20px}.li-metrics strong{display:block;font-size:36px;margin-top:8px}.li-metrics small{color:var(--li-muted)}
+
+.li-trend{display:flex;gap:12px;align-items:flex-end;overflow-x:auto;padding:20px 0 4px}.li-trend-day{flex:1;min-width:32px;display:flex;flex-direction:column;align-items:center;gap:8px}.li-trend-day span{display:block;width:100%;max-width:40px;background:var(--li-green);border-radius:6px 6px 2px 2px;border-top:3px solid var(--li-orange)}.li-trend-day small,.li-trend-day b{font-size:11px;color:var(--li-muted);font-variant-numeric:tabular-nums}
+.admin-hero h1{color:var(--li-cream);font-size:clamp(26px,4vw,36px);margin:8px 0}.admin-hero .btn{background:var(--li-orange);color:var(--li-green-deep)}

@@ -1,0 +1,17 @@
+# dependencies and build output
+node_modules
+.next
+out
+coverage
+
+# local tooling
+.vercel
+.claude
+.DS_Store
+*.log
+
+# secrets: never commit keys
+.env
+.env.*
+!.env.example
+.probe-token.json
