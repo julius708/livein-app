@@ -39,6 +39,9 @@ export default function Shell({ me, user, isAdmin, active = 'home', locked = fal
         {active !== "home" && <div className="li-trail"><Link href="/">LIVE-IN domov</Link><span>{items.find(i => i.id === active)?.label || "Tímový priestor"}</span></div>}
         {children}
         {!locked && me && <UsageTracker />}
+        {!locked && isAdmin && active !== 'guru' && (
+          <a className="guru-fab" href="/guru" aria-label="Opýtaj sa Gurua"><span aria-hidden="true">🧠</span> Opýtaj sa Gurua</a>
+        )}
         {!locked && !hideFooter && me && (
           <details className="card fbfoot" id="feedback">
             <summary><span>💬 Feedback k appke</span><small>Testujeme. Napíš nám, čo zmeniť.</small></summary>
@@ -46,9 +49,6 @@ export default function Shell({ me, user, isAdmin, active = 'home', locked = fal
           </details>
         )}
       </main>
-      {!locked && isAdmin && active !== 'guru' && (
-        <a className="guru-fab" href="/guru" aria-label="Opýtaj sa Gurua"><span aria-hidden="true">🧠</span> Opýtaj sa Gurua</a>
-      )}
       {!locked && (
         <nav className="tabbar" aria-label="Spodná navigácia">
           {items.map((i) => (
