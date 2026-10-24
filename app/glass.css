@@ -9,9 +9,9 @@
 }
 /* svetlo za sklom: dve pomaly plávajúce škvrny, aby mal blur čo rozmazať */
 body{position:relative;isolation:isolate}
-body::before,body::after{content:'';position:fixed;z-index:-1;pointer-events:none;border-radius:50%;filter:blur(42px);opacity:.85;will-change:transform}
-body::before{width:62vmax;height:62vmax;left:-24vmax;top:-18vmax;background:radial-gradient(circle at 40% 40%,#c9ddc8,#a9c7b3 45%,transparent 70%);animation:lg-float-a 26s ease-in-out infinite alternate}
-body::after{width:58vmax;height:58vmax;right:-26vmax;top:22vh;background:radial-gradient(circle at 50% 50%,#ffd9bd,#f7b98e 40%,transparent 70%);animation:lg-float-b 32s ease-in-out infinite alternate}
+body::before,body::after{content:'';position:fixed;z-index:-1;pointer-events:none;border-radius:50%;filter:blur(48px);opacity:.7;will-change:transform}
+body::before{width:62vmax;height:62vmax;left:-24vmax;top:-18vmax;background:radial-gradient(circle at 40% 40%,#c9ddc8,#a9c7b3 45%,transparent 70%);animation:lg-float-a 44s ease-in-out infinite alternate}
+body::after{width:58vmax;height:58vmax;right:-26vmax;top:22vh;background:radial-gradient(circle at 50% 50%,#ffd9bd,#f7b98e 40%,transparent 70%);animation:lg-float-b 54s ease-in-out infinite alternate}
 @keyframes lg-float-a{from{transform:translate3d(0,0,0) scale(1)}to{transform:translate3d(9vw,7vh,0) scale(1.08)}}
 @keyframes lg-float-b{from{transform:translate3d(0,0,0) scale(1)}to{transform:translate3d(-8vw,-9vh,0) scale(1.1)}}
 
@@ -40,11 +40,9 @@ body::after{width:58vmax;height:58vmax;right:-26vmax;top:22vh;background:radial-
 
 /* interakcia: dlaždice a karty žijú pod kurzorom aj pod prstom */
 .tile:not(.soon){transition:transform .35s var(--lg-ease),box-shadow .35s var(--lg-ease),border-color .35s var(--lg-ease)}
-.tile:not(.soon)::after{content:'';position:absolute;top:-60%;left:-40%;width:50%;height:220%;transform:rotate(18deg) translateX(-140%);background:linear-gradient(90deg,transparent,#ffffffb3,transparent);pointer-events:none;transition:transform .9s var(--lg-ease);opacity:.9}
 @media(hover:hover) and (pointer:fine){
-  a.tile:not(.soon):hover{transform:translateY(-4px) scale(1.012);border-color:#fff;box-shadow:inset 0 1px 0 #fff,0 30px 60px -26px #173e2c73,0 0 0 1px #ffffff80}
-  a.tile:not(.soon):hover::after{transform:rotate(18deg) translateX(320%)}
-  a.tile:not(.soon):hover .ic{transform:translateY(-2px) rotate(-4deg) scale(1.06)}
+  a.tile:not(.soon):hover{transform:translateY(-3px);border-color:#fff;box-shadow:inset 0 1px 0 #fff,0 30px 60px -26px #173e2c73,0 0 0 1px #ffffff80}
+  a.tile:not(.soon):hover .ic{transform:translateY(-2px) scale(1.05)}
   .card:hover,.bc:hover{border-color:#fff;box-shadow:inset 0 1px 0 #fff,inset 1px 0 0 #ffffffb8,0 30px 64px -28px #173e2c66,0 2px 8px #173e2c0a}
 }
 .tile .ic{transition:transform .35s var(--lg-ease)}
@@ -64,5 +62,16 @@ a.tile:not(.soon):active{transform:scale(.985);transition-duration:.12s}
 .dash{animation-delay:.05s}.card.mt{animation-delay:.12s}.tiles{animation-delay:.18s}
 
 /* prístupnosť: bez pohybu a bez priesvitnosti, keď si to používateľ praje */
-@media(prefers-reduced-motion:reduce){body::before,body::after,.dash,.card.mt,.ticker.band,.tiles{animation:none}.tile:not(.soon)::after{display:none}.tile,.card,.bc,.btn,button{transition:none!important;transform:none!important}}
+@media(prefers-reduced-motion:reduce){body::before,body::after,.dash,.card.mt,.ticker.band,.tiles{animation:none}.tile,.card,.bc,.btn,button{transition:none!important;transform:none!important}}
 @media(prefers-reduced-transparency:reduce),(prefers-contrast:more){:root{--lg-surface:#FFFEFB}body::before,body::after{display:none}.card,.bc,.tile:not(.soon),.ticker.band,.login-card,.li-masthead,.tabbar{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}.card::before,.bc::before,.tile:not(.soon)::before,.ticker.band::before{display:none}}
+
+/* potiahnutie na obnovenie + tlačidlo Obnoviť */
+.ptr{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 86px);z-index:40;display:flex;align-items:center;gap:10px;padding:10px 16px;border-radius:999px;font-size:13px;font-weight:700;color:#173E2C;background:rgba(255,254,251,.78);border:1px solid #ffffffe6;box-shadow:inset 0 1px 0 #fff,0 14px 34px -14px #173e2c80;-webkit-backdrop-filter:blur(24px) saturate(160%);backdrop-filter:blur(24px) saturate(160%);opacity:0;pointer-events:none;transition:opacity .25s ease,transform .25s var(--lg-ease);will-change:transform}
+.ptr.show{opacity:1}
+.ptr-ic{display:inline-block;font-size:18px;line-height:1;transition:transform .1s linear}
+.ptr.busy .ptr-ic{animation:lg-spin .9s linear infinite}
+@keyframes lg-spin{to{transform:rotate(360deg)}}
+.li-refresh{background:#ffffff14;border:1px solid #ffffff25;border-radius:999px;color:#F6F2EA;width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;transition:background-color .2s ease,transform .18s var(--lg-ease)}
+.li-refresh:hover{background:#ffffff26}.li-refresh:active{transform:scale(.94)}
+.li-refresh.busy span{display:inline-block;animation:lg-spin .9s linear infinite}
+@media(max-width:600px){.li-refresh{display:none}}

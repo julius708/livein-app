@@ -2,6 +2,7 @@ import Link from 'next/link'
 import UsageTracker from '@/components/UsageTracker'
 import { initials } from '@/lib/auth'
 import FeedbackForm from '@/components/FeedbackForm'
+import PullToRefresh, { RefreshButton } from '@/components/Refresh'
 import '@/app/guru/guru.css'
 
 export default function Shell({ me, user, isAdmin, active = 'home', locked = false, hideFooter = false, children }) {
@@ -16,6 +17,7 @@ export default function Shell({ me, user, isAdmin, active = 'home', locked = fal
   return (
     <>
       <a className="li-skip" href="#workspace-content">Preskočiť na obsah</a>
+      {!locked && <PullToRefresh />}
       <header className="li-masthead">
         <div className="li-masthead-inner">
           <a className="li-brand-link" href="/" aria-label="Domov"><img src="/logo.png" alt="LIVE-IN" /><span className="li-product">Tímový priestor</span></a>
@@ -28,6 +30,7 @@ export default function Shell({ me, user, isAdmin, active = 'home', locked = fal
           <div className="who">
             <div className="av" aria-hidden="true">{initials(name)}</div>
             <div className="nm">{name}<small>{me && me.title ? me.title : (user ? user.email : '')}</small></div>
+            {!locked && <RefreshButton />}
             <form action="/auth/signout" method="post"><button className="out" type="submit">Odhlásiť</button></form>
           </div>
         </div>
