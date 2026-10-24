@@ -1,6 +1,7 @@
 import './globals.css'
 import './livein-design.css'
 import './workspace.css'
+import './glass.css'
 
 export const metadata = {
   title: { default: 'LIVE-IN', template: '%s · LIVE-IN' },
