@@ -223,7 +223,7 @@ export default async function Home({ searchParams }) {
           <div className="sec"><h2>Tvoje nástroje</h2><span>{ready.length}</span></div>
           <div className="tiles">
             {ready.map((m) => (
-              <a className="tile" key={m.id} href={m.url} target={m.internal ? undefined : '_blank'} rel={m.internal ? undefined : 'noreferrer'}>
+              <a className="tile" key={m.id} href={m.url}>
                 <div className="ic" aria-hidden="true">{m.icon}</div>
                 <h3>{m.title}</h3>
                 <p>{m.desc}</p>
