@@ -3,7 +3,7 @@ module.exports = {
   // /ekonomika/ potrebuje koncovú lomku (relatívne cesty statickej stránky) – Next ju nesmie odstraňovať
   skipTrailingSlashRedirect: true,
   // Zjednotenie appiek: moduly bežia pod jednou doménou (app.live-in.international/<modul>)
-  // a hlavná appka ich proxuje na ich vlastné nasadenia. Cesta /cs = Customer Service (basePath '/cs'), /ring = Vstupy hostí (basePath '/ring'), /ekonomika/ = Ekonomika (statická stránka), /pracovna = Práčovňa (basePath '/pracovna').
+  // a hlavná appka ich proxuje na ich vlastné nasadenia. Cesta /cs = Customer Service (basePath '/cs'), /ring = Vstupy hostí (basePath '/ring'), /ekonomika/ = Ekonomika (statická stránka), /pracovna = Práčovňa (basePath '/pracovna'), /kb = Znalostná báza (basePath '/kb').
   async rewrites() {
     return [
       { source: '/cs', destination: 'https://cs.live-in.international/cs' },
@@ -14,6 +14,8 @@ module.exports = {
       { source: '/ekonomika/:path*', destination: 'https://ekonomika.live-in.international/:path*' },
       { source: '/pracovna', destination: 'https://pracovna.live-in.international/pracovna' },
       { source: '/pracovna/:path*', destination: 'https://pracovna.live-in.international/pracovna/:path*' },
+      { source: '/kb', destination: 'https://livein-kb.vercel.app/kb' },
+      { source: '/kb/:path*', destination: 'https://livein-kb.vercel.app/kb/:path*' },
     ];
   },
 };
