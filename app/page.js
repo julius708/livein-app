@@ -162,7 +162,7 @@ export default async function Home({ searchParams }) {
       )}
 
       {hd && (
-        <Fold id="dash" title="Rezervácie a portfólio" hint={`${hd.arrivals_list?.length || 0} príchodov · ${hd.departures_list?.length || 0} odchodov`}>
+        <Fold id="dash" open title="Rezervácie a portfólio" hint={`${hd.arrivals_list?.length || 0} príchodov · ${hd.departures_list?.length || 0} odchodov`}>
         <div className="dash">
           <TodayBoard arrivals={hd.arrivals_list || []} departures={hd.departures_list || []} />
           <section className="card pf" aria-label="Portfólio">
@@ -193,7 +193,7 @@ export default async function Home({ searchParams }) {
         </div>
         </Fold>
       )}
-      {mnt.flats.length > 0 && <Fold id="mnt" title="Údržba" hint={`${mnt.issues.length} ${mnt.issues.length === 1 ? 'otvorená oprava' : mnt.issues.length < 5 ? 'otvorené opravy' : 'otvorených opráv'}`}><MaintenanceBoard issues={mnt.issues} flats={mnt.flats} asana={asanaConfigured()} /></Fold>}
+      {mnt.flats.length > 0 && <Fold id="mnt" open title="Údržba" hint={`${mnt.issues.length} ${mnt.issues.length === 1 ? 'otvorená oprava' : mnt.issues.length < 5 ? 'otvorené opravy' : 'otvorených opráv'}`}><MaintenanceBoard issues={mnt.issues} flats={mnt.flats} asana={asanaConfigured()} /></Fold>}
       {ov && ov.city && (
         <div className="hint" style={{ marginTop: 8 }}>Tvoje mesto ({ov.city}): {ov.arrivals} príchodov, {ov.departures} odchodov, {ov.staying} ubytovaných.</div>
       )}

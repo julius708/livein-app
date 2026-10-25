@@ -129,13 +129,25 @@ i.d{background:var(--ch)}
 .fold-t{display:none}
 .fold-h{display:none}
 @media (max-width:820px){
-  .home{display:flex;flex-direction:column}
-  .home>.hero2{order:-3}
-  .home>.pin{order:-2}
-  .home>.tools{order:-1}
-  .hero2{min-height:190px}
-  .hero2 h1{font-size:26px}
+  /* pôvodné poradie (informácie hore, nástroje dole), len kompaktnejšie */
+  .hero2{min-height:170px;margin-top:14px}
+  .hero2 .in{padding:20px 18px}
+  .hero2 h1{font-size:24px}
   .hero2 p{display:none}
+  .hero2 .chips{margin-top:8px}
+  .bc{padding:14px 14px;border-radius:16px}
+  .bn{gap:6px;margin-top:8px}
+  .bn div{padding:9px 6px;border-radius:12px}
+  .bn b{font-size:22px}
+  .bn span{font-size:11px;margin-top:3px}
+  .bc .bf{font-size:13px;margin-top:8px}
+  .bc.notes li{font-size:13px;padding:7px 0}
+  .brief{margin-top:12px}
+  .brief .bt h2{font-size:18px}
+  .kpis{gap:6px}.kpis div{padding:9px}.kpis b{font-size:20px}.kpis span{font-size:11px}
+  .nums{padding:18px 16px}
+  .ngrid{gap:12px 10px}
+  .sec{margin-top:16px}
   .fold{margin-top:12px}
   .fold-h{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;border-radius:18px;background:#fff;border:1px solid var(--line);font-weight:800;font-size:15px;color:var(--ch);cursor:pointer;-webkit-tap-highlight-color:transparent;min-height:52px}
   .fold-h small{display:block;font-size:12px;font-weight:600;color:#667;margin-top:2px}
