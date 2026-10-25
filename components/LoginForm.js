@@ -1,21 +1,45 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { browserClient } from '@/lib/browser'
 
 const ERRORS = {
   denied: 'Tento e-mail nemá prístup do LIVE-IN. Ak si člen tímu, napíš Júliusovi – pridá ťa do zoznamu.',
+  link: 'Odkaz z e-mailu sa nepodarilo použiť. Vyžiadaj si nový.',
   expired: 'Prihlasovací odkaz už neplatí (platí 1 hodinu a dá sa použiť raz). Vyžiadaj si nový alebo sa prihlás heslom.',
   google: 'Prihlásenie cez Google sa nepodarilo. Skús heslo alebo e-mailový odkaz.',
   auth: 'Prihlásenie sa nepodarilo. Skús to znova.',
 }
 
 export default function LoginForm({ google, err }) {
-  const [mode, setMode] = useState('password') // 'password' | 'link'
+  const [mode, setMode] = useState('password') // 'password' | 'link' | 'reset'
+  const [fromMail, setFromMail] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
   const [sent, setSent] = useState(false)
   const [msg, setMsg] = useState(err ? { kind: 'err', text: ERRORS[err] || ERRORS.auth } : null)
+
+  // Odkaz z e-mailu (prihlasovací alebo na obnovu hesla) prinesie session v adrese za #.
+  // Uložíme ju do cookies a pokračujeme: obnova hesla ide na /heslo, prihlásenie na domov.
+  useEffect(() => {
+    const hash = window.location.hash
+    if (!hash || hash.length < 2) return
+    const p = new URLSearchParams(hash.slice(1))
+    if (p.get('error') || p.get('error_code')) {
+      window.history.replaceState(null, '', window.location.pathname)
+      setMsg({ kind: 'err', text: ERRORS.expired })
+      return
+    }
+    const access_token = p.get('access_token'), refresh_token = p.get('refresh_token')
+    if (!access_token || !refresh_token) return
+    setFromMail(true)
+    const recovery = p.get('type') === 'recovery'
+    window.history.replaceState(null, '', window.location.pathname)
+    browserClient().auth.setSession({ access_token, refresh_token }).then(({ error }) => {
+      if (error) { setFromMail(false); setMsg({ kind: 'err', text: ERRORS.link }); return }
+      window.location.assign(recovery ? '/heslo?reset=1' : '/')
+    })
+  }, [])
 
   async function post(url, body) {
     const r = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
@@ -47,6 +71,18 @@ export default function LoginForm({ google, err }) {
     } finally { setBusy(false) }
   }
 
+  async function withReset(e) {
+    e.preventDefault()
+    setMsg(null); setBusy(true)
+    try {
+      const j = await post('/api/auth/reset', { email })
+      if (j.ok) setSent(true)
+      else setMsg({ kind: j.code === 'rate' ? 'info' : 'err', text: j.error })
+    } catch {
+      setMsg({ kind: 'err', text: 'Nepodarilo sa spojiť so serverom. Skús znova.' })
+    } finally { setBusy(false) }
+  }
+
   async function withGoogle() {
     setMsg(null); setBusy(true)
     const { error } = await browserClient().auth.signInWithOAuth({
@@ -63,7 +99,7 @@ export default function LoginForm({ google, err }) {
       <div className="box">
         <div className="lh"><img src="/logo.png" alt="LIVE-IN" /></div>
         <h2>Vitaj späť</h2>
-        <p className="term">{mode === 'password' ? 'Prihlás sa e-mailom a heslom, ktoré máš v LIVE-IN.' : 'Pošleme ti na e-mail jednorazový prihlasovací odkaz.'}</p>
+        <p className="term">{fromMail ? 'Prihlasujem ťa z odkazu…' : mode === 'password' ? 'Prihlás sa e-mailom a heslom, ktoré máš v LIVE-IN.' : mode === 'reset' ? 'Pošleme ti e-mail s odkazom na nastavenie nového hesla.' : 'Pošleme ti na e-mail jednorazový prihlasovací odkaz.'}</p>
 
         {google && (
           <>
@@ -85,9 +121,16 @@ export default function LoginForm({ google, err }) {
           </form>
         ) : sent ? (
           <div className="msg ok" role="status">
-            <b>Odkaz je na ceste.</b><br />Otvor e-mail <b>{email}</b> a klikni na prihlasovací odkaz. Platí 1 hodinu.
+            <b>Odkaz je na ceste.</b><br />Otvor e-mail <b>{email}</b> a klikni na odkaz. Platí 1 hodinu.
+            {mode === 'reset' && <><br /><small>Odkaz sa otvorí v prehliadači. Nastav si tam nové heslo a potom sa ním prihlás aj tu v appke.</small></>}
             <div style={{ marginTop: 10 }}><button className="mini" type="button" onClick={() => { setSent(false); setMsg(null) }}>Poslať znova</button></div>
           </div>
+        ) : mode === 'reset' ? (
+          <form onSubmit={withReset}>
+            <label className="sr" htmlFor="email3">E-mail</label>
+            <input id="email3" className="f" type="email" required placeholder="tvoj@email.sk" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" inputMode="email" autoFocus />
+            <button className="btn w" disabled={busy} type="submit">{busy ? 'Odosielam…' : 'Poslať odkaz na nové heslo'}</button>
+          </form>
         ) : (
           <form onSubmit={withLink}>
             <label className="sr" htmlFor="email2">E-mail</label>
@@ -99,9 +142,12 @@ export default function LoginForm({ google, err }) {
         {msg && <div className={`msg ${msg.kind}`} role="alert">{msg.text}</div>}
 
         <div className="alt">
-          {mode === 'password'
-            ? <button className="lnk" type="button" onClick={() => switchMode('link')}>Zabudol/a si heslo? Pošli mi prihlasovací odkaz</button>
-            : <button className="lnk" type="button" onClick={() => switchMode('password')}>Späť na prihlásenie heslom</button>}
+          {mode === 'password' ? (
+            <>
+              <button className="lnk" type="button" onClick={() => switchMode('reset')}>Zabudol/a si heslo? Nastav si nové</button>
+              <button className="lnk" type="button" onClick={() => switchMode('link')}>Prihlásiť sa jednorazovým odkazom</button>
+            </>
+          ) : <button className="lnk" type="button" onClick={() => switchMode('password')}>Späť na prihlásenie heslom</button>}
         </div>
         <div className="foot">Interná aplikácia LIVE-IN. Prístup majú len členovia tímu.</div>
       </div>

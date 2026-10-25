@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { sb, originOf } from '@/lib/supabase'
 import { EMAIL_RE } from '@/lib/validate'
+import { mailAuth } from '@/lib/mail-auth'
 
 export async function POST(req) {
   const body = await req.json().catch(() => ({}))
@@ -12,9 +13,10 @@ export async function POST(req) {
   if (rpcErr) return NextResponse.json({ ok: false, code: 'server', error: 'Server je dočasne nedostupný. Skús o chvíľu.' })
   if (!allowed) return NextResponse.json({ ok: false, code: 'denied', error: 'Tento e-mail nie je v zozname používateľov LIVE-IN. Ak si člen tímu, napíš Júliusovi.' })
 
-  const { error } = await s.auth.signInWithOtp({
+  // implicitný režim: odkaz funguje aj keď sa otvorí v inom prehliadači než v nainštalovanej appke
+  const { error } = await mailAuth().auth.signInWithOtp({
     email,
-    options: { emailRedirectTo: `${originOf(req)}/auth/confirm`, shouldCreateUser: true },
+    options: { emailRedirectTo: `${originOf(req)}/login`, shouldCreateUser: true },
   })
   if (error) {
     const rate = error.status === 429 || /rate limit/i.test(error.message || '')
