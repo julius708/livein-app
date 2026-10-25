@@ -20,6 +20,8 @@ export async function middleware(req) {
 
   const { data: { user } } = await supabase.auth.getUser()
   const path = req.nextUrl.pathname
+  // statická Ekonomika používa relatívne cesty, preto musí bežať na /ekonomika/ s koncovou lomkou
+  if (path === '/ekonomika') return new NextResponse(null, { status: 307, headers: { Location: '/ekonomika/' } })
   const isOpen = OPEN.some((o) => path === o || path.startsWith(o))
 
   if (!user && !isOpen) {
