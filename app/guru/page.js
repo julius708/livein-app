@@ -17,7 +17,7 @@ export default async function GuruPage({ searchParams }) {
       <section className="guru">
         <div className="gh">
           <h1>🧠 LIVE-IN Guru</h1>
-          <p>Opýtaj sa na čokoľvek z našej databázy (rezervácie, byty, Práčovňa, nástenka) alebo všeobecne. Odpovedá podľa tvojich oprávnení.</p>
+          <p>Opýtaj sa na čokoľvek: na naše byty, rezervácie, Práčovňu a nástenku, alebo úplne všeobecne – texty, preklady, rady. Učí sa z otázok celého tímu a odpovedá podľa tvojich oprávnení.</p>
         </div>
         <GuruChat initial={sp && typeof sp.q === 'string' ? sp.q.slice(0, 500) : ''} />
       </section>

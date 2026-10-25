@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import '@/app/guru/guru.css'
-const SUGG=['Čo dnes potrebuje moju pozornosť?','Koľko máme dnes príchodov a odchodov podľa miest?','Čo sme riešili v našich starších rozhovoroch?']
+const SUGG=['Čo dnes potrebuje moju pozornosť?','Koľko máme dnes príchodov a odchodov podľa miest?','Napíš hosťovi odpoveď na sťažnosť na hluk','Ako riešime neskorý check-in?']
 export default function GuruChat({initial=''}){
  const [turns,setTurns]=useState([]),[text,setText]=useState(initial),[busy,setBusy]=useState(false),[loading,setLoading]=useState(true),[error,setError]=useState(''),[more,setMore]=useState(false),[reading,setReading]=useState(false)
  const end=useRef(null),lock=useRef(false),historyLock=useRef(false)
@@ -14,7 +14,7 @@ export default function GuruChat({initial=''}){
   setTurns(old=>older?[...j.turns,...old]:j.turns);setMore(j.hasMore)
   }finally{historyLock.current=false;setReading(false)}
  }
- useEffect(()=>{load().catch(e=>setError(e.message)).finally(()=>setLoading(false))},[])
+ useEffect(()=>{setLoading(false)},[])
  async function send(question,id){
   const q=question.trim();if(!q||lock.current||loading||historyLock.current)return
   lock.current=true;setBusy(true);setError('')
@@ -30,14 +30,13 @@ export default function GuruChat({initial=''}){
   finally{lock.current=false;setBusy(false);end.current?.scrollIntoView({block:'nearest'})}
  }
  async function clear(){
-  if(busy||!window.confirm('Vymazať celú tvoju históriu a pamäť Gurua? Túto akciu nemožno vrátiť.'))return
+  if(busy||!window.confirm('Vymazať celú tvoju históriu rozhovorov s Guruom? Túto akciu nemožno vrátiť.'))return
   setBusy(true);lock.current=true;setError('')
   try{const r=await fetch('/api/guru/history',{method:'DELETE'}),j=await r.json();if(!r.ok||!j.ok)throw new Error(j.error||'Vymazanie zlyhalo.');setTurns([]);setMore(false)}catch(e){setError(e.message)}finally{setBusy(false);lock.current=false}
  }
  return <div className="gchat">
-  <div className="g-memory"><div><strong>Tvoja súkromná pamäť</strong><small>Rozhovory sa ukladajú k tvojmu účtu. Kolegovia ani administrátorský prehľad ich nevidia. Guru dohľadá aj staršie témy; aktuálne čísla overuje nanovo.</small></div><button disabled={busy||loading||reading} onClick={()=>load().then(()=>setError('')).catch(e=>setError(e.message))}>Obnoviť</button><button disabled={busy||loading||reading} onClick={clear}>Vymazať pamäť</button></div>
+  <div className="g-memory"><div><small>Guru si tvoje rozhovory pamätá na pozadí a učí sa z otázok celého tímu; história sa tu nezobrazuje, aby bol chat prehľadný.</small></div><button disabled={busy||loading||reading} onClick={()=>load().then(()=>setError('')).catch(e=>setError(e.message))}>Zobraziť históriu</button><button disabled={busy||loading||reading} onClick={clear}>Vymazať moju pamäť</button></div>
   <div className="gmsgs" aria-label="História rozhovoru">
-   {loading&&<p role="status">Načítavam tvoju pamäť…</p>}
    {more&&<button className="g-older" disabled={busy||reading} onClick={()=>load(true).catch(e=>setError(e.message))}>Načítať staršie rozhovory</button>}
    {!loading&&!turns.length&&<div className="gsug">{SUGG.map(q=><button key={q} disabled={busy} onClick={()=>send(q)}>{q}</button>)}</div>}
    {turns.map(t=><div key={t.id}><div className="gm u">{t.question}</div>{t.answer&&<div className="gm a">{t.answer}</div>}{t.status==='pending'&&<div className="gm a" role="status">{busy?'Premýšľam…':'Odpoveď ešte nie je uložená.'}</div>}{t.status!=='complete'&&!busy&&<button className="g-retry" onClick={()=>send(t.question,t.id)}>Skúsiť znova</button>}</div>)}
