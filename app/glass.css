@@ -43,9 +43,23 @@ body::after{width:58vmax;height:58vmax;right:-26vmax;top:22vh;background:radial-
 @media(hover:hover) and (pointer:fine){
   a.tile:not(.soon):hover{transform:translateY(-3px);border-color:#fff;box-shadow:inset 0 1px 0 #fff,0 30px 60px -26px #173e2c73,0 0 0 1px #ffffff80}
   a.tile:not(.soon):hover .ic{transform:translateY(-2px) scale(1.05)}
+  /* 3D dlaždice: nakláňajú sa za kurzorom, svetlo ide za myšou */
+  a.tile.t3d:hover{transform:perspective(900px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) translateY(-8px) scale(1.015);border-color:#fff;box-shadow:inset 0 1px 0 #fff,0 36px 70px -28px #173e2c99,0 0 0 1px #ffffff80,0 0 40px -10px #f46d1655}
+  a.tile.t3d:hover .glow{opacity:1}
+  a.tile.t3d:hover .ic{transform:translateY(-5px) scale(1.14) rotate(-6deg);filter:drop-shadow(0 10px 14px #173e2c40)}
+  a.tile.t3d:hover .st{color:var(--o)}
+  a.tile.t3d:hover .st .arr{transform:translateX(6px)}
+  a.tile.t3d:hover::after{opacity:1;transform:scaleX(1)}
   .card:hover,.bc:hover{border-color:#fff;box-shadow:inset 0 1px 0 #fff,inset 1px 0 0 #ffffffb8,0 30px 64px -28px #173e2c66,0 2px 8px #173e2c0a}
 }
-.tile .ic{transition:transform .35s var(--lg-ease)}
+.tile .ic{transition:transform .35s var(--lg-ease),filter .35s var(--lg-ease)}
+.tile.t3d{transform:perspective(900px) rotateX(0deg) rotateY(0deg);transform-style:preserve-3d;transition:transform .22s var(--lg-ease),box-shadow .35s var(--lg-ease),border-color .35s var(--lg-ease);will-change:transform}
+.tile .glow{position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;transition:opacity .3s ease;background:radial-gradient(240px circle at var(--mx,50%) var(--my,50%),#ffffffcc,transparent 62%);mix-blend-mode:soft-light}
+.tile.t3d::after{content:'';position:absolute;left:0;right:0;bottom:0;height:4px;background:linear-gradient(90deg,var(--o),#ffb27a);opacity:0;transform:scaleX(.3);transform-origin:left;transition:opacity .3s ease,transform .45s var(--lg-ease);border-radius:0 0 inherit inherit}
+.tile .st{transition:color .25s ease}
+.tile .st .arr{display:inline-block;transition:transform .3s var(--lg-ease)}
+a.tile.t3d:active{transform:perspective(900px) scale(.975);transition-duration:.1s}
+a.tile.t3d:active .glow{opacity:1}
 a.tile:not(.soon):active{transform:scale(.985);transition-duration:.12s}
 .card,.bc{transition:box-shadow .35s var(--lg-ease),border-color .35s var(--lg-ease)}
 

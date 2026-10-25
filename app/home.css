@@ -113,3 +113,37 @@ i.d{background:var(--ch)}
   .ticker .tk-dots{display:none}
 }
 @media (prefers-reduced-motion:reduce){.hero2 .slides img{animation:none}.hero2 .slides img:first-child{opacity:1}}
+
+/* nástenka tímu: kompaktné riadky, 3 viditeľné + rozkliknutie */
+.bc.notes .nh{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.bc.notes .nh span{font-size:12px;color:#667;font-weight:700}
+.bc.notes li{display:grid;grid-template-columns:auto auto 1fr;gap:4px 10px;align-items:baseline;padding:8px 0;font-size:14px;line-height:1.4}
+.bc.notes li p{grid-column:1/-1;margin:0;color:#1d2a24}
+.bc.notes li.now .by{background:var(--ch);color:#fff}
+.bc.notes .who{font-size:12px;font-weight:700;color:var(--ch)}
+.bc.notes .more{margin-top:10px;width:100%;border:1px solid var(--line);background:#fff;border-radius:12px;padding:10px;font:inherit;font-size:13px;font-weight:800;color:var(--ch);cursor:pointer;min-height:44px}
+.bc.notes .more:hover{background:#F4F5F0}
+
+/* domovská stránka: na počítači bez zmeny, na telefóne nástroje hore a ťažké sekcie zbalené */
+.home{display:contents}
+.fold-t{display:none}
+.fold-h{display:none}
+@media (max-width:820px){
+  .home{display:flex;flex-direction:column}
+  .home>.hero2{order:-3}
+  .home>.pin{order:-2}
+  .home>.tools{order:-1}
+  .hero2{min-height:190px}
+  .hero2 h1{font-size:26px}
+  .hero2 p{display:none}
+  .fold{margin-top:12px}
+  .fold-h{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;border-radius:18px;background:#fff;border:1px solid var(--line);font-weight:800;font-size:15px;color:var(--ch);cursor:pointer;-webkit-tap-highlight-color:transparent;min-height:52px}
+  .fold-h small{display:block;font-size:12px;font-weight:600;color:#667;margin-top:2px}
+  .fold-h i{font-style:normal;font-size:22px;line-height:1;transition:transform .25s ease;color:#667}
+  .fold-b{display:none}
+  .fold-t:checked~.fold-b{display:block}
+  .fold-t:checked~.fold-h{border-bottom-left-radius:0;border-bottom-right-radius:0}
+  .fold-t:checked~.fold-h i{transform:rotate(180deg)}
+  .fold-b>.dash,.fold-b>.card.mt,.fold-b>.nums{margin-top:8px}
+  .tools .sec{margin-top:16px}
+}

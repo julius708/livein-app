@@ -8,6 +8,9 @@ import PinnedNoteForm from '@/components/PinnedNoteForm'
 import FactTicker from '@/components/FactTicker'
 import TodayBoard from '@/components/TodayBoard'
 import MaintenanceBoard from '@/components/MaintenanceBoard'
+import NotesBoard from '@/components/NotesBoard'
+import Tile from '@/components/Tile'
+import Fold from '@/components/Fold'
 import { buildMaintenance, todayBA } from '@/lib/maintenance'
 import { asanaConfigured, fetchOpenDamageTasks } from '@/lib/asana'
 import './home.css'
@@ -31,13 +34,18 @@ export default async function Home({ searchParams }) {
   if (!user) redirect('/login')
   if (blocked) return <NoAccess email={user.email} />
 
-  const [{ data: cfg }, { data: ov }, { data: hf }, { data: hd }, { data: hw }] = await Promise.all([
+  const today = todayBA()
+  const since = new Date(Date.parse(today) - 45 * 864e5).toISOString().slice(0, 10)
+  const [{ data: cfg }, { data: ov }, { data: hf }, { data: hd }, { data: hw }, { data: noteRows }] = await Promise.all([
     s.from('config').select('value').eq('key', 'module_urls').maybeSingle(),
     s.rpc('today_overview'),
     s.rpc('home_facts'),
     s.rpc('home_dashboard'),
     s.rpc('home_work'),
+    // nástenka: oznamy za posledných 45 dní (aj na zajtra), najnovšie hore
+    s.from('board_notes').select('id,text,author_name,date,created_at').is('removed_at', null).gte('date', since).order('date', { ascending: false }).order('created_at', { ascending: false }).limit(60),
   ])
+  const notes = noteRows || []
   // Údržba: opravy z Asany (Damages Reporting) + ručné opravy + okná, kedy je byt voľný na opravu
   let mnt = { issues: [], flats: [] }
   try {
@@ -86,6 +94,7 @@ export default async function Home({ searchParams }) {
 
   return (
     <Shell me={me} user={user} isAdmin={isAdmin} active="home">
+     <div className="home">
       {sp && sp.heslo === 'ok' && <div className="msg ok" style={{ marginTop: 16 }}>Heslo je uložené. Odteraz sa prihlasuješ novým heslom.</div>}
       <section className="hero2">
         <div className="slides" aria-hidden="true">
@@ -148,20 +157,12 @@ export default async function Home({ searchParams }) {
               </div>
             )}
           </div>
-          {hw && hw.notes && hw.notes.length > 0 && (
-            <div className="bc notes">
-              <h3>📋 Nástenka tímu</h3>
-              <ul>
-                {hw.notes.map((n, k) => (
-                  <li key={k}><span className="by">{n.by}{n.date !== hd?.week?.[0]?.day ? ' · zajtra' : ''}</span>{n.text}</li>
-                ))}
-              </ul>
-            </div>
-          )}
+          <NotesBoard notes={notes} today={today} />
         </section>
       )}
 
       {hd && (
+        <Fold id="dash" title="Rezervácie a portfólio" hint={`${hd.arrivals_list?.length || 0} príchodov · ${hd.departures_list?.length || 0} odchodov`}>
         <div className="dash">
           <TodayBoard arrivals={hd.arrivals_list || []} departures={hd.departures_list || []} />
           <section className="card pf" aria-label="Portfólio">
@@ -190,8 +191,9 @@ export default async function Home({ searchParams }) {
             </ul>
           </section>
         </div>
+        </Fold>
       )}
-      {mnt.flats.length > 0 && <MaintenanceBoard issues={mnt.issues} flats={mnt.flats} asana={asanaConfigured()} />}
+      {mnt.flats.length > 0 && <Fold id="mnt" title="Údržba" hint={`${mnt.issues.length} ${mnt.issues.length === 1 ? 'otvorená oprava' : mnt.issues.length < 5 ? 'otvorené opravy' : 'otvorených opráv'}`}><MaintenanceBoard issues={mnt.issues} flats={mnt.flats} asana={asanaConfigured()} /></Fold>}
       {ov && ov.city && (
         <div className="hint" style={{ marginTop: 8 }}>Tvoje mesto ({ov.city}): {ov.arrivals} príchodov, {ov.departures} odchodov, {ov.staying} ubytovaných.</div>
       )}
@@ -199,6 +201,7 @@ export default async function Home({ searchParams }) {
       <FactTicker facts={tick} label="Vedeli ste?" />
 
       {hf && (
+        <Fold id="nums" title="LIVE-IN v číslach" hint={`${hf.listings} nehnuteľností`}>
         <section className="nums" aria-label="LIVE-IN v číslach">
           <h2>LIVE-IN v číslach</h2>
           <p className="sub2">Toto všetko sme postavili spolu.</p>
@@ -216,20 +219,15 @@ export default async function Home({ searchParams }) {
           ) : null}
           <p className="winwin">Robíme <b>win-win</b>: majitelia majú o nehnuteľnosť postarané, hostia krásny pobyt a my prácu, ktorá nás baví. 💚</p>
         </section>
+        </Fold>
       )}
 
+      <div className="tools">
       {ready.length > 0 && (
         <>
           <div className="sec"><h2>Tvoje nástroje</h2><span>{ready.length}</span></div>
           <div className="tiles">
-            {ready.map((m) => (
-              <a className="tile" key={m.id} href={m.url}>
-                <div className="ic" aria-hidden="true">{m.icon}</div>
-                <h3>{m.title}</h3>
-                <p>{m.desc}</p>
-                <div className="st">Otvoriť →</div>
-              </a>
-            ))}
+            {ready.map((m) => <Tile key={m.id} href={m.url} icon={m.icon} title={m.title} desc={m.desc} />)}
           </div>
         </>
       )}
@@ -249,6 +247,8 @@ export default async function Home({ searchParams }) {
           </div>
         </>
       )}
+      </div>
+     </div>
     </Shell>
   )
 }
