@@ -3,7 +3,8 @@ import { NextResponse } from 'next/server'
 import { SUPABASE_URL, SUPABASE_ANON } from './lib/env'
 
 // Verejné cesty (bez prihlásenia)
-const OPEN = ['/login', '/auth/', '/api/auth/']
+// Práčovňa pod /pracovna: service worker, manifest a ikony sa sťahujú bez session (push, pridanie na plochu)
+const OPEN = ['/login', '/auth/', '/api/auth/', '/pracovna/sw.js', '/pracovna/manifest.webmanifest', '/pracovna/icons/']
 
 export async function middleware(req) {
   let res = NextResponse.next({ request: req })

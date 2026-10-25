@@ -153,7 +153,7 @@ export default async function Home({ searchParams }) {
                   <div><b>{hw.today_same_day}</b><span>s príchodom v ten istý deň</span></div>
                   <div><b>{hw.tomorrow_total}</b><span>tašiek zajtra</span></div>
                 </div>
-                {pracUrl && <a className="bl" href={pracUrl} target="_blank" rel="noreferrer">Otvoriť Práčovňu →</a>}
+                {pracUrl && <a className="bl" href={pracUrl}>Otvoriť Práčovňu →</a>}
               </div>
             )}
           </div>
