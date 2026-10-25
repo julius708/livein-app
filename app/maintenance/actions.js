@@ -1,7 +1,7 @@
 'use server'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { getViewer } from '@/lib/auth'
-import { ASANA_TAG, completeDamageTask } from '@/lib/asana'
+import { ASANA_TAG, completeDamageTask, assignDamageTask } from '@/lib/asana'
 
 /** Pridá ručnú opravu do zoznamu údržby (ktokoľvek aktívny v tíme). */
 export async function addIssue(prev, formData) {
@@ -18,6 +18,18 @@ export async function addIssue(prev, formData) {
   if (error) return { ok: false, error: error.message || 'Uloženie zlyhalo.' }
   revalidatePath('/')
   return { ok: true, n: Date.now() }
+}
+
+/** Priradí úlohu z Asany členovi tímu (alebo ju odpriradí) – priamo v Asane. */
+export async function assignIssue(formData) {
+  const { user, me } = await getViewer()
+  if (!user || !me) return { ok: false, error: 'Nie si prihlásený/á.' }
+  const id = String(formData.get('id') || '')
+  const assignee = String(formData.get('assignee') || '')
+  if (!/^\d+$/.test(id)) return { ok: false, error: 'Neplatná úloha.' }
+  const r = await assignDamageTask(id, assignee, me.name)
+  if (r.ok) { revalidateTag(ASANA_TAG); revalidatePath('/') }
+  return r
 }
 
 /** Označí opravu ako hotovú: úlohu v Asane uzavrie (s komentárom, kto), ručnú opravu v appke. */

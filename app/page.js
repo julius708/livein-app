@@ -12,7 +12,7 @@ import NotesBoard from '@/components/NotesBoard'
 import Tile from '@/components/Tile'
 import Fold from '@/components/Fold'
 import { buildMaintenance, todayBA } from '@/lib/maintenance'
-import { asanaConfigured, fetchOpenDamageTasks } from '@/lib/asana'
+import { asanaConfigured, fetchOpenDamageTasks, fetchProjectMembers } from '@/lib/asana'
 import './home.css'
 
 const CDN = 'https://d2ol7oe51mr4n9.cloudfront.net/user_3FzChznIQ3gbpo8z6ko8CWTOlI0/'
@@ -48,12 +48,15 @@ export default async function Home({ searchParams }) {
   const notes = noteRows || []
   // Údržba: opravy z Asany (Damages Reporting) + ručné opravy + okná, kedy je byt voľný na opravu
   let mnt = { issues: [], flats: [] }
+  let members = []
   try {
-    const [{ data: md }, { data: iss }, tasks] = await Promise.all([
+    const [{ data: md }, { data: iss }, tasks, people] = await Promise.all([
       s.rpc('maintenance_data'),
       s.from('maintenance_issues').select('id,listing_id,listing_name,text,priority,created_at,created_by_name').eq('status', 'open').order('created_at', { ascending: false }).limit(200),
       fetchOpenDamageTasks(),
+      fetchProjectMembers(),
     ])
+    members = people || []
     if (md) mnt = buildMaintenance({ listings: md.listings, reservations: md.reservations, issues: iss || [], tasks: tasks || [], today: md.today || todayBA() })
   } catch {}
   const urls = (cfg && cfg.value) || {}
@@ -193,7 +196,7 @@ export default async function Home({ searchParams }) {
         </div>
         </Fold>
       )}
-      {mnt.flats.length > 0 && <Fold id="mnt" open title="Údržba" hint={`${mnt.issues.length} ${mnt.issues.length === 1 ? 'otvorená oprava' : mnt.issues.length < 5 ? 'otvorené opravy' : 'otvorených opráv'}`}><MaintenanceBoard issues={mnt.issues} flats={mnt.flats} asana={asanaConfigured()} /></Fold>}
+      {mnt.flats.length > 0 && <Fold id="mnt" open title="Údržba" hint={`${mnt.issues.length} ${mnt.issues.length === 1 ? 'otvorená oprava' : mnt.issues.length < 5 ? 'otvorené opravy' : 'otvorených opráv'}`}><MaintenanceBoard issues={mnt.issues} flats={mnt.flats} asana={asanaConfigured()} members={members} /></Fold>}
       {ov && ov.city && (
         <div className="hint" style={{ marginTop: 8 }}>Tvoje mesto ({ov.city}): {ov.arrivals} príchodov, {ov.departures} odchodov, {ov.staying} ubytovaných.</div>
       )}

@@ -1,6 +1,6 @@
 'use client'
-import { useActionState, useState } from 'react'
-import { addIssue, closeIssue } from '@/app/maintenance/actions'
+import { useActionState, useState, useTransition } from 'react'
+import { addIssue, closeIssue, assignIssue } from '@/app/maintenance/actions'
 
 const fmt = (iso) => new Date(iso).toLocaleDateString('sk-SK', { day: 'numeric', month: 'numeric', timeZone: 'Europe/Bratislava' })
 
@@ -10,7 +10,32 @@ const fmt = (iso) => new Date(iso).toLocaleDateString('sk-SK', { day: 'numeric',
  */
 const LIMIT = 5
 
-export default function MaintenanceBoard({ issues = [], flats = [], asana = false }) {
+/** Rozbaľovacia ponuka členov tímu z Asany: výber úlohu hneď priradí (aj v Asane). */
+function Assign({ issue, members }) {
+  const [busy, start] = useTransition()
+  const [err, setErr] = useState('')
+  const [val, setVal] = useState(issue.assignee_gid || '')
+  function change(e) {
+    const v = e.target.value
+    setVal(v); setErr('')
+    const fd = new FormData(); fd.set('id', issue.id); fd.set('assignee', v)
+    start(async () => { const r = await assignIssue(fd); if (!r || !r.ok) { setErr((r && r.error) || 'Priradenie zlyhalo.'); setVal(issue.assignee_gid || '') } })
+  }
+  return (
+    <span className="asg-row">
+      <span aria-hidden="true">👤</span>
+      <select className={`asg${val ? '' : ' none'}`} value={val} onChange={change} disabled={busy} aria-label="Priradiť úlohu členovi tímu (aj v Asane)" title="Priradí úlohu aj v Asane">
+        <option value="">Nepriradené – vybrať…</option>
+        {members.map((m) => <option key={m.gid} value={m.gid}>{m.name}</option>)}
+        {val && !members.some((m) => m.gid === val) && <option value={val}>{issue.by || 'priradené'}</option>}
+      </select>
+      {busy && <small>ukladám…</small>}
+      {err && <small className="e">{err}</small>}
+    </span>
+  )
+}
+
+export default function MaintenanceBoard({ issues = [], flats = [], asana = false, members = [] }) {
   const [st, act, pending] = useActionState(addIssue, null)
   const [other, setOther] = useState(false)
   const [all, setAll] = useState(false)
@@ -33,8 +58,9 @@ export default function MaintenanceBoard({ issues = [], flats = [], asana = fals
             </form>
             <span className="t">{i.text}</span>
             <span className={`d w-${i.window.kind}`}>{i.window.text}</span>
+            {i.source === 'asana' && asana && <Assign issue={i} members={members} />}
             <span className="by">
-              {i.source === 'asana' ? <>Asana{i.section ? ` · ${i.section}` : ''}{i.guest ? ` · hosť ${i.guest}` : ''}{i.code ? ` · ${i.code}` : ''}{i.by ? ` · ${i.by}` : ''} · {fmt(i.created_at)}{i.url ? <> · <a href={i.url} target="_blank" rel="noreferrer">otvoriť v Asane</a></> : null}</> : <>{i.by} · {fmt(i.created_at)}</>}
+              {i.source === 'asana' ? <>Asana{i.section ? ` · ${i.section}` : ''}{i.guest ? ` · hosť ${i.guest}` : ''}{i.code ? ` · ${i.code}` : ''} · {fmt(i.created_at)}{i.url ? <> · <a href={i.url} target="_blank" rel="noreferrer">otvoriť v Asane</a></> : null}</> : <>{i.by} · {fmt(i.created_at)}</>}
             </span>
           </li>
         ))}
@@ -62,7 +88,7 @@ export default function MaintenanceBoard({ issues = [], flats = [], asana = fals
           </div>
         </form>
       </details>
-      <style>{`.mt-sub{color:#6b6866;font-size:14px;margin:4px 0}.mt-l{list-style:none;margin:8px 0 0;padding:0}.mt-l li{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:10px 0;border-bottom:1px solid #eceae6;align-items:start}.mt-l li.hi{background:#FFF3E8;margin:0 -8px;padding:10px 8px;border-radius:10px}.mt-l .n{font-weight:700;color:#363433}.mt-l .n small{font-weight:500;color:#6b6866}.mt-l .pr{font-style:normal;background:#F46D16;color:#fff;border-radius:99px;padding:1px 8px;font-size:11px;margin-right:6px;vertical-align:middle}.mt-l .t{grid-column:1/-1;font-size:15px;color:#1d2b24;white-space:pre-wrap}.mt-l .d{grid-column:1/-1;font-size:13px;font-weight:600}.mt-l .w-now{color:#1a7f3c}.mt-l .w-soon{color:#B8470A}.mt-l .w-busy{color:#6b6866}.mt-l .w-none{color:#b33;font-weight:500}.mt-l .by{grid-column:1/-1;font-size:12px;color:#8a8784}.mt-l .by a{color:#F46D16}.mt-l .done{background:#fff;border:1px solid #cfd6cc;border-radius:99px;padding:4px 10px;font-size:13px;font-weight:600;color:#173E2C;cursor:pointer}.mt-l .done:hover{background:#E8ECE4}.mt-more{margin-top:10px;background:none;border:0;padding:0;color:#F46D16;font-weight:700;font-size:14px;cursor:pointer}.mt-more:hover{text-decoration:underline}.mt-add{margin-top:12px}.mt-add summary{cursor:pointer;font-weight:700;font-size:14px;color:#173E2C}.mt-form{display:grid;gap:8px;margin-top:10px;max-width:560px}.mt-form select,.mt-form input,.mt-form textarea{width:100%;font-size:15px;padding:10px 12px;border-radius:12px;border:1px solid #DCE2D6;font-family:inherit;background:#fff}.mt-form .sw{font-size:13px;color:#6b6866;display:flex;gap:6px;align-items:center}.mt-form .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}.mt a{color:#F46D16}`}</style>
+      <style>{`.mt-sub{color:#6b6866;font-size:14px;margin:4px 0}.mt-l{list-style:none;margin:8px 0 0;padding:0}.mt-l li{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:10px 0;border-bottom:1px solid #eceae6;align-items:start}.mt-l li.hi{background:#FFF3E8;margin:0 -8px;padding:10px 8px;border-radius:10px}.mt-l .n{font-weight:700;color:#363433}.mt-l .n small{font-weight:500;color:#6b6866}.mt-l .pr{font-style:normal;background:#F46D16;color:#fff;border-radius:99px;padding:1px 8px;font-size:11px;margin-right:6px;vertical-align:middle}.mt-l .t{grid-column:1/-1;font-size:15px;color:#1d2b24;white-space:pre-wrap}.mt-l .d{grid-column:1/-1;font-size:13px;font-weight:600}.mt-l .w-now{color:#1a7f3c}.mt-l .w-soon{color:#B8470A}.mt-l .w-busy{color:#6b6866}.mt-l .w-none{color:#b33;font-weight:500}.mt-l .by{grid-column:1/-1;font-size:12px;color:#8a8784}.mt-l .by a{color:#F46D16}.mt-l .asg-row{grid-column:1/-1;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px;color:#6b6866}.mt-l .asg{font:inherit;font-size:13px;font-weight:600;color:#173E2C;padding:5px 30px 5px 10px;border-radius:99px;border:1px solid #cfd6cc;background:#fff;max-width:240px;cursor:pointer}.mt-l .asg.none{color:#B8470A;border-color:#F46D16}.mt-l .asg:disabled{opacity:.6}.mt-l .asg-row .e{color:#b33}.mt-l .done{background:#fff;border:1px solid #cfd6cc;border-radius:99px;padding:4px 10px;font-size:13px;font-weight:600;color:#173E2C;cursor:pointer}.mt-l .done:hover{background:#E8ECE4}.mt-more{margin-top:10px;background:none;border:0;padding:0;color:#F46D16;font-weight:700;font-size:14px;cursor:pointer}.mt-more:hover{text-decoration:underline}.mt-add{margin-top:12px}.mt-add summary{cursor:pointer;font-weight:700;font-size:14px;color:#173E2C}.mt-form{display:grid;gap:8px;margin-top:10px;max-width:560px}.mt-form select,.mt-form input,.mt-form textarea{width:100%;font-size:15px;padding:10px 12px;border-radius:12px;border:1px solid #DCE2D6;font-family:inherit;background:#fff}.mt-form .sw{font-size:13px;color:#6b6866;display:flex;gap:6px;align-items:center}.mt-form .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}.mt a{color:#F46D16}`}</style>
     </section>
   )
 }
