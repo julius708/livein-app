@@ -104,3 +104,26 @@ body{background-image:radial-gradient(ellipse 70% 700px at 0% 0%,#c4d9c9bf,trans
 @media(max-width:600px){.li-masthead{width:calc(100% - 16px);margin-top:8px;border-radius:24px}.top .li-masthead{width:calc(100vw - 16px);margin-left:-8px}.li-main-workspace .hero2{border-radius:28px}.li-main-workspace .tile:not(.soon){padding:20px}}
 @media(prefers-reduced-motion:reduce){.li-nav a,.li-nav button,.li-account button,.li-page-intro .li-shortcut,.li-main-workspace .tile:not(.soon),:is(.li-main-workspace,.li-cs,.li-ring-workspace,.li-economy-workspace,.li-laundry-board) :is(.btn,button[type=submit]){transition:none;transform:none!important}}
 @media(prefers-reduced-transparency:reduce),(prefers-contrast:more){:root{--li-glass-surface:#FFFEFB;--li-glass-green:#173E2C}.li-masthead,.tabbar,:is(.li-main-workspace,.li-cs,.li-ring-workspace,.li-economy-workspace) :is(.card,.panel,.search,.analysis-dock),.li-main-workspace :is(.bc,.tile:not(.soon),.ticker.band),.li-laundry-board :is(.sum,.li-package-controls,.days){-webkit-backdrop-filter:none;backdrop-filter:none}.tabbar{background:#FFFEFB}}
+/* bežiaci pás noviniek o appkách */
+.newsticker{background:#0E2A1E;color:#F6F2EA;border-bottom:1px solid #ffffff14;position:relative;z-index:20}
+.newsticker .nt-bar{display:flex;align-items:center;gap:0;width:100%;max-width:1180px;margin:0 auto;padding:0 20px;height:34px;background:none;border:0;color:inherit;font:inherit;cursor:pointer;text-align:left}
+.newsticker .nt-lb{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:800;letter-spacing:.14em;color:#FF9A57;padding-right:14px;border-right:1px solid #ffffff22;margin-right:14px;flex-shrink:0;height:100%}
+.newsticker .nt-dot{width:7px;height:7px;border-radius:50%;background:#FF9A57;box-shadow:0 0 0 0 #ff9a5788;animation:ntpulse 1.8s infinite}
+@keyframes ntpulse{70%{box-shadow:0 0 0 7px #ff9a5700}100%{box-shadow:0 0 0 0 #ff9a5700}}
+.newsticker .nt-track{flex:1;overflow:hidden;white-space:nowrap;display:flex;mask-image:linear-gradient(90deg,transparent,#000 3%,#000 97%,transparent)}
+.newsticker .nt-run{display:inline-flex;align-items:center;flex-shrink:0;animation:ntscroll var(--nt-dur,90s) linear infinite;padding-right:40px}
+.newsticker .nt-bar:hover .nt-run,.newsticker.open .nt-run{animation-play-state:paused}
+@keyframes ntscroll{from{transform:translateX(0)}to{transform:translateX(-100%)}}
+.newsticker .nt-it{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:#F6F2EA}
+.newsticker .nt-d{font-size:11px;font-weight:800;color:#9BC4AE;font-variant-numeric:tabular-nums}
+.newsticker .nt-app{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#0E2A1E;background:#9BC4AE;border-radius:999px;padding:2px 7px}
+.newsticker .nt-sep{color:#FF9A57;font-size:9px;margin:0 18px 0 12px}
+.newsticker .nt-more{flex-shrink:0;font-size:10px;color:#9BC4AE;margin-left:12px}
+.newsticker .nt-list{max-width:1180px;margin:0 auto;padding:10px 20px 16px;display:grid;gap:8px;max-height:60vh;overflow:auto}
+.newsticker .nt-list article{background:#ffffff0f;border-radius:14px;padding:10px 14px}
+.newsticker .nt-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:14px}
+.newsticker .nt-list p{margin:6px 0 0;font-size:13px;line-height:1.5;color:#e4e9e3}
+.newsticker .nt-list a{color:#FF9A57;font-weight:700;font-size:13px}
+.newsticker .nt-foot{font-size:12px;color:#9BC4AE;margin-top:4px}
+@media (prefers-reduced-motion:reduce){.newsticker .nt-run{animation:none}.newsticker .nt-track{overflow-x:auto}}
+@media (max-width:600px){.newsticker .nt-bar{padding:0 12px;height:32px}.newsticker .nt-lb{font-size:10px;padding-right:10px;margin-right:10px}.newsticker .nt-it{font-size:12px}.newsticker .nt-list{padding:8px 12px 14px}}

@@ -3,6 +3,7 @@ import UsageTracker from '@/components/UsageTracker'
 import { initials } from '@/lib/auth'
 import FeedbackForm from '@/components/FeedbackForm'
 import PullToRefresh, { RefreshButton } from '@/components/Refresh'
+import NewsBand from '@/components/NewsBand'
 import '@/app/guru/guru.css'
 
 export default function Shell({ me, user, isAdmin, active = 'home', locked = false, hideFooter = false, children }) {
@@ -35,6 +36,7 @@ export default function Shell({ me, user, isAdmin, active = 'home', locked = fal
           </div>
         </div>
       </header>
+      {!locked && <NewsBand />}
       <main id="workspace-content" className={"wrap li-main-workspace" + (isAdmin ? " li-admin" : "")}>
         {active !== "home" && <div className="li-trail"><Link href="/">LIVE-IN domov</Link><span>{items.find(i => i.id === active)?.label || "Tímový priestor"}</span></div>}
         {children}
