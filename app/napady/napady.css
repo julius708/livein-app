@@ -1,0 +1,38 @@
+/* Nápady na obsah – mobile first, farby: zelená #173E2C, oranžová #F46D16, pozadie #F4F5F0, text #233E31 */
+.ideas-hero{background:#173E2C;color:#F6F2EA;border-radius:0 0 28px 28px;padding:26px 22px 24px;margin:0 -20px 16px}
+.ideas-hero .kick{font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#FF9A57}
+.ideas-hero h1{font-size:30px;margin:4px 0 6px}.ideas-hero p{margin:0;opacity:.85;font-size:15px;max-width:640px}
+.ideas{padding-bottom:110px;max-width:720px}
+.ideas .search{font-size:17px;padding:14px 16px;border-radius:18px;background:#fff}
+.ideas .chips{display:flex;gap:8px;overflow-x:auto;padding:12px 0 4px;margin:0 -20px;padding-left:20px;padding-right:20px;scrollbar-width:none}
+.ideas .chips button{flex-shrink:0;border-radius:999px;padding:9px 16px;font:inherit;font-size:14px;font-weight:700;border:1px solid var(--line);background:#fff;color:#173E2C;cursor:pointer}
+.ideas .chips button span{opacity:.55;margin-left:3px}.ideas .chips button.on{background:#173E2C;color:#fff;border-color:#173E2C}
+.ideas-list{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:14px}
+.ideas-list .idea{background:#fff;border:1px solid var(--line);border-radius:24px;padding:20px 20px 16px;box-shadow:0 4px 20px #173e2c08;color:#233E31}
+.ideas-list .idea h3{font-size:20px;color:#173E2C;line-height:1.25;margin:0}
+.ideas-list .desc{white-space:pre-line;line-height:1.55;margin:8px 0 0;font-size:16px}
+.ideas-list .meta{font-size:13px;color:var(--muted);margin:10px 0 0}
+.ideas-list .seg{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:#F4F5F0;border-radius:16px;padding:4px;margin-top:14px}
+.ideas-list .seg button{border:0;border-radius:12px;padding:10px 4px;font:inherit;font-size:13px;font-weight:700;color:var(--muted);background:transparent;cursor:pointer}
+.ideas-list .seg button.on{background:#fff;color:#173E2C;box-shadow:0 2px 8px #173e2c1a}
+.ideas-list .seg button.on.selected{background:#F46D16;color:#fff}.ideas-list .seg button.on.script_done{background:#173E2C;color:#fff}
+.ideas-list .seg button:disabled{opacity:.6}
+.ideas-list .script{margin-top:14px;background:#FFF1E6;border-radius:18px;padding:12px 14px}
+.ideas-list .script .sh{display:flex;justify-content:space-between;align-items:center;gap:10px;color:#A8420B}
+.ideas-list .script p{white-space:pre-line;line-height:1.55;margin:6px 0 0;font-size:15px}
+.ideas-list .noscript{font-size:13px;color:var(--muted);margin:12px 0 0}
+.ideas-list .empty{text-align:center;color:var(--muted);padding:40px 0}
+.ideas .mini{border:0;border-radius:999px;padding:6px 12px;font:inherit;font-size:13px;font-weight:700;background:#173E2C;color:#fff;cursor:pointer}
+.ideas .addbar{position:fixed;left:0;right:0;bottom:0;padding:14px 16px calc(14px + env(safe-area-inset-bottom));background:linear-gradient(180deg,#f4f5f000,#F4F5F0 40%);z-index:25;display:flex;justify-content:center}
+.ideas .addbar .add{width:100%;max-width:720px;font-size:19px;padding:17px 22px;border-radius:18px;box-shadow:0 14px 30px -10px rgba(244,109,22,.6)}
+.ideas .sheet-bg{position:fixed;inset:0;background:#173E2C66;z-index:40;display:flex;align-items:flex-end;justify-content:center}
+.ideas .sheet{background:#fff;width:100%;max-width:640px;border-radius:28px 28px 0 0;padding:22px 20px calc(20px + env(safe-area-inset-bottom));display:grid;gap:12px;max-height:92vh;overflow:auto}
+.ideas .sheet h2{font-size:24px;color:#173E2C;margin:0}
+.ideas .sheet label{display:grid;gap:6px;font-weight:700;font-size:14px;color:#173E2C}
+.ideas .sheet .f{font-size:17px;padding:13px 15px;border-radius:16px}
+.ideas .sheet .hint{margin:0;font-size:14px;color:var(--muted)}
+.ideas .sheet .row{display:flex;gap:10px;justify-content:flex-end;align-items:center}
+.ideas .sheet .ghost{border:0;background:none;font:inherit;font-weight:700;color:var(--muted);padding:12px 14px;cursor:pointer}
+.ideas .sheet .btn{font-size:17px;padding:14px 22px;flex:1}
+@media (min-width:640px){.ideas .sheet-bg{align-items:center}.ideas .sheet{border-radius:28px}.ideas .chips{margin:0;padding-left:0;padding-right:0}}
+@media (min-width:760px){.ideas-hero{margin:0 0 16px;border-radius:28px}}
