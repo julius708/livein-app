@@ -1,0 +1,20 @@
+# APP changelog – dodatok 2026-11-02
+
+## Prerábka appiek (vlna 2)
+- CS: prehľad zmeny v troch blokoch (príchody, odchody, úlohy), rýchle akcie hore, Moje úlohy nad tímom.
+- Ring: kratší úvod, návod zbalený. KB a Zaradenie: kratšie úvody, hľadanie hneď hore.
+- Menu „Aplikácie“ v hlavičke všetkých 7 appiek v štýle liquid glass; opravené prečnievanie dlaždíc.
+- Dlaždice nástrojov na domove v strednej veľkosti (ikona vľavo, jeden riadok popisu).
+- Funkcie Vercelu presunuté do regiónu Dublin (vedľa Supabase eu-west-1); indexy na guru.reservations.
+
+## LIVE-IN Guru ako widget (rovnaký typ ako Adam na webe)
+- `components/GuruWidget.js`: malá postavička dole na každej stránke, po kliknutí čitateľné okno, dá sa presúvať (poloha sa pamätá) a zbaliť, Esc zavrie. Žiadne skákanie, len jemné dýchanie.
+- Viditeľný len pre prihlásených aktívnych členov tímu (`me` v `Shell`), na stránke `/guru` ostáva veľký chat.
+- Hlas: `app/api/guru/tts/route.js` (ElevenLabs s časovaním znakov podľa vzoru `api/tts.js` asistenta Adama), ústa sa hýbu podľa hlások, slová sa odkrývajú so zvukom. Bez kľúčov číta prehliadač (sk-SK).
+- Ústa na rovnakej pozícii ako u Adama (ľavý okraj 39,58 %, horný 30,6 %, šírka 19,44 %, plátno 140×80), obrázok `public/guru.png` (720×1280, priehľadné pozadie). Kým obrázok chýba, zobrazí sa náhradná ikona.
+- Odpovede cez existujúci `/api/guru` (rovnaký model, pamäť, nástroje sql/search_kb). Systémový prompt: bez markdownu; kódy od dverí, keysafe a Wi-Fi heslá smie tímu uviesť (schválil Július 24. 10. 2026); citlivé financie (marže, platy, ziskovosť, bankové a osobné finančné údaje) odkáže na Júliusa alebo Ninu. Tón nezmenený.
+- Pomocné funkcie v `lib/guru-widget-core.js` (strip markdownu, visémy, časová os, clamp, text pre hlas) s testami `tests/guru-widget-core.test.mjs` (`npm test`, node:test).
+- Premenné vo Verceli (nastavuje Július): `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID`, voliteľne `ELEVENLABS_MODEL`.
+
+## Súbory
+`components/GuruWidget.js`, `app/guru/guru-widget.css`, `app/api/guru/tts/route.js`, `app/api/guru/route.js` (prompt), `lib/guru-widget-core.js`, `tests/guru-widget-core.test.mjs`, `components/Shell.js`, `package.json` (skript test), `app/home.css`, `app/workspace.css`, `vercel.json`.

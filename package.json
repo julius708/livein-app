@@ -1,7 +1,7 @@
 {
   "name": "livein-app",
   "private": true,
-  "scripts": { "dev": "next dev", "build": "next build", "start": "next start" },
+  "scripts": { "dev": "next dev", "build": "next build", "start": "next start", "test": "node --test tests/*.test.mjs" },
   "dependencies": {
     "@supabase/ssr": "0.5.2",
     "@supabase/supabase-js": "2.45.4",
