@@ -220,7 +220,7 @@ export default function GuruWidget({ name = '' }) {
     <div className={'gw-fig' + (open ? ' in' : '')} ref={figRef} title={open ? undefined : 'Klikni a opýtaj sa Gura · chyť a presuň'}
       onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} onClick={() => { if (open && speaking.current) stopSpeech(true) }}>
       <div className="gw-bob"><div className="gw-nod">
-        {imgOk ? <img src="/guru.png" alt="LIVE-IN Guru" draggable="false" onError={() => setImgOk(false)} /> : <div className="gw-fallback" aria-hidden="true">🧠</div>}
+        {imgOk ? <img src="/guru-v3.png" alt="LIVE-IN Guru" draggable="false" onError={() => setImgOk(false)} /> : <div className="gw-fallback" aria-hidden="true">🧠</div>}
         {imgOk && <canvas className="gw-mouth" width={MOUTH.canvasW} height={MOUTH.canvasH} ref={cvRef} style={{ left: MOUTH.left + '%', top: MOUTH.top + '%', width: MOUTH.width + '%' }} />}
       </div></div>
     </div>

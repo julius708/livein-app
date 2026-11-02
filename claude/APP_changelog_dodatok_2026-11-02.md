@@ -11,7 +11,7 @@
 - `components/GuruWidget.js`: malá postavička dole na každej stránke, po kliknutí čitateľné okno, dá sa presúvať (poloha sa pamätá) a zbaliť, Esc zavrie. Žiadne skákanie, len jemné dýchanie.
 - Viditeľný len pre prihlásených aktívnych členov tímu (`me` v `Shell`), na stránke `/guru` ostáva veľký chat.
 - Hlas: `app/api/guru/tts/route.js` (ElevenLabs s časovaním znakov podľa vzoru `api/tts.js` asistenta Adama), ústa sa hýbu podľa hlások, slová sa odkrývajú so zvukom. Bez kľúčov číta prehliadač (sk-SK).
-- Ústa na rovnakej pozícii ako u Adama (ľavý okraj 39,58 %, horný 30,6 %, šírka 19,44 %, plátno 140×80), obrázok `public/guru.png` (720×1280, priehľadné pozadie). Kým obrázok chýba, zobrazí sa náhradná ikona.
+- Ústa na rovnakej pozícii ako u Adama (ľavý okraj 39,58 %, horný 30,6 %, šírka 19,44 %, plátno 140×80), obrázok `public/guru-v3.png` (720×1280, priehľadné pozadie). Finálna postava Gura (zelené tričko LIVE-IN, okuliare), názov s verziou kvôli cache.
 - Odpovede cez existujúci `/api/guru` (rovnaký model, pamäť, nástroje sql/search_kb). Systémový prompt: bez markdownu; kódy od dverí, keysafe a Wi-Fi heslá smie tímu uviesť (schválil Július 24. 10. 2026); citlivé financie (marže, platy, ziskovosť, bankové a osobné finančné údaje) odkáže na Júliusa alebo Ninu. Tón nezmenený.
 - Pomocné funkcie v `lib/guru-widget-core.js` (strip markdownu, visémy, časová os, clamp, text pre hlas) s testami `tests/guru-widget-core.test.mjs` (`npm test`, node:test).
 - Premenné vo Verceli (nastavuje Július): `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID`, voliteľne `ELEVENLABS_MODEL`.
