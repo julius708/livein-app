@@ -1,5 +1,11 @@
 {
   "crons": [
-    { "path": "/api/cron/asana-kb", "schedule": "35 4 * * *" }
+    {
+      "path": "/api/cron/asana-kb",
+      "schedule": "35 4 * * *"
+    }
+  ],
+  "regions": [
+    "dub1"
   ]
 }
