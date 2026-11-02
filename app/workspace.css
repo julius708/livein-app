@@ -127,3 +127,5 @@ body{background-image:radial-gradient(ellipse 70% 700px at 0% 0%,#c4d9c9bf,trans
 .newsticker .nt-foot{font-size:12px;color:#9BC4AE;margin-top:4px}
 @media (prefers-reduced-motion:reduce){.newsticker .nt-run{animation:none}.newsticker .nt-track{overflow-x:auto}}
 @media (max-width:600px){.newsticker .nt-bar{padding:0 12px;height:32px}.newsticker .nt-lb{font-size:10px;padding-right:10px;margin-right:10px}.newsticker .nt-it{font-size:12px}.newsticker .nt-list{padding:8px 12px 14px}}
+.li-bell{display:inline-flex;align-items:center;gap:4px;text-decoration:none;color:#F6F2EA;font-size:16px;padding:6px 10px;border-radius:999px;background:#ffffff14;border:1px solid #ffffff25}
+.li-bell b{font-size:12px;background:#F46D16;color:#fff;border-radius:999px;padding:1px 7px}

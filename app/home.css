@@ -159,3 +159,13 @@ i.d{background:var(--ch)}
   .fold-b>.dash,.fold-b>.card.mt,.fold-b>.nums{margin-top:8px}
   .tools .sec{margin-top:16px}
 }
+/* nástenka: pridanie oznamu, adresovanie, zvýraznenie */
+.notes .nh{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.notes .nh .mini{margin-left:auto}
+.notes .addnote{display:grid;gap:8px;margin:10px 0 12px;padding:12px;border-radius:14px;background:#F4F5F0}
+.notes .addnote .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.notes .forwho small{color:var(--muted);font-weight:700;font-size:12px}
+.notes .people{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.notes .people button{font:inherit;font-size:12px;font-weight:700;padding:5px 10px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--ch);cursor:pointer}
+.notes .people button.on{background:var(--ch);color:#fff;border-color:var(--ch)}
+.notes li.forme{background:#FFF1E6;border-radius:12px;padding-left:10px}.notes li.fresh{box-shadow:inset 3px 0 0 var(--o)}
+.notes .tag{font-style:normal;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;background:var(--o);color:#fff;border-radius:999px;padding:2px 7px;margin-left:8px;vertical-align:middle}

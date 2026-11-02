@@ -4,6 +4,7 @@ import { initials } from '@/lib/auth'
 import FeedbackForm from '@/components/FeedbackForm'
 import PullToRefresh, { RefreshButton } from '@/components/Refresh'
 import NewsBand from '@/components/NewsBand'
+import MentionBadge from '@/components/MentionBadge'
 import '@/app/guru/guru.css'
 
 export default function Shell({ me, user, isAdmin, active = 'home', locked = false, hideFooter = false, children }) {
@@ -31,6 +32,7 @@ export default function Shell({ me, user, isAdmin, active = 'home', locked = fal
           <div className="who">
             <div className="av" aria-hidden="true">{initials(name)}</div>
             <div className="nm">{name}<small>{me && me.title ? me.title : (user ? user.email : '')}</small></div>
+            {!locked && <MentionBadge />}
             {!locked && <RefreshButton />}
             <form action="/auth/signout" method="post"><button className="out" type="submit">Odhlásiť</button></form>
           </div>

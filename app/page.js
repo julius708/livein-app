@@ -36,7 +36,7 @@ export default async function Home({ searchParams }) {
 
   const today = todayBA()
   const since = new Date(Date.parse(today) - 45 * 864e5).toISOString().slice(0, 10)
-  const [{ data: cfg }, { data: ov }, { data: hf }, { data: hd }, { data: hw }, { data: noteRows }] = await Promise.all([
+  const [{ data: cfg }, { data: ov }, { data: hf }, { data: hd }, { data: hw }, { data: noteRows }, { data: nums }, { data: myMentions }, { data: teamRows }] = await Promise.all([
     s.from('config').select('value').eq('key', 'module_urls').maybeSingle(),
     s.rpc('today_overview'),
     s.rpc('home_facts'),
@@ -44,8 +44,14 @@ export default async function Home({ searchParams }) {
     s.rpc('home_work'),
     // nástenka: oznamy za posledných 45 dní (aj na zajtra), najnovšie hore
     s.from('board_notes').select('id,text,author_name,date,created_at').is('removed_at', null).gte('date', since).order('date', { ascending: false }).order('created_at', { ascending: false }).limit(60),
+    s.rpc('home_numbers'),
+    s.from('board_note_mentions').select('note_id,seen_at').ilike('email', user.email),
+    s.from('app_users').select('name,email').eq('active', true).order('name'),
   ])
   const notes = noteRows || []
+  const mentionIds = (myMentions || []).map((m) => m.note_id)
+  const unseen = (myMentions || []).filter((m) => !m.seen_at).map((m) => m.note_id)
+  const team = (teamRows || []).filter((t) => t.email && t.email.toLowerCase() !== user.email.toLowerCase())
   // Údržba: opravy z Asany (Damages Reporting) + ručné opravy + okná, kedy je byt voľný na opravu
   let mnt = { issues: [], flats: [] }
   let members = []
@@ -65,10 +71,15 @@ export default async function Home({ searchParams }) {
   const dateLabel = now.toLocaleDateString('sk-SK', { weekday: 'long', day: 'numeric', month: 'long' })
   const facts = (hf && hf.facts) || {}
   const note = hf && hf.note && hf.note.text ? hf.note.text : ''
+  // živé čísla z rezervácií Guesty (obnova každú hodinu); ručné číslo v nastaveniach má prednosť
   const manualGuests = Number(facts.guests_total) || 0
-  const guestsTotal = manualGuests || (hf ? Number(hf.guests_logged) || 0 : 0)
+  const live = nums && typeof nums === 'object' ? nums : null
+  const guestsTotal = manualGuests || (live ? Number(live.guests_since_2025) || 0 : (hf ? Number(hf.guests_logged) || 0 : 0))
   const guestsPlus = manualGuests ? '+' : ''
-  const guestsLabel = manualGuests ? 'hostí sme doteraz ubytovali' : 'hostí evidovaných v systéme od augusta 2026'
+  const guestsLabel = manualGuests ? 'hostí sme doteraz ubytovali' : live ? 'hostí sme ubytovali od 1. 1. 2025' : 'hostí evidovaných v systéme od augusta 2026'
+  const pctChange = (a, b) => (b > 0 ? Math.round(((a - b) / b) * 100) : null)
+  const staysGrowth = live ? pctChange(Number(live.stays_ytd), Number(live.stays_ytd_prev)) : null
+  const nightsGrowth = live ? pctChange(Number(live.nights_ytd), Number(live.nights_ytd_prev)) : null
   const startApts = Number(facts.start_apartments || facts.apartments_start) || 0
   const goal = Number(facts.goal) || 0
   const growth = startApts && hf ? Math.round(((hf.listings - startApts) / startApts) * 100) : 0
@@ -160,7 +171,7 @@ export default async function Home({ searchParams }) {
               </div>
             )}
           </div>
-          <NotesBoard notes={notes} today={today} />
+          <NotesBoard notes={notes} today={today} mentionIds={mentionIds} unseen={unseen} team={team} />
         </section>
       )}
 
@@ -211,6 +222,9 @@ export default async function Home({ searchParams }) {
           <div className="ngrid">
             <div><div className="big"><CountUp value={guestsTotal} suffix={guestsPlus} /></div><div className="lab">{guestsLabel}</div></div>
             <div><div className="big o"><CountUp value={hf.listings} /></div><div className="lab">nehnuteľností dnes</div></div>
+            {live && Number(live.stays_ytd) > 0 ? <div><div className="big"><CountUp value={Number(live.stays_ytd)} /></div><div className="lab">pobytov tento rok{staysGrowth != null ? ` · ${staysGrowth >= 0 ? '+' : ''}${staysGrowth} % oproti vlaňajšku` : ''}</div></div> : null}
+            {live && Number(live.nights_ytd) > 0 ? <div><div className="big"><CountUp value={Number(live.nights_ytd)} /></div><div className="lab">obsadených nocí tento rok{nightsGrowth != null ? ` · ${nightsGrowth >= 0 ? '+' : ''}${nightsGrowth} %` : ''}</div></div> : null}
+            {live && Number(live.guests_in_house) > 0 ? <div><div className="big o"><CountUp value={Number(live.guests_in_house)} /></div><div className="lab">hostí je práve u nás</div></div> : null}
             {startApts ? <div><div className="big"><CountUp value={startApts} /></div><div className="lab">nehnuteľností {facts.start_label || 'na začiatku'}</div></div> : null}
             {goal ? <div><div className="big"><CountUp value={goal} suffix="+" /></div><div className="lab">náš cieľ{facts.goal_year ? ` do roku ${facts.goal_year}` : ''}</div></div> : null}
           </div>
