@@ -171,11 +171,12 @@ i.d{background:var(--ch)}
 .notes .tag{font-style:normal;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;background:var(--o);color:#fff;border-radius:999px;padding:2px 7px;margin-left:8px;vertical-align:middle}
 /* nástroje hore, kompaktné dlaždice */
 .toolsTop{margin-top:16px}
-.tiles.compact{grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
-.tiles.compact .tile{min-height:0;padding:14px 16px;gap:6px}
-.tiles.compact .tile .ic{width:38px;height:38px;font-size:20px;border-radius:12px}
-.tiles.compact .tile h3{font-size:15px}
-.tiles.compact .tile p{font-size:12.5px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.tiles.compact .tile .st{font-size:11px}
+/* nástroje na domove: stredná veľkosť, ikona vľavo, jeden riadok popisu (J. Hönsch, 2. 11. 2026) */
+.li-main-workspace .tiles.compact{grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;margin-top:10px}
+.li-main-workspace .tiles.compact .tile:not(.soon){min-height:0;padding:12px 14px;display:grid;grid-template-columns:38px 1fr;column-gap:12px;row-gap:2px;align-items:center;gap:2px 12px}
+.li-main-workspace .tiles.compact .tile .ic{width:38px;height:38px;font-size:19px;border-radius:12px;grid-row:1 / span 2}
+.li-main-workspace .tiles.compact .tile h3{font-size:14.5px;line-height:1.2;margin:0}
+.li-main-workspace .tiles.compact .tile p{font-size:12.5px;line-height:1.3;margin:0;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.li-main-workspace .tiles.compact .tile .st{display:none}
 .hero2{min-height:230px}
-@media (max-width:760px){.hero2{min-height:170px}.hero2 .in{padding:22px 20px}.hero2 p{display:none}.tiles.compact{grid-template-columns:repeat(2,1fr);gap:10px}.tiles.compact .tile p{display:none}.tiles.compact .tile{padding:12px}.tiles.compact .tile .st{display:none}}
+@media (max-width:760px){.hero2{min-height:170px}.hero2 .in{padding:22px 20px}.hero2 p{display:none}.li-main-workspace .tiles.compact{grid-template-columns:repeat(2,1fr);gap:8px}.li-main-workspace .tiles.compact .tile p{display:none}.li-main-workspace .tiles.compact .tile:not(.soon){padding:10px 12px}.li-main-workspace .tiles.compact .tile .ic{width:34px;height:34px;font-size:17px}}
