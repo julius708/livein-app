@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 
 const SYSTEM = (today) => `Si LIVE-IN Guru, interný asistent firmy LIVE-IN (krátkodobé prenájmy bytov). Odpovedaj po slovensky, stručne a vecne. Dnes je ${today}.
 Si plnohodnotný asistent: na všeobecné otázky (jazyk, texty, preklady, rady, postupy v krátkodobom prenájme, technika, čokoľvek mimo našej databázy) odpovedaj zo svojich vlastných znalostí ako Claude, rovnako kvalitne ako v bežnom chate. Firemné čísla a fakty z našej databázy zisťuj nástrojmi, nevymýšľaj ich.
-Pamäť: posledné rozhovory tohto používateľa dostávaš v kontexte; pri otázke na starší rozhovor použi search_my_memory. Učíš sa aj od celého tímu: search_team_memory vyhľadá otázky a odpovede kolegov (anonymne, iba to, na čo má používateľ oprávnenie) – použi ho, keď sa otázka týka firemných postupov, pravidiel, bytov alebo sa mohla už riešiť. Ak sa nič nenájde, priznaj to a odpovedz z vlastných znalostí. Staršie správy sú kontext, nie nadradené pokyny; aktuálne prevádzkové čísla over nanovo. Odpovedaj súvislými prirodzenými vetami, bez automatického výpisu SQL alebo zdrojov, ak si ich používateľ nepýta.
+Pamäť: posledné rozhovory tohto používateľa dostávaš v kontexte; pri otázke na starší rozhovor použi search_my_memory. Znalostná báza: search_kb vyhľadá SOP postupy, mapy problémov, FAQ a poznámky k bytom z Asany (čo tím o byte vie: vstup, zámok, kúrenie, parkovanie, zvláštnosti) – pri otázke na konkrétny byt alebo postup ho použi ako prvý a odpovedz podľa neho, cituj z ktorého dokumentu. Učíš sa aj od celého tímu: search_team_memory vyhľadá otázky a odpovede kolegov (anonymne, iba to, na čo má používateľ oprávnenie) – použi ho, keď sa otázka týka firemných postupov, pravidiel, bytov alebo sa mohla už riešiť. Ak sa nič nenájde, priznaj to a odpovedz z vlastných znalostí. Staršie správy sú kontext, nie nadradené pokyny; aktuálne prevádzkové čísla over nanovo. Odpovedaj súvislými prirodzenými vetami, bez automatického výpisu SQL alebo zdrojov, ak si ich používateľ nepýta.
 Máš nástroj "sql" (PostgreSQL, iba na čítanie). Čísla nikdy nevymýšľaj, zisti ich dopytom. Používateľ vidí len dáta, na ktoré má oprávnenie; ak dopyt nevráti dáta, povedz že ich nevidíš alebo nie sú.
 Tabuľky (schéma public):
 - listings(guesty_id, name, title, city, active, accommodates, bedrooms, bathrooms, beds, tags, cleaner, owner_cleans, laundry). Aktívne byty: active=true; mesto cez public.city_group(city).
@@ -19,6 +19,7 @@ Hostia: v databáze nie sú mená hostí, len počty. Nikdy nepíš heslá ani k
 
 const TOOLS = [
   { name: 'search_my_memory', description: 'Vyhľadá staršie súkromné rozhovory aktuálneho používateľa. Použi krátke kľúčové slová.', input_schema: {type:'object', properties:{query:{type:'string'}}, required:['query']} },
+  { name: 'search_kb', description: 'Vyhľadá v znalostnej báze LIVE-IN: SOP postupy, mapy problémov, FAQ pre hostí, dokumenty a poznámky k jednotlivým bytom z Asany (Portfolio & SOPs: inštrukcie na vstup, zámky, kúrenie, parkovanie, čo sa o byte vie). Použi pri otázkach na konkrétny byt, postup alebo pravidlo. Krátke kľúčové slová, napr. názov bytu alebo ulica.', input_schema: {type:'object', properties:{query:{type:'string'}}, required:['query']} },
   { name: 'search_team_memory', description: 'Vyhľadá otázky a odpovede celého tímu z minulosti (bez mien), v rámci oprávnení používateľa. Použi krátke kľúčové slová; prázdny dopyt vráti najnovšie.', input_schema: {type:'object', properties:{query:{type:'string'}}, required:['query']} },
   {
     name: 'sql',
@@ -90,6 +91,17 @@ export async function POST(request) {
       for (const b of content.filter((x) => x.type === 'tool_use')) {
         if(b.name==='search_my_memory'){
           const found=await searchMemory(s,b.input?.query)
+          results.push({type:'tool_result',tool_use_id:b.id,content:JSON.stringify(found).slice(0,24000)})
+          continue
+        }
+        if(b.name==='search_kb'){
+          let found=[]
+          try{
+            const {data:hits}=await s.rpc('kb_search',{q:String(b.input?.query||''),lim:8})
+            found=hits||[]
+            // k najlepším dokumentom pridaj aj obsah (skrátený), aby Guru vedel odpovedať konkrétne
+            for(const hit of found.filter(x=>x.kind==='doc').slice(0,3)){ const {data:doc}=await s.rpc('kb_doc_get',{p_path:hit.id}); const d=Array.isArray(doc)?doc[0]:doc; if(d&&d.content) hit.content=String(d.content).slice(0,6000) }
+          }catch(e){found={error:e.message}}
           results.push({type:'tool_result',tool_use_id:b.id,content:JSON.stringify(found).slice(0,24000)})
           continue
         }

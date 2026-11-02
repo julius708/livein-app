@@ -1,0 +1,5 @@
+{
+  "crons": [
+    { "path": "/api/cron/asana-kb", "schedule": "35 4 * * *" }
+  ]
+}
