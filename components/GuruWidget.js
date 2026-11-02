@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'react'
 import { MOUTH, stripMarkdown, visAt, timelineFrom, clampPos } from '@/lib/guru-widget-core'
 
 const CHIPS = ['Čo dnes potrebuje moju pozornosť?', 'Koľko máme dnes príchodov a odchodov?', 'Aký je kód od dverí na byte…', 'Ako riešime neskorý check-in?', 'Napíš hosťovi odpoveď na sťažnosť na hluk']
-const HELLO = 'Ahoj, som Guru. Opýtaj sa ma na byty, rezervácie alebo postupy.'
+const HELLO = 'Ahoj, som LIVE-IN Guru. Opýtaj sa ma na byty, rezervácie alebo postupy.'
 const GREETING = 'Ahoj, som LIVE-IN Guru. Opýtaj sa na byty, rezervácie, kódy, postupy alebo čokoľvek iné. Môžeš aj hovoriť.'
 const ERR = 'Prepáč, teraz sa mi nepodarilo odpovedať. Skús to o chvíľu znova.'
 const SILENT = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA='
@@ -217,7 +217,7 @@ export default function GuruWidget({ name = '' }) {
 
   const first = (name || '').split(' ')[0]
   const figure = (
-    <div className={'gw-fig' + (open ? ' in' : '')} ref={figRef} title={open ? undefined : 'Klikni a opýtaj sa Gura · chyť a presuň'}
+    <div className={'gw-fig' + (open ? ' in' : '')} ref={figRef} title={open ? undefined : 'Klikni a opýtaj sa LIVE-IN Guru · chyť a presuň'}
       onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} onClick={() => { if (open && speaking.current) stopSpeech(true) }}>
       <div className="gw-bob"><div className="gw-nod">
         {imgOk ? <img src="/guru-v3.png" alt="LIVE-IN Guru" draggable="false" onError={() => setImgOk(false)} /> : <div className="gw-fallback" aria-hidden="true">🧠</div>}
@@ -233,12 +233,12 @@ export default function GuruWidget({ name = '' }) {
           <div className="gw-col">
             <button type="button" className={'gw-hello' + (hello ? ' show' : '')} onClick={openWin}>{HELLO}</button>
             {figure}
-            <button type="button" className="gw-pill" onClick={openWin}>Opýtať sa Gura</button>
+            <button type="button" className="gw-pill" onClick={openWin}>Opýtať sa LIVE-IN Guru</button>
           </div>
         </div>
       )}
       {open && (
-        <div className="gw-win" role="dialog" aria-label="Chat s Guruom" onKeyDown={(e) => { if (e.key === 'Escape') closeWin() }}>
+        <div className="gw-win" role="dialog" aria-label="Chat s LIVE-IN Guru" onKeyDown={(e) => { if (e.key === 'Escape') closeWin() }}>
           <div className="gw-head">
             {figure}
             <div className="gw-ht"><b>LIVE-IN Guru</b><span>Interný asistent tímu{first ? ` · ${first}` : ''}</span></div>
