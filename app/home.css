@@ -169,3 +169,13 @@ i.d{background:var(--ch)}
 .notes .people button.on{background:var(--ch);color:#fff;border-color:var(--ch)}
 .notes li.forme{background:#FFF1E6;border-radius:12px;padding-left:10px}.notes li.fresh{box-shadow:inset 3px 0 0 var(--o)}
 .notes .tag{font-style:normal;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;background:var(--o);color:#fff;border-radius:999px;padding:2px 7px;margin-left:8px;vertical-align:middle}
+/* nástroje hore, kompaktné dlaždice */
+.toolsTop{margin-top:16px}
+.tiles.compact{grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.tiles.compact .tile{min-height:0;padding:14px 16px;gap:6px}
+.tiles.compact .tile .ic{width:38px;height:38px;font-size:20px;border-radius:12px}
+.tiles.compact .tile h3{font-size:15px}
+.tiles.compact .tile p{font-size:12.5px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tiles.compact .tile .st{font-size:11px}
+.hero2{min-height:230px}
+@media (max-width:760px){.hero2{min-height:170px}.hero2 .in{padding:22px 20px}.hero2 p{display:none}.tiles.compact{grid-template-columns:repeat(2,1fr);gap:10px}.tiles.compact .tile p{display:none}.tiles.compact .tile{padding:12px}.tiles.compact .tile .st{display:none}}

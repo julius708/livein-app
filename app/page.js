@@ -129,6 +129,15 @@ export default async function Home({ searchParams }) {
         </div>
       </section>
 
+      {ready.length > 0 && (
+        <section className="toolsTop" aria-label="Tvoje nástroje">
+          <div className="sec"><h2>Tvoje nástroje</h2><span>{ready.length}</span></div>
+          <div className="tiles compact">
+            {ready.map((m) => <Tile key={m.id} href={m.url} icon={m.icon} title={m.title} desc={m.desc} />)}
+          </div>
+        </section>
+      )}
+
       {(note || isAdmin) && (
         <section className={note ? 'pin' : undefined} style={note ? undefined : { marginTop: 12 }}>
           {note && (
@@ -178,7 +187,7 @@ export default async function Home({ searchParams }) {
       )}
 
       {hd && (
-        <Fold id="dash" open title="Rezervácie a portfólio" hint={`${hd.arrivals_list?.length || 0} príchodov · ${hd.departures_list?.length || 0} odchodov`}>
+        <Fold id="dash" title="Rezervácie a portfólio" hint={`${hd.arrivals_list?.length || 0} príchodov · ${hd.departures_list?.length || 0} odchodov`}>
         <div className="dash">
           <TodayBoard arrivals={hd.arrivals_list || []} departures={hd.departures_list || []} />
           <section className="card pf" aria-label="Portfólio">
@@ -241,32 +250,6 @@ export default async function Home({ searchParams }) {
         </Fold>
       )}
 
-      <div className="tools">
-      {ready.length > 0 && (
-        <>
-          <div className="sec"><h2>Tvoje nástroje</h2><span>{ready.length}</span></div>
-          <div className="tiles">
-            {ready.map((m) => <Tile key={m.id} href={m.url} icon={m.icon} title={m.title} desc={m.desc} />)}
-          </div>
-        </>
-      )}
-
-      {soon.length > 0 && (
-        <>
-          <div className="sec"><h2>Pripravujeme</h2><span>{soon.length}</span></div>
-          <div className="tiles">
-            {soon.map((m) => (
-              <div className="tile soon" key={m.id}>
-                <div className="ic" aria-hidden="true">{m.icon}</div>
-                <h3>{m.title}</h3>
-                <p>{m.desc}</p>
-                <div className="st">Pripravuje sa</div>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-      </div>
      </div>
     </Shell>
   )

@@ -5,6 +5,7 @@ import FeedbackForm from '@/components/FeedbackForm'
 import PullToRefresh, { RefreshButton } from '@/components/Refresh'
 import NewsBand from '@/components/NewsBand'
 import MentionBadge from '@/components/MentionBadge'
+import AppsNav from '@/components/AppsNav'
 import '@/app/guru/guru.css'
 
 export default function Shell({ me, user, isAdmin, active = 'home', locked = false, hideFooter = false, children }) {
@@ -23,6 +24,7 @@ export default function Shell({ me, user, isAdmin, active = 'home', locked = fal
       <header className="li-masthead">
         <div className="li-masthead-inner">
           <a className="li-brand-link" href="/" aria-label="Domov"><img src="/logo.png" alt="LIVE-IN" /><span className="li-product">Tímový priestor</span></a>
+          {!locked && <AppsNav me={me} current={active === 'home' ? 'home' : active} />}
           {!locked && (
             <nav className="li-nav" aria-label="Hlavná navigácia">
               {items.map((i) => <Link key={i.id} href={i.href} aria-current={active === i.id ? 'page' : undefined} className={active === i.id ? 'on' : ''}>{i.label}</Link>)}
