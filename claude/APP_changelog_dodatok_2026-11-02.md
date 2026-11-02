@@ -29,3 +29,7 @@
 - Hlava sa pri reči jemne hýbe (pomalé kolísanie, bez trasenia).
 - Režim widgetu v `/api/guru` (`mode: 'widget'`): odpovede 2 až 4 vety, max 700 tokenov, najviac 4 kroky nástrojov. Text odpovede sa zobrazí hneď, hlas ide zvlášť.
 - Postava o pätinu väčšia (150 px, v okne 178 px, mobil 118 px).
+
+## Guru: hlasový vstup cez nahrávku a prepis
+- `app/api/guru/stt/route.js`: nahrávka z mikrofónu (MediaRecorder) sa prepíše cez ElevenLabs Speech to Text (scribe_v1, slovenčina). Funguje v Chrome, Safari aj na iPhone; rozpoznávanie reči v prehliadači ostáva len ako záloha.
+- Klik na mikrofón začne nahrávať (max 20 s), druhý klik odošle. Jasné hlášky pri zablokovanom mikrofóne alebo zlyhaní prepisu.

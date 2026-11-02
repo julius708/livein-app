@@ -244,21 +244,63 @@ export default function GuruWidget({ name = '' }) {
     openWin()
   }
 
-  /* ---------- mikrofón ---------- */
+  /* ---------- mikrofón: nahrávka → prepis na serveri (ElevenLabs), záloha rozpoznávanie v prehliadači ---------- */
   const SR = typeof window !== 'undefined' ? (window.SpeechRecognition || window.webkitSpeechRecognition) : null
-  function mic() {
+  const canRecord = typeof window !== 'undefined' && !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder)
+  const micOk = canRecord || !!SR
+  const recorder = useRef(null), chunks = useRef([]), recTimer = useRef(null)
+  function note(text) { setMsgs((old) => [...old.filter((m) => !m.thinking), { id: uuid(), role: 'a', text }]); scrollEnd() }
+  async function transcribe(blob) {
+    const fd = new FormData(); fd.append('audio', blob, blob.type.includes('mp4') ? 'audio.mp4' : 'audio.webm')
+    const r = await fetch('/api/guru/stt', { method: 'POST', body: fd, signal: AbortSignal.timeout(30000) })
+    const j = await r.json().catch(() => ({}))
+    if (r.status === 503) throw new Error('nokey')
+    if (!r.ok || !j.ok) throw new Error('stt')
+    return (j.text || '').trim()
+  }
+  function stopRecording() { try { recorder.current && recorder.current.state !== 'inactive' && recorder.current.stop() } catch {} }
+  async function mic() {
     unlock()
-    if (recRef.current) { try { recRef.current.stop() } catch {} return }
-    if (!SR) return
+    if (rec) { if (recorder.current) stopRecording(); else if (recRef.current) { try { recRef.current.stop() } catch {} } return }
     stopSpeech(true)
+    if (canRecord) {
+      let stream
+      try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }) }
+      catch (e) { note(e && e.name === 'NotAllowedError' ? 'Prehliadač blokuje mikrofón. Povoľ ho v nastaveniach stránky (ikona zámku pri adrese) a skús znova.' : 'Mikrofón sa nepodarilo spustiť. Skontroluj, či ho nepoužíva iná aplikácia.'); return }
+      const mime = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus'].find((m) => window.MediaRecorder.isTypeSupported(m)) || ''
+      let mr
+      try { mr = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined) } catch { stream.getTracks().forEach((t) => t.stop()); note('Nahrávanie v tomto prehliadači nejde. Napíš otázku, prosím.'); return }
+      chunks.current = []; recorder.current = mr; setRec(true); setQ('')
+      mr.ondataavailable = (e) => { if (e.data && e.data.size) chunks.current.push(e.data) }
+      mr.onstop = async () => {
+        clearTimeout(recTimer.current); setRec(false); recorder.current = null
+        stream.getTracks().forEach((t) => t.stop())
+        const blob = new Blob(chunks.current, { type: mr.mimeType || mime || 'audio/webm' })
+        if (blob.size < 800) { note('Nič som nepočul. Klikni na mikrofón, povedz otázku a klikni znova.'); return }
+        setQ('Prepisujem…')
+        try {
+          const text = await transcribe(blob)
+          setQ('')
+          if (!text) { note('Nerozumel som. Skús to povedať ešte raz, bližšie k mikrofónu.'); return }
+          setQ(text); ask(text)
+        } catch (e) {
+          setQ('')
+          if (e && e.message === 'nokey') note('Prepis hlasu ešte nie je zapnutý (chýba kľúč ElevenLabs). Napíš otázku, prosím.')
+          else note('Prepis hlasu teraz zlyhal. Skús znova alebo napíš otázku.')
+        }
+      }
+      mr.start()
+      recTimer.current = setTimeout(stopRecording, 20000) // najviac 20 s na jednu otázku
+      return
+    }
+    if (!SR) return
     const r = new SR(); r.lang = 'sk-SK'; r.interimResults = false; r.maxAlternatives = 1
     recRef.current = r; setRec(true)
     let done = false
     const finish = () => { done = true; setRec(false); recRef.current = null; clearTimeout(watchdog) }
-    // poistka: ak rozpoznávanie do 12 s nič nevráti (Safari), ukonči ho, aby sa nič nezaseklo
     const watchdog = setTimeout(() => { if (!done) { try { r.abort() } catch {} finish() } }, 12000)
     r.onresult = (e) => { const t = e.results[0][0].transcript; finish(); setQ(t); ask(t) }
-    r.onerror = () => finish()
+    r.onerror = (e) => { finish(); note(e && e.error === 'not-allowed' ? 'Prehliadač blokuje mikrofón. Povoľ ho v nastaveniach stránky.' : 'Rozpoznávanie reči zlyhalo. Napíš otázku, prosím.') }
     r.onend = () => finish()
     try { r.start() } catch { finish() }
   }
@@ -306,8 +348,8 @@ export default function GuruWidget({ name = '' }) {
             {CHIPS.map((c) => <button key={c} type="button" className="gw-chip" disabled={busy} onClick={() => ask(c)}>{c}</button>)}
           </div>
           <form className="gw-form" autoComplete="off" onSubmit={(e) => { e.preventDefault(); ask(q) }}>
-            <input ref={inputRef} value={q} onChange={(e) => setQ(e.target.value)} maxLength={4000} placeholder="Napíš alebo povedz…" aria-label="Tvoja otázka" />
-            {SR && <button type="button" className={'gw-ib' + (rec ? ' rec' : '')} aria-label="Hovoriť" onClick={mic}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" /></svg></button>}
+            <input ref={inputRef} value={q} onChange={(e) => setQ(e.target.value)} maxLength={4000} placeholder={rec ? 'Počúvam… klikni na mikrofón, keď dopovieš' : 'Napíš alebo povedz…'} aria-label="Tvoja otázka" />
+            {micOk && <button type="button" className={'gw-ib' + (rec ? ' rec' : '')} aria-label={rec ? 'Zastaviť a odoslať' : 'Hovoriť'} title={rec ? 'Klikni, keď dopovieš' : 'Klikni a hovor, potom klikni znova'} onClick={mic}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" /></svg></button>}
             <button type="submit" className="gw-ib send" aria-label="Odoslať" disabled={busy}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg></button>
           </form>
           <div className="gw-foot">Len pre tím LIVE-IN. Celá história a nastavenia: <a href="/guru">stránka Guru</a>.</div>
