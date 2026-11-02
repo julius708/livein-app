@@ -31,7 +31,7 @@ export default function GuruWidget({ name = '' }) {
   const [pos, setPos] = useState({ r: 22, b: 14 })
   const [mobile, setMobile] = useState(false)
 
-  const hostRef = useRef(null), figRef = useRef(null), cvRef = useRef(null), msgsRef = useRef(null), inputRef = useRef(null)
+  const hostRef = useRef(null), figRef = useRef(null), cvRef = useRef(null), jawRef = useRef(null), msgsRef = useRef(null), inputRef = useRef(null)
   const audio = useRef(null), TL = useRef(null), speaking = useRef(false), sim = useRef(false), mouth = useRef({ o: 0, w: 0 })
   const primed = useRef(false), greeted = useRef(false), revealId = useRef(null), recRef = useRef(null), mountedRef = useRef(false)
 
@@ -52,6 +52,7 @@ export default function GuruWidget({ name = '' }) {
   }, [])
 
   /* ---------- ústa: kreslenie v slučke, plynulé (lerp), bez trasenia ---------- */
+  const lastIdx = useRef(-1)
   useEffect(() => {
     let raf
     const loop = () => {
@@ -62,14 +63,18 @@ export default function GuruWidget({ name = '' }) {
         if (speaking.current) {
           if (!sim.current && TL.current && audio.current) {
             const v = visAt(TL.current, audio.current.currentTime); tO = v.o; tW = v.w
-            if (v.i >= 0 && revealId.current) reveal(revealId.current, (v.i + 2) / TL.current.c.length)
+            if (v.i >= 0 && v.i !== lastIdx.current && revealId.current) { lastIdx.current = v.i; reveal(revealId.current, (v.i + 2) / TL.current.c.length) }
           } else {
-            const t = performance.now() / 1000; tO = 0.3 + 0.5 * Math.abs(Math.sin(t * 13)) * (0.55 + 0.45 * Math.sin(t * 3.3))
+            const t = performance.now() / 1000; tO = 0.25 + 0.4 * Math.abs(Math.sin(t * 11)) * (0.55 + 0.45 * Math.sin(t * 3.1))
           }
         }
-        mouth.current.o += (tO - mouth.current.o) * 0.3
-        mouth.current.w += (tW - mouth.current.w) * 0.25
-        drawMouth(g, mouth.current.o, mouth.current.w)
+        if (window.__guruForce) { tO = window.__guruForce.o; tW = window.__guruForce.w || 0 }
+        // plynulé dobiehanie: otváranie rýchlejšie než zatváranie, bez trasenia
+        const m = mouth.current
+        m.o += (tO - m.o) * (tO > m.o ? 0.22 : 0.16)
+        m.w += (tW - m.w) * 0.14
+        drawMouth(g, m.o, m.w)
+        if (jawRef.current) jawRef.current.style.transform = `translateY(${(m.o * 1.6).toFixed(2)}%)`
       }
       raf = requestAnimationFrame(loop)
     }
@@ -80,27 +85,38 @@ export default function GuruWidget({ name = '' }) {
   function drawMouth(g, o, w) {
     const W = MOUTH.canvasW, H = MOUTH.canvasH
     g.clearRect(0, 0, W, H)
-    if (o < 0.05) return
-    const a = Math.min(1, (o - 0.05) * 7), cx = 70, cy = 30, hw = 29 + 9 * w, h = 4 + o * 34
-    g.globalAlpha = a
-    const path = () => { g.beginPath(); g.moveTo(cx - hw, cy - 1); g.quadraticCurveTo(cx, cy - 5, cx + hw, cy - 1); g.quadraticCurveTo(cx, cy - 1 + h * 1.7, cx - hw, cy - 1); g.closePath() }
-    path(); const gr = g.createLinearGradient(0, cy, 0, cy + h); gr.addColorStop(0, '#2a0d0d'); gr.addColorStop(1, '#4a1818'); g.fillStyle = gr; g.fill()
-    g.save(); path(); g.clip()
-    g.fillStyle = '#c5625b'; g.beginPath(); g.ellipse(cx, cy + h * 0.82, hw * 0.5, h * 0.3, 0, 0, 7); g.fill()
-    g.fillStyle = '#f7f2ea'; g.fillRect(cx - hw + 5, cy - 6, 2 * hw - 10, Math.min(7, h * 0.3) + 3)
+    if (o < 0.04) return
+    // otvorenie medzi perami: začína na línii pier (y≈27 v plátne) a rastie dole spolu s bradou
+    const open = Math.min(1, o), cx = W / 2, top = 26, hw = 22 + 6 * w, h = 2.5 + open * 17
+    g.save()
+    g.globalCompositeOperation = 'multiply'
+    g.globalAlpha = Math.min(1, (o - 0.04) * 6)
+    g.filter = 'blur(1.4px)'
+    const cy = top + h / 2
+    const gr = g.createRadialGradient(cx, cy, 1, cx, cy, hw)
+    gr.addColorStop(0, 'rgba(34,12,12,1)'); gr.addColorStop(0.7, 'rgba(66,24,24,0.95)'); gr.addColorStop(1, 'rgba(120,70,60,0)')
+    g.fillStyle = gr
+    g.beginPath(); g.ellipse(cx, cy, hw, h / 2, 0, 0, Math.PI * 2); g.fill()
     g.restore()
-    path(); g.lineWidth = 2.8; g.strokeStyle = '#a8604f'; g.stroke()
-    g.globalAlpha = 1
+    if (open > 0.45) {
+      // náznak horných zubov tesne pod hornou perou, veľmi jemný
+      g.save(); g.globalAlpha = (open - 0.45) * 0.45; g.filter = 'blur(0.7px)'; g.fillStyle = '#efe6dc'
+      g.beginPath(); g.ellipse(cx, top + 2.2, hw * 0.42, 1.8, 0, 0, Math.PI * 2); g.fill(); g.restore()
+    }
   }
 
   /* ---------- správy ---------- */
   function scrollEnd() { const el = msgsRef.current; if (el) requestAnimationFrame(() => { el.scrollTop = el.scrollHeight }) }
+  const lastReveal = useRef({ id: null, n: -1 })
   function reveal(id, ratio) {
-    setMsgs((old) => old.map((m) => {
-      if (m.id !== id || !m.words) return m
-      const n = Math.ceil(m.words.length * Math.min(1, ratio))
-      return n === m.shown ? m : { ...m, shown: n }
-    }))
+    setMsgs((old) => {
+      const i = old.findIndex((m) => m.id === id && m.words)
+      if (i < 0) return old
+      const m = old[i], n = Math.ceil(m.words.length * Math.min(1, ratio))
+      if (n === m.shown) return old
+      lastReveal.current = { id, n }
+      const next = old.slice(); next[i] = { ...m, shown: n }; return next
+    })
   }
   function addGuru(text) {
     const id = uuid(), words = text.split(/\s+/).filter(Boolean)
@@ -159,11 +175,11 @@ export default function GuruWidget({ name = '' }) {
     scrollEnd()
     let reply
     try {
-      const r = await fetch('/api/guru', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ question, turnId: uuid() }) })
+      const r = await fetch('/api/guru', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ question, turnId: uuid() }), signal: AbortSignal.timeout(70000) })
       const j = await r.json()
       if (!r.ok || !j.ok) throw new Error(j.error || 'chat')
       reply = stripMarkdown(j.text || '').trim() || ERR
-    } catch (e) { reply = e && e.message && /prihlás|uložen|nedostupn|krokov/i.test(e.message) ? e.message : ERR }
+    } catch (e) { reply = e && e.name === 'TimeoutError' ? 'Odpoveď trvá pridlho. Skús otázku položiť znova alebo ju rozdeľ.' : e && e.message && /prihlás|uložen|nedostupn|krokov/i.test(e.message) ? e.message : ERR }
     if (!mountedRef.current) return
     addGuru(reply)
     setBusy(false)
@@ -209,10 +225,14 @@ export default function GuruWidget({ name = '' }) {
     stopSpeech(true)
     const r = new SR(); r.lang = 'sk-SK'; r.interimResults = false; r.maxAlternatives = 1
     recRef.current = r; setRec(true)
-    r.onresult = (e) => { const t = e.results[0][0].transcript; setQ(t); ask(t) }
-    r.onerror = () => {}
-    r.onend = () => { setRec(false); recRef.current = null }
-    try { r.start() } catch { setRec(false); recRef.current = null }
+    let done = false
+    const finish = () => { done = true; setRec(false); recRef.current = null; clearTimeout(watchdog) }
+    // poistka: ak rozpoznávanie do 12 s nič nevráti (Safari), ukonči ho, aby sa nič nezaseklo
+    const watchdog = setTimeout(() => { if (!done) { try { r.abort() } catch {} finish() } }, 12000)
+    r.onresult = (e) => { const t = e.results[0][0].transcript; finish(); setQ(t); ask(t) }
+    r.onerror = () => finish()
+    r.onend = () => finish()
+    try { r.start() } catch { finish() }
   }
 
   const first = (name || '').split(' ')[0]
@@ -221,6 +241,7 @@ export default function GuruWidget({ name = '' }) {
       onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} onClick={() => { if (open && speaking.current) stopSpeech(true) }}>
       <div className="gw-bob"><div className="gw-nod">
         {imgOk ? <img src="/guru-v3.png" alt="LIVE-IN Guru" draggable="false" onError={() => setImgOk(false)} /> : <div className="gw-fallback" aria-hidden="true">🧠</div>}
+        {imgOk && <img className="gw-jaw" src="/guru-v3.png" alt="" aria-hidden="true" draggable="false" ref={jawRef} />}
         {imgOk && <canvas className="gw-mouth" width={MOUTH.canvasW} height={MOUTH.canvasH} ref={cvRef} style={{ left: MOUTH.left + '%', top: MOUTH.top + '%', width: MOUTH.width + '%' }} />}
       </div></div>
     </div>

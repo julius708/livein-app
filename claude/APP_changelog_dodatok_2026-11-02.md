@@ -18,3 +18,8 @@
 
 ## Súbory
 `components/GuruWidget.js`, `app/guru/guru-widget.css`, `app/api/guru/tts/route.js`, `app/api/guru/route.js` (prompt), `lib/guru-widget-core.js`, `tests/guru-widget-core.test.mjs`, `components/Shell.js`, `package.json` (skript test), `app/home.css`, `app/workspace.css`, `vercel.json`.
+
+## Guru widget: oprava zasekávania a realistickejšie ústa (večer)
+- Odhaľovanie slov pri reči už neprekresľuje zoznam správ pri každom snímku (60×/s), čo zasekávalo stránku pri dlhých odpovediach.
+- Časový limit odpovede 70 s s hláškou; poistka mikrofónu (po 12 s bez výsledku sa rozpoznávanie ukončí, nič neostane zaseknuté).
+- Ústa: namiesto kreslených pier sa pri reči jemne spúšťa brada (kópia spodnej časti tváre, `.gw-jaw`) a medzi perami sa kreslí mäkké tmavé otvorenie prelínané do fotky (multiply). Plynulé dobiehanie bez trasenia.

@@ -48,3 +48,5 @@
   .gw-win{left:8px;right:8px;bottom:8px;width:auto;height:calc(100vh - 16px);height:calc(100dvh - 16px);max-height:none;border-radius:20px}
 }
 @media(prefers-reduced-motion:reduce){.gw-bob,.gw-col,.gw-win,.gw-dots i,.gw-ib.rec{animation:none}}
+/* brada: kópia spodnej časti tváre, pri reči sa jemne posúva dole (prirodzenejšie než kreslené ústa) */
+.gw-jaw{position:absolute;left:0;top:0;width:100%;height:auto;pointer-events:none;-webkit-user-drag:none;clip-path:inset(32.8% 33% 58.5% 33%);will-change:transform;transition:none}
