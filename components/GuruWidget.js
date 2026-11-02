@@ -80,16 +80,17 @@ export default function GuruWidget({ name = '' }) {
         m.w += (tW - m.w) * 0.14
         if (sprites && visRefs.current.ah) {
           // cieľové váhy snímok: otvorenie rozhoduje o sile, šírka o tvare (oh ↔ ee)
-          const o = Math.max(0, Math.min(1, (m.o - 0.06) / 0.8)), w = m.w
+          // výraznejšie otváranie (viditeľné aj pri malej postave), strop pri „á“ 0.85, aby to nevyzeralo ako zívanie
+          const o = Math.max(0, Math.min(1, (m.o - 0.03) / 0.5)), w = m.w
           const t = { e: 0, ah: 0, oh: 0, ee: 0 }
           if (o > 0) {
-            if (w < -0.35) { t.oh = o; t.e = (1 - o) * 0.3 }
-            else if (w > 0.35) { t.ee = o * 0.75; t.e = (1 - o) * 0.4 }
-            else if (o < 0.45) { t.e = o * 2 }
-            else { t.e = Math.max(0, 1.6 - o * 2); t.ah = (o - 0.45) / 0.55 }
+            if (w < -0.35) { t.oh = Math.min(0.95, o * 1.2); t.e = (1 - o) * 0.3 }
+            else if (w > 0.35) { t.ee = Math.min(0.8, o); t.e = (1 - o) * 0.4 }
+            else if (o < 0.35) { t.e = Math.min(1, o * 2.6) }
+            else { t.e = Math.max(0, 1.5 - o * 1.8); t.ah = Math.min(0.85, (o - 0.35) / 0.45) }
           }
           const v = visW.current
-          for (const k of VIS) { v[k] += (t[k] - v[k]) * 0.35; const el = visRefs.current[k]; if (el) el.style.opacity = v[k].toFixed(3) }
+          for (const k of VIS) { v[k] += (t[k] - v[k]) * 0.45; const el = visRefs.current[k]; if (el) el.style.opacity = v[k].toFixed(3) }
           g.clearRect(0, 0, MOUTH.canvasW, MOUTH.canvasH)
           if (jawRef.current) jawRef.current.style.transform = `translateY(${(m.o * 0.5).toFixed(2)}%)`
         } else {
@@ -98,8 +99,9 @@ export default function GuruWidget({ name = '' }) {
         }
         // živá hlava: pomalé kolísanie, pri reči o niečo výraznejšie, bez trasenia
         if (nodRef.current) {
-          const t = performance.now() / 1000, amp = 0.35 + m.o * 0.6
-          nodRef.current.style.transform = `rotate(${(Math.sin(t * 0.9) * amp).toFixed(2)}deg) translateY(${(Math.sin(t * 1.3) * amp * 0.8 - m.o * 0.6).toFixed(2)}px)`
+          // hlava takmer nehybná: len nepatrné dýchanie, pri reči sa nehýbe celá postava
+          const t = performance.now() / 1000
+          nodRef.current.style.transform = `translateY(${(Math.sin(t * 0.8) * 0.4).toFixed(2)}px)`
         }
       }
       raf = requestAnimationFrame(loop)
