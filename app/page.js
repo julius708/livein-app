@@ -52,10 +52,12 @@ export default async function Home({ searchParams }) {
   const mentionIds = (myMentions || []).map((m) => m.note_id)
   const unseen = (myMentions || []).filter((m) => !m.seen_at).map((m) => m.note_id)
   const team = (teamRows || []).filter((t) => t.email && t.email.toLowerCase() !== user.email.toLowerCase())
-  // Údržba: opravy z Asany (Damages Reporting) + ručné opravy + okná, kedy je byt voľný na opravu
+  // Údržba: opravy z Asany (Damages Reporting) + ručné opravy + okná, kedy je byt voľný na opravu.
+  // Dočasne vypnutá na úvodnej stránke (J. Hönsch, 2. 11. 2026): postup údržby sa ešte doladí, potom sa vráti ako malé okienko na boku.
+  const SHOW_MAINTENANCE = false
   let mnt = { issues: [], flats: [] }
   let members = []
-  try {
+  if (SHOW_MAINTENANCE) try {
     const [{ data: md }, { data: iss }, tasks, people] = await Promise.all([
       s.rpc('maintenance_data'),
       s.from('maintenance_issues').select('id,listing_id,listing_name,text,priority,created_at,created_by_name').eq('status', 'open').order('created_at', { ascending: false }).limit(200),
@@ -207,7 +209,7 @@ export default async function Home({ searchParams }) {
         </div>
         </Fold>
       )}
-      {mnt.flats.length > 0 && <Fold id="mnt" open title="Údržba" hint={`${mnt.issues.length} ${mnt.issues.length === 1 ? 'otvorená oprava' : mnt.issues.length < 5 ? 'otvorené opravy' : 'otvorených opráv'}`}><MaintenanceBoard issues={mnt.issues} flats={mnt.flats} asana={asanaConfigured()} members={members} /></Fold>}
+      {SHOW_MAINTENANCE && mnt.flats.length > 0 && <Fold id="mnt" open title="Údržba" hint={`${mnt.issues.length} ${mnt.issues.length === 1 ? 'otvorená oprava' : mnt.issues.length < 5 ? 'otvorené opravy' : 'otvorených opráv'}`}><MaintenanceBoard issues={mnt.issues} flats={mnt.flats} asana={asanaConfigured()} members={members} /></Fold>}
       {ov && ov.city && (
         <div className="hint" style={{ marginTop: 8 }}>Tvoje mesto ({ov.city}): {ov.arrivals} príchodov, {ov.departures} odchodov, {ov.staying} ubytovaných.</div>
       )}
