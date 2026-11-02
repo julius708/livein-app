@@ -2,8 +2,8 @@
 .gw-host{position:fixed;z-index:2147483000;width:0;height:0}
 .gw-col{position:absolute;right:0;bottom:0;display:flex;flex-direction:column;align-items:center;color:#233E31;animation:gw-wake .5s ease both}
 @keyframes gw-wake{from{opacity:0}to{opacity:1}}
-.gw-fig{position:relative;overflow:hidden;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none;flex:0 0 auto;width:124px;height:161px}
-.gw-fig.in{cursor:default;touch-action:auto;width:150px;height:195px}
+.gw-fig{position:relative;overflow:hidden;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none;flex:0 0 auto;width:150px;height:195px}
+.gw-fig.in{cursor:default;touch-action:auto;width:178px;height:231px}
 .gw-bob{transform-origin:50% 100%;animation:gw-breathe 7s ease-in-out infinite}
 @keyframes gw-breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.006)}}
 .gw-nod{position:relative;transform-origin:50% 100%}
@@ -44,9 +44,12 @@
 .gw-foot{flex:0 0 auto;font-size:11px;color:#8a9a8f;text-align:center;padding:6px 12px 10px;line-height:1.3}
 .gw-foot a{color:#4f6657}
 @media(max-width:699px){
-  .gw-fig{width:100px;height:130px}.gw-fig.in{width:104px;height:135px}
+  .gw-fig{width:118px;height:153px}.gw-fig.in{width:118px;height:153px}
   .gw-win{left:8px;right:8px;bottom:8px;width:auto;height:calc(100vh - 16px);height:calc(100dvh - 16px);max-height:none;border-radius:20px}
 }
 @media(prefers-reduced-motion:reduce){.gw-bob,.gw-col,.gw-win,.gw-dots i,.gw-ib.rec{animation:none}}
 /* brada: kópia spodnej časti tváre, pri reči sa jemne posúva dole (prirodzenejšie než kreslené ústa) */
 .gw-jaw{position:absolute;left:0;top:0;width:100%;height:auto;pointer-events:none;-webkit-user-drag:none;clip-path:inset(32.8% 33% 58.5% 33%);will-change:transform;transition:none}
+/* skutočné snímky úst: prelínanie podľa hlások, hlava sa jemne hýbe */
+.gw-vis{position:absolute;height:auto;pointer-events:none;-webkit-user-drag:none;opacity:0;will-change:opacity}
+.gw-nod{will-change:transform;transition:none}

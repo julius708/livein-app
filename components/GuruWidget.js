@@ -9,6 +9,9 @@ const CHIPS = ['Čo dnes potrebuje moju pozornosť?', 'Koľko máme dnes prícho
 const HELLO = 'Ahoj, som LIVE-IN Guru. Opýtaj sa ma na byty, rezervácie alebo postupy.'
 const GREETING = 'Ahoj, som LIVE-IN Guru. Opýtaj sa na byty, rezervácie, kódy, postupy alebo čokoľvek iné. Môžeš aj hovoriť.'
 const ERR = 'Prepáč, teraz sa mi nepodarilo odpovedať. Skús to o chvíľu znova.'
+// Skutočné snímky úst z postavy (vygenerované z guru-v3.png), prelínajú sa podľa hlások. Región v % obrázka.
+const VIS = ['e', 'ah', 'oh', 'ee']
+const VIS_BOX = { left: 30.5, top: 28.5, width: 39 }
 const SILENT = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA='
 
 function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v) } catch {} return null }
@@ -31,7 +34,9 @@ export default function GuruWidget({ name = '' }) {
   const [pos, setPos] = useState({ r: 22, b: 14 })
   const [mobile, setMobile] = useState(false)
 
-  const hostRef = useRef(null), figRef = useRef(null), cvRef = useRef(null), jawRef = useRef(null), msgsRef = useRef(null), inputRef = useRef(null)
+  const hostRef = useRef(null), figRef = useRef(null), cvRef = useRef(null), jawRef = useRef(null), nodRef = useRef(null)
+  const visRefs = useRef({}), visW = useRef({ e: 0, ah: 0, oh: 0, ee: 0 })
+  const [sprites, setSprites] = useState(true), msgsRef = useRef(null), inputRef = useRef(null)
   const audio = useRef(null), TL = useRef(null), speaking = useRef(false), sim = useRef(false), mouth = useRef({ o: 0, w: 0 })
   const primed = useRef(false), greeted = useRef(false), revealId = useRef(null), recRef = useRef(null), mountedRef = useRef(false)
 
@@ -73,8 +78,29 @@ export default function GuruWidget({ name = '' }) {
         const m = mouth.current
         m.o += (tO - m.o) * (tO > m.o ? 0.22 : 0.16)
         m.w += (tW - m.w) * 0.14
-        drawMouth(g, m.o, m.w)
-        if (jawRef.current) jawRef.current.style.transform = `translateY(${(m.o * 1.6).toFixed(2)}%)`
+        if (sprites && visRefs.current.ah) {
+          // cieľové váhy snímok: otvorenie rozhoduje o sile, šírka o tvare (oh ↔ ee)
+          const o = Math.max(0, Math.min(1, (m.o - 0.06) / 0.8)), w = m.w
+          const t = { e: 0, ah: 0, oh: 0, ee: 0 }
+          if (o > 0) {
+            if (w < -0.35) { t.oh = o; t.e = (1 - o) * 0.3 }
+            else if (w > 0.35) { t.ee = o * 0.75; t.e = (1 - o) * 0.4 }
+            else if (o < 0.45) { t.e = o * 2 }
+            else { t.e = Math.max(0, 1.6 - o * 2); t.ah = (o - 0.45) / 0.55 }
+          }
+          const v = visW.current
+          for (const k of VIS) { v[k] += (t[k] - v[k]) * 0.35; const el = visRefs.current[k]; if (el) el.style.opacity = v[k].toFixed(3) }
+          g.clearRect(0, 0, MOUTH.canvasW, MOUTH.canvasH)
+          if (jawRef.current) jawRef.current.style.transform = `translateY(${(m.o * 0.5).toFixed(2)}%)`
+        } else {
+          drawMouth(g, m.o, m.w)
+          if (jawRef.current) jawRef.current.style.transform = `translateY(${(m.o * 1.6).toFixed(2)}%)`
+        }
+        // živá hlava: pomalé kolísanie, pri reči o niečo výraznejšie, bez trasenia
+        if (nodRef.current) {
+          const t = performance.now() / 1000, amp = 0.35 + m.o * 0.6
+          nodRef.current.style.transform = `rotate(${(Math.sin(t * 0.9) * amp).toFixed(2)}deg) translateY(${(Math.sin(t * 1.3) * amp * 0.8 - m.o * 0.6).toFixed(2)}px)`
+        }
       }
       raf = requestAnimationFrame(loop)
     }
@@ -120,7 +146,7 @@ export default function GuruWidget({ name = '' }) {
   }
   function addGuru(text) {
     const id = uuid(), words = text.split(/\s+/).filter(Boolean)
-    setMsgs((old) => [...old.filter((m) => !m.thinking), { id, role: 'a', text, words, shown: 0 }])
+    setMsgs((old) => [...old.filter((m) => !m.thinking), { id, role: 'a', text, words, shown: words.length }])
     revealId.current = id
     scrollEnd()
     return id
@@ -175,7 +201,7 @@ export default function GuruWidget({ name = '' }) {
     scrollEnd()
     let reply
     try {
-      const r = await fetch('/api/guru', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ question, turnId: uuid() }), signal: AbortSignal.timeout(70000) })
+      const r = await fetch('/api/guru', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ question, turnId: uuid(), mode: 'widget' }), signal: AbortSignal.timeout(70000) })
       const j = await r.json()
       if (!r.ok || !j.ok) throw new Error(j.error || 'chat')
       reply = stripMarkdown(j.text || '').trim() || ERR
@@ -239,9 +265,10 @@ export default function GuruWidget({ name = '' }) {
   const figure = (
     <div className={'gw-fig' + (open ? ' in' : '')} ref={figRef} title={open ? undefined : 'Klikni a opýtaj sa LIVE-IN Guru · chyť a presuň'}
       onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} onClick={() => { if (open && speaking.current) stopSpeech(true) }}>
-      <div className="gw-bob"><div className="gw-nod">
+      <div className="gw-bob"><div className="gw-nod" ref={nodRef}>
         {imgOk ? <img src="/guru-v3.png" alt="LIVE-IN Guru" draggable="false" onError={() => setImgOk(false)} /> : <div className="gw-fallback" aria-hidden="true">🧠</div>}
         {imgOk && <img className="gw-jaw" src="/guru-v3.png" alt="" aria-hidden="true" draggable="false" ref={jawRef} />}
+        {imgOk && sprites && VIS.map((k) => <img key={k} className="gw-vis" src={`/guru-mouth/${k}.png`} alt="" aria-hidden="true" draggable="false" ref={(el) => { visRefs.current[k] = el }} onError={() => setSprites(false)} style={{ left: VIS_BOX.left + '%', top: VIS_BOX.top + '%', width: VIS_BOX.width + '%' }} />)}
         {imgOk && <canvas className="gw-mouth" width={MOUTH.canvasW} height={MOUTH.canvasH} ref={cvRef} style={{ left: MOUTH.left + '%', top: MOUTH.top + '%', width: MOUTH.width + '%' }} />}
       </div></div>
     </div>

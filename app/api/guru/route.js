@@ -41,6 +41,8 @@ export async function POST(request) {
   try { body = await request.json() } catch { body = {} }
   if (!sameOrigin(request)) return NextResponse.json({ok:false},{status:403})
   const question = typeof body.question === 'string' ? body.question.trim() : ''
+  // widget (postavička na stránke): kratšie odpovede a menej krokov, aby odpoveď prišla rýchlo
+  const widget = body.mode === 'widget'
   const turnId=body.turnId
   if(!question || question.length>4000 || !validTurnId(turnId))return NextResponse.json({ok:false,error:'Napíš otázku do 4 000 znakov.'},{status:400})
   const {data:previous,error:previousError}=await s.from('guru_turns').select('id,question,answer,status,updated_at').eq('id',turnId).maybeSingle()
@@ -68,14 +70,14 @@ export async function POST(request) {
   const model = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5'
   const deadline = Date.now()+50000
   try {
-    for (let step = 0; step < 7; step++) {
+    for (let step = 0; step < (widget ? 4 : 7); step++) {
       const remaining=deadline-Date.now()
       if(remaining<1000)return fail('Spracovanie trvá dlhšie. Tvoja otázka je uložená; skús ju znova.')
       const r = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
         signal: AbortSignal.timeout(Math.min(45000,remaining)),
-        body: JSON.stringify({ model, max_tokens: 2500, system: SYSTEM(today), tools: TOOLS, messages: convo }),
+        body: JSON.stringify({ model, max_tokens: widget ? 700 : 2500, system: SYSTEM(today) + (widget ? '\nTeraz odpovedáš v malom okne na stránke: odpovedz stručne, 2 až 4 vety, bez úvodu a zhrnutia. Ak treba viac, povedz to a ponúkni pokračovanie.' : ''), tools: TOOLS, messages: convo }),
       })
       if (!r.ok) {
         return fail('AI služba je dočasne nedostupná. Tvoja otázka zostala uložená.')

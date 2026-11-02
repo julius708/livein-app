@@ -23,3 +23,9 @@
 - Odhaľovanie slov pri reči už neprekresľuje zoznam správ pri každom snímku (60×/s), čo zasekávalo stránku pri dlhých odpovediach.
 - Časový limit odpovede 70 s s hláškou; poistka mikrofónu (po 12 s bez výsledku sa rozpoznávanie ukončí, nič neostane zaseknuté).
 - Ústa: namiesto kreslených pier sa pri reči jemne spúšťa brada (kópia spodnej časti tváre, `.gw-jaw`) a medzi perami sa kreslí mäkké tmavé otvorenie prelínané do fotky (multiply). Plynulé dobiehanie bez trasenia.
+
+## Guru: skutočné snímky úst, rýchlejšie odpovede, väčšia postava
+- `public/guru-mouth/{e,ah,oh,ee}.png`: štyri snímky úst vygenerované z postavy (Higgsfield, GPT Image 2.5), zarovnané na pôvodný obrázok, s mäkkým okrajom. Widget ich prelína podľa hlások z časovania ElevenLabs; kreslené ústa ostávajú len ako záloha, keď snímky nejdú načítať.
+- Hlava sa pri reči jemne hýbe (pomalé kolísanie, bez trasenia).
+- Režim widgetu v `/api/guru` (`mode: 'widget'`): odpovede 2 až 4 vety, max 700 tokenov, najviac 4 kroky nástrojov. Text odpovede sa zobrazí hneď, hlas ide zvlášť.
+- Postava o pätinu väčšia (150 px, v okne 178 px, mobil 118 px).
