@@ -14,7 +14,7 @@
 - Ústa na rovnakej pozícii ako u Adama (ľavý okraj 39,58 %, horný 30,6 %, šírka 19,44 %, plátno 140×80), obrázok `public/guru-v3.png` (720×1280, priehľadné pozadie). Finálna postava Gura (zelené tričko LIVE-IN, okuliare), názov s verziou kvôli cache.
 - Odpovede cez existujúci `/api/guru` (rovnaký model, pamäť, nástroje sql/search_kb). Systémový prompt: bez markdownu; kódy od dverí, keysafe a Wi-Fi heslá smie tímu uviesť (schválil Július 24. 10. 2026); citlivé financie (marže, platy, ziskovosť, bankové a osobné finančné údaje) odkáže na Júliusa alebo Ninu. Tón nezmenený.
 - Pomocné funkcie v `lib/guru-widget-core.js` (strip markdownu, visémy, časová os, clamp, text pre hlas) s testami `tests/guru-widget-core.test.mjs` (`npm test`, node:test).
-- Premenné vo Verceli (nastavuje Július): `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID`, voliteľne `ELEVENLABS_MODEL`.
+- Premenné vo Verceli (nastavuje Július): `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID`, voliteľne `ELEVENLABS_MODEL`. Model Gura: `ANTHROPIC_MODEL=claude-sonnet-5-5` (prepnuté 2. 11. 2026 večer na žiadosť Júliusa).
 
 ## Súbory
 `components/GuruWidget.js`, `app/guru/guru-widget.css`, `app/api/guru/tts/route.js`, `app/api/guru/route.js` (prompt), `lib/guru-widget-core.js`, `tests/guru-widget-core.test.mjs`, `components/Shell.js`, `package.json` (skript test), `app/home.css`, `app/workspace.css`, `vercel.json`.
