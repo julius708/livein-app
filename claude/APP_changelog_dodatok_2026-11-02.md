@@ -90,3 +90,13 @@
 - **Pozdrav pri otvorení appky**: 2 s po načítaní Guru povie „Ahoj, Meno!“ (bublina + pohyb úst + hlas). Raz za otvorenie karty (`sessionStorage guru-greeted`), nie pri každom prechode medzi stránkami. Hlas sa pri blokovanom autoplay prehrá po prvom kliknutí/klávese.
 - Zaujímavosti dňa sú vypnuté (na želanie). Route `/api/guru/fact` a tabuľky `guru_facts`/`guru_daily_facts` zostávajú, nič ich nevolá.
 - Ekonomika (statická stránka) má zatiaľ Guru cez iframe okno; pozdrav tam nie je.
+
+## 2026-11-03 – Ekonomika ako sekcia hlavnej appky
+- Nová sekcia `/ekonomika` (len admini; dáta navyše chráni RLS na `economics_snapshots`, vidia ich 4 ľudia z vedenia). Rovnaká hlavička, menu Aplikácie, Guru (kontext „economy“, otázky o výnosoch a výkone bytov) ako zvyšok appky. Modul v `lib/modules.js` má `href:'/ekonomika'`; `config.module_urls.economy` ukazuje na `…/ekonomika`.
+- `app/api/ekonomika/snapshot`: prečíta snímok (gzip+base64) cez session prihláseného, rozbalí na serveri, vráti JSON (~1,3 MB, komprimuje Vercel). Klient ho obnovuje každých 5 minút a tlačidlom Obnoviť.
+- Výpočty: `lib/economy-math.js` (prefixové súčty na denných poliach, intervaly, presety, kanály, mesiace, filtre, Monte Carlo scenáre, banka, CSV) + `tests/economy-math.test.mjs`.
+- Pohľady (`components/economy/`): Prehľad (6 KPI so zmenou oproti predchádzajúcemu rovnako dlhému obdobiu a sparkline; „Čo hovoria čísla“; mesačný graf výnos + obsadenosť s označením neúplného mesiaca; kanály ako prstenec; top byty; kto rastie / klesá; mestá s RevPAN), Porovnanie A ⇄ B (KPI, čiary, kanály, tabuľka, CSV), Byty (karty alebo tabuľka, triedenie, CSV), Mapa (Leaflet z unpkg, metrika, výber), Výhľad (slidery, histogram 2 000 scenárov, už rezervované po mesiacoch, analytický report na stiahnutie), Banka (firma/účet/mesiace, príjmy a výdavky, tabuľka, P&L YTD podklad, kandidátske kategórie), Analýza (dopyt pod/nad trhom, finančný pohľad, kvalita dát, report PriceLabs). Detail bytu v dialógu (história po mesiacoch, kanály, odkaz na Airbnb).
+- Nové metriky oproti starej stránke: obsadenosť, výnos na dostupnú noc (RevPAN), rozklad zmeny na noci × cenu, koncentrácia top 10, mestá zjednotené (Bratislava I/II… → Bratislava).
+- Smerovanie: zrušený proxy `/ekonomika/` na statickú stránku; `/ekonomika/` → 308 na `/ekonomika`. Starý projekt `live-in-ekonomika` (ekonomika.live-in.international) všetko presmerúva na novú sekciu.
+- Hub: skip-link „Preskočiť na obsah“ sa ukáže len pri klávesnici (`:focus-visible`).
+- Usage sa eviduje ako `economy_<pohľad>`; bankové filtre a obdobia A/B sa na banku nevzťahujú (ako predtým).
