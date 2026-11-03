@@ -84,3 +84,9 @@
 - Práčovňa: nový zoznam v menu Aplikácie.
 - Ekonomika (statická): `<header>`, navigácia pred účtom, „Odhlásiť“, menu Aplikácie s popismi a stavom `.open`, pätička `.li-footer`, Guru.
 - Ring + ostatné: záchytná obrazovka chyby zatiaľ len v Ringu; odporúčam doplniť do ostatných pri najbližšej zmene.
+
+## 2026-11-03 – Guru všade rovnaký, pozdrav menom
+- Jeden zdieľaný widget `components/GuruWidget.js` (zdroj pravdy v hlavnej appke, kópie v KB, Zaradení, CS, Ringu a Práčovni – v Práčovni s `/* eslint-disable */` na prvom riadku). Volá API hlavnej appky (`/api/guru`, `/api/guru/tts`, `/api/guru/stt`) cez CORS s cookies; každá appka posiela `app`, podľa ktorého API dostane kontext a widget ukáže relevantné otázky (čipy).
+- **Pozdrav pri otvorení appky**: 2 s po načítaní Guru povie „Ahoj, Meno!“ (bublina + pohyb úst + hlas). Raz za otvorenie karty (`sessionStorage guru-greeted`), nie pri každom prechode medzi stránkami. Hlas sa pri blokovanom autoplay prehrá po prvom kliknutí/klávese.
+- Zaujímavosti dňa sú vypnuté (na želanie). Route `/api/guru/fact` a tabuľky `guru_facts`/`guru_daily_facts` zostávajú, nič ich nevolá.
+- Ekonomika (statická stránka) má zatiaľ Guru cez iframe okno; pozdrav tam nie je.
