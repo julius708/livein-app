@@ -63,3 +63,9 @@
 - Vlastné výsledky vidím na mape aj bez zdieľania, kolegovia vidia len zdieľané (RLS nezmenené).
 - Testy: `tests/personality-tests.test.mjs` (15 testov) – pozícia, podobnosť, dvojice, priemer, priebežné skóre, mená typov.
 - Ticker `app_updates`: „Testy osobnosti: mapa tímu a hravý priebeh“.
+
+## 2026-11-03 – Tímový feedback (zapracované)
+- #17 Michaela Uhríková (nápad): história balenia tašiek pár dní dozadu → Práčovňa: personál vidí v menu „História → Zabalené balíčky“ (byt, kto, kedy, na koľko osôb, koľko čoho; predvolene 7 dní). Audit udalostí a CSV zostali len správcovi. Nasadené (pracovna f7651d2), ticker `app_updates`. Stav: hotovo.
+- #8 Miška (nápad): odkaz na stránku s voľnými apartmánmi → v hlavnej appke nová dlaždica „Voľné apartmány“ (booking.live-in.international) pre všetkých. Nasadené (livein-app daa3263). Stav: hotovo.
+- #2, #3, #16 pochvaly → uzavreté ako hotovo.
+- #6 Zuzana Pavlíková (chyba/otázka): Booking blokuje odkazy v správach cez Guesty, bez telefónu sa Ring link nedá poslať. Zmena správ hosťom je bez súhlasu vedenia zakázaná → stav „rieši sa“, návrh pre Júliusa: (a) do automatickej správy pred príchodom pridať vetu „Pre otvorenie dverí nám prosím pošlite telefónne číslo“ pri bytoch s Ringom, (b) alternatívne posielať link e-mailom cez Guesty (Booking relay adresa link v e-maile prepustí), (c) v Ring appke umožniť vygenerovať krátky kód, ktorý hosť zadá na ring.live-in.international (text bez odkazu Booking neblokuje).
