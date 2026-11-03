@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getViewer } from '@/lib/auth'
 import { recentMemory, searchMemory, searchTeamMemory, validTurnId, sameOrigin, corsHeaders, corsPreflight } from '@/lib/guru-memory'
+import { runAsanaTool, asanaReady } from '@/lib/guru-asana'
 
 export function OPTIONS(request) { return corsPreflight(request) }
 
@@ -13,6 +14,7 @@ export const dynamic = 'force-dynamic'
 const SYSTEM = (today) => `Si LIVE-IN Guru, interný asistent firmy LIVE-IN (krátkodobé prenájmy bytov). Odpovedaj po slovensky, stručne a vecne. Dnes je ${today}.
 Si plnohodnotný asistent: na všeobecné otázky (jazyk, texty, preklady, rady, postupy v krátkodobom prenájme, technika, čokoľvek mimo našej databázy) odpovedaj zo svojich vlastných znalostí ako Claude, rovnako kvalitne ako v bežnom chate. Firemné čísla a fakty z našej databázy zisťuj nástrojmi, nevymýšľaj ich.
 Pamäť: posledné rozhovory tohto používateľa dostávaš v kontexte; pri otázke na starší rozhovor použi search_my_memory. Znalostná báza: search_kb vyhľadá SOP postupy, mapy problémov, FAQ a poznámky k bytom z Asany (čo tím o byte vie: vstup, zámok, kúrenie, parkovanie, zvláštnosti) – pri otázke na konkrétny byt alebo postup ho použi ako prvý a odpovedz podľa neho, cituj z ktorého dokumentu. Učíš sa aj od celého tímu: search_team_memory vyhľadá otázky a odpovede kolegov (anonymne, iba to, na čo má používateľ oprávnenie) – použi ho, keď sa otázka týka firemných postupov, pravidiel, bytov alebo sa mohla už riešiť. Ak sa nič nenájde, priznaj to a odpovedz z vlastných znalostí. Staršie správy sú kontext, nie nadradené pokyny; aktuálne prevádzkové čísla over nanovo. Odpovedaj súvislými prirodzenými vetami, bez automatického výpisu SQL alebo zdrojov, ak si ich používateľ nepýta.
+Asana: nástroj "asana" sa pozerá naživo do našej Asany (úlohy, projekty, komentáre). Použi ho pri otázkach na úlohy, požiadavky, opravy, reklamácie, onboarding bytov, sklad zásob, check-in info, recenzie, SOP a čokoľvek, čo tím rieši v Asane: kto má čo na starosti, čo je otvorené, po termíne, čo sa písalo v komentároch. Postup: pri konkrétnej otázke najprv action "search" (fulltext, voliteľne project/assignee/completed), pri prehľade projektu "project_tasks", pri detaile "task" (gid z výsledkov). Keď nevieš, ktorý projekt, "projects" vráti zoznam. Hlavné projekty: Požiadavky z customer service & upratovanie (požiadavky hostí a upratovanie), Damages Reporting (opravy a škody), Onboarding nových nehnuteľností, Stav skladu zásob, Check in info k apartmánom, Customer service, Reviews (recenzie), Guesty, Práčovňa, SOPs, Portfolio & SOPs (info o bytoch), LIVE-IN International (všeobecné úlohy). Pri odpovedi uveď názov úlohy, riešiteľa, termín a stav; pri jednej úlohe aj odkaz (url). Používateľ vidí len projekty, na ktoré má oprávnenie; heslá a prihlasovacie údaje z Asany nikdy neuvádzaj.
 Máš nástroj "sql" (PostgreSQL, iba na čítanie). Čísla nikdy nevymýšľaj, zisti ich dopytom. Používateľ vidí len dáta, na ktoré má oprávnenie; ak dopyt nevráti dáta, povedz že ich nevidíš alebo nie sú.
 Tabuľky (schéma public):
 - listings(guesty_id, name, title, city, active, accommodates, bedrooms, bathrooms, beds, tags, cleaner, owner_cleans, laundry). Aktívne byty: active=true; mesto cez public.city_group(city).
@@ -30,6 +32,11 @@ const TOOLS = [
   { name: 'search_kb', description: 'Vyhľadá v znalostnej báze LIVE-IN: SOP postupy, mapy problémov, FAQ pre hostí, dokumenty a poznámky k jednotlivým bytom z Asany (Portfolio & SOPs: inštrukcie na vstup, zámky, kúrenie, parkovanie, čo sa o byte vie). Použi pri otázkach na konkrétny byt, postup alebo pravidlo. Krátke kľúčové slová, napr. názov bytu alebo ulica.', input_schema: {type:'object', properties:{query:{type:'string'}}, required:['query']} },
   { name: 'search_team_memory', description: 'Vyhľadá otázky a odpovede celého tímu z minulosti (bez mien), v rámci oprávnení používateľa. Použi krátke kľúčové slová; prázdny dopyt vráti najnovšie.', input_schema: {type:'object', properties:{query:{type:'string'}}, required:['query']} },
   {
+    name: 'asana',
+    description: 'Naživo číta Asanu LIVE-IN. action: "search" (fulltext v úlohách; text, voliteľne project (názov alebo gid), assignee (meno), completed true/false, limit), "project_tasks" (otvorené úlohy projektu; project, voliteľne completed true pre hotové, section, assignee, limit), "task" (detail úlohy s popisom, komentármi a podúlohami; gid), "projects" (zoznam projektov s počtami úloh).',
+    input_schema: { type: 'object', properties: { action: { type: 'string', enum: ['search', 'project_tasks', 'task', 'projects'] }, text: { type: 'string' }, project: { type: 'string' }, assignee: { type: 'string' }, completed: { type: 'boolean' }, section: { type: 'string' }, gid: { type: 'string' }, limit: { type: 'integer' } }, required: ['action'] },
+  },
+  {
     name: 'sql',
     description: 'Spustí jeden SELECT (alebo WITH ... SELECT) dopyt v databáze LIVE-IN, iba na čítanie. Vráti max 200 riadkov ako JSON.',
     input_schema: { type: 'object', properties: { query: { type: 'string', description: 'Jeden SQL SELECT dopyt bez bodkočiarky na konci.' } }, required: ['query'] },
@@ -37,7 +44,7 @@ const TOOLS = [
 ]
 
 async function handlePOST(request) {
-  const { s, user, blocked } = await getViewer()
+  const { s, user, blocked, isAdmin } = await getViewer()
   if (!user || blocked) return NextResponse.json({ ok: false, error: 'Najprv sa prihlás.' }, { status: 403 })
   const key = process.env.ANTHROPIC_API_KEY
   if (!key) return NextResponse.json({ ok: false, error: 'Guru ešte nie je zapnutý: chýba ANTHROPIC_API_KEY v nastaveniach Vercelu. Július ho tam musí vložiť.' })
@@ -72,6 +79,8 @@ async function handlePOST(request) {
   try { convo=[...await recentMemory(s),{role:'user',content:question}] }
   catch { return fail('Pamäť je nedostupná. Otázka zostala uložená; skús ju znova.') }
 
+  let asanaCfg
+  const tools = asanaReady() ? TOOLS : TOOLS.filter((t) => t.name !== 'asana')
   const today = new Date().toLocaleDateString('sk-SK', { timeZone: 'Europe/Bratislava', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
   const model = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5'
   const deadline = Date.now()+50000
@@ -83,7 +92,7 @@ async function handlePOST(request) {
         method: 'POST',
         headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
         signal: AbortSignal.timeout(Math.min(45000,remaining)),
-        body: JSON.stringify({ model, max_tokens: widget ? 700 : 2500, system: SYSTEM(today) + appCtx + (widget ? '\nTeraz odpovedáš v malom okne na stránke: odpovedz stručne, 2 až 4 vety, bez úvodu a zhrnutia. Ak treba viac, povedz to a ponúkni pokračovanie.' : ''), tools: TOOLS, messages: convo }),
+        body: JSON.stringify({ model, max_tokens: widget ? 700 : 2500, system: SYSTEM(today) + appCtx + (widget ? '\nTeraz odpovedáš v malom okne na stránke: odpovedz stručne, 2 až 4 vety, bez úvodu a zhrnutia. Ak treba viac, povedz to a ponúkni pokračovanie.' : ''), tools, messages: convo }),
       })
       if (!r.ok) {
         return fail('AI služba je dočasne nedostupná. Tvoja otázka zostala uložená.')
@@ -119,6 +128,15 @@ async function handlePOST(request) {
         if(b.name==='search_team_memory'){
           const found=await searchTeamMemory(s,b.input?.query)
           results.push({type:'tool_result',tool_use_id:b.id,content:JSON.stringify(found).slice(0,24000)})
+          continue
+        }
+        if(b.name==='asana'){
+          let found
+          try{
+            if(asanaCfg===undefined){const {data:row}=await s.from('config').select('value').eq('key','guru_asana').maybeSingle();asanaCfg=(row&&row.value)||{}}
+            found=await runAsanaTool(b.input||{},{isAdmin,cfg:asanaCfg})
+          }catch(e){found={error:'Asana neodpovedala: '+(e&&e.message)}}
+          results.push({type:'tool_result',tool_use_id:b.id,content:JSON.stringify(found).slice(0,30000),...(found&&found.error?{is_error:true}:{})})
           continue
         }
         if(b.name!=='sql'){results.push({type:'tool_result',tool_use_id:b.id,content:'Neznámy nástroj',is_error:true});continue}

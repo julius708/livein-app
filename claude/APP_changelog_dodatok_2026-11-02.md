@@ -100,3 +100,9 @@
 - Smerovanie: zrušený proxy `/ekonomika/` na statickú stránku; `/ekonomika/` → 308 na `/ekonomika`. Starý projekt `live-in-ekonomika` (ekonomika.live-in.international) všetko presmerúva na novú sekciu.
 - Hub: skip-link „Preskočiť na obsah“ sa ukáže len pri klávesnici (`:focus-visible`).
 - Usage sa eviduje ako `economy_<pohľad>`; bankové filtre a obdobia A/B sa na banku nevzťahujú (ako predtým).
+
+## 2026-11-03 – Guru vidí do Asany
+- Nový nástroj Guru `asana` (`lib/guru-asana.js`): `search` (fulltext v úlohách cez Asana search API, s filtrami projekt/riešiteľ/hotové; bez platenej funkcie padá na typeahead podľa názvu), `project_tasks` (otvorené alebo hotové úlohy projektu, sekcie, riešiteľ), `task` (detail s popisom, poľami, poslednými 15 komentármi a podúlohami), `projects` (zoznam s počtami). Token `ASANA_TOKEN` (ten istý ako Údržba a import do KB); bez tokenu sa nástroj neponúka.
+- Viditeľnosť: projekt s prihlasovacími údajmi je skrytý pre všetkých; faktúry, účtovníctvo, dochádzka a dovolenky, obchod (Sales, Business), kontakty, meetings/report a SIFC vidia len admini. Výnimky: `config.guru_asana = { deny_all, deny_staff, allow_staff }` (gid projektov). Úlohy mimo povolených projektov sa z výsledkov vyhadzujú.
+- Systémový prompt Guru vysvetľuje, kedy Asanu použiť a aké sú hlavné projekty; v odpovedi uvádza názov, riešiteľa, termín, stav a odkaz. Widget na domove má čip „Aké opravy sú v Asane otvorené?“.
+- Testy pravidiel viditeľnosti: `tests/guru-asana.test.mjs`.
