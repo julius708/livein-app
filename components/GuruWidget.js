@@ -28,6 +28,7 @@ export default function GuruWidget({ name = '' }) {
   const [busy, setBusy] = useState(false)
   const [muted, setMuted] = useState(false)
   const [hello, setHello] = useState(false)
+  const [fact, setFact] = useState('')          // zaujímavosť dňa: Guru ju povie sám pri otvorení appky, raz za deň
   const [imgOk, setImgOk] = useState(true)
   const [q, setQ] = useState('')
   const [rec, setRec] = useState(false)
@@ -52,8 +53,20 @@ export default function GuruWidget({ name = '' }) {
     const onResize = () => { setMobile(m()); setPos((p) => clampPos(p.r, p.b, { w: window.innerWidth, h: window.innerHeight }, { w: 130, h: 200 })) }
     window.addEventListener('resize', onResize)
     const t = setTimeout(() => { if (!sstore('guru-hello')) { sstore('guru-hello', '1'); setHello(true); setTimeout(() => setHello(false), 9000) } }, 1500)
+    // zaujímavosť dňa: raz za deň na zariadenie, bez otvorenia chatu; postavička pri nej hýbe ústami
+    const day = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Bratislava' })
+    const factTimer = setTimeout(async () => {
+      if (store('guru-fact-day') === day) return
+      try {
+        const r = await fetch('/api/guru/fact', { cache: 'no-store' }); const j = await r.json()
+        if (!r.ok || !j.ok || !j.text || !mountedRef.current) return
+        store('guru-fact-day', day)
+        setHello(false); setFact(j.text)
+        tellFact(j.text)
+      } catch {}
+    }, sstore('guru-hello') ? 2200 : 11000)
     const A = new Audio(); A.preload = 'auto'; A.playsInline = true; audio.current = A
-    return () => { mountedRef.current = false; window.removeEventListener('resize', onResize); clearTimeout(t); try { A.pause() } catch {} try { speechSynthesis.cancel() } catch {} }
+    return () => { mountedRef.current = false; window.removeEventListener('resize', onResize); clearTimeout(t); clearTimeout(factTimer); try { A.pause() } catch {} try { speechSynthesis.cancel() } catch {} }
   }, [])
 
   /* ---------- ústa: kreslenie v slučke, plynulé (lerp), bez trasenia ---------- */
@@ -193,6 +206,16 @@ export default function GuruWidget({ name = '' }) {
     } catch { TL.current = null; await speechFallback(text) }
   }
 
+  /* ---------- zaujímavosť dňa: ústa sa hýbu aj bez zvuku (prehliadač bez kliknutia zvuk nepustí) ---------- */
+  const factTimer2 = useRef(null)
+  function tellFact(text) {
+    const secs = Math.min(18, 2 + text.split(/\s+/).length * 0.42)
+    sim.current = true; speaking.current = true
+    clearTimeout(factTimer2.current)
+    factTimer2.current = setTimeout(() => { if (sim.current) { speaking.current = false; sim.current = false } }, secs * 1000)
+    setTimeout(() => setFact((f) => (f === text ? '' : f)), Math.max(14000, secs * 1000 + 5000))
+  }
+
   /* ---------- chat ---------- */
   async function ask(text) {
     const question = (text || '').trim()
@@ -323,7 +346,7 @@ export default function GuruWidget({ name = '' }) {
       {!open && (
         <div className="gw-host" ref={hostRef} style={{ right: pos.r, bottom: pos.b }}>
           <div className="gw-col">
-            <button type="button" className={'gw-hello' + (hello ? ' show' : '')} onClick={openWin}>{HELLO}</button>
+            <button type="button" className={'gw-hello' + (fact ? ' fact show' : hello ? ' show' : '')} onClick={() => { if (fact) { const f = fact; setFact(''); speaking.current = false; sim.current = false; openWin(); setTimeout(() => addGuru('Zaujímavosť na dnes: ' + f), 50) } else openWin() }}>{fact ? <><b>Zaujímavosť na dnes</b>{fact}</> : HELLO}</button>
             {figure}
             <button type="button" className="gw-pill" onClick={openWin}>Opýtať sa LIVE-IN Guru</button>
           </div>
