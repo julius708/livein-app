@@ -44,7 +44,7 @@ export default function Shell({ me, user, isAdmin, active = 'home', locked = fal
       </header>
       {!locked && <NewsBand />}
       <main id="workspace-content" className={"wrap li-main-workspace" + (isAdmin ? " li-admin" : "")}>
-        {active !== "home" && <div className="li-trail"><Link href="/">LIVE-IN domov</Link><span>{items.find(i => i.id === active)?.label || (active === "ideas" ? "Nápady na obsah" : "Tímový priestor")}</span></div>}
+        {active !== "home" && <div className="li-trail"><Link href="/">LIVE-IN domov</Link><span>{items.find(i => i.id === active)?.label || (active === "ideas" ? "Nápady na obsah" : active === "testy" ? "Testy osobnosti" : "Tímový priestor")}</span></div>}
         {children}
         {!locked && me && <UsageTracker />}
         {/* Guru ako živý asistent na každej stránke, len pre prihlásených aktívnych členov tímu (na stránke /guru je veľký chat) */}

@@ -1,0 +1,45 @@
+/* Testy osobnosti – v dizajne appky (sklené karty, zelená #173E2C, oranžová #F46D16). */
+.ts-tabs{display:flex;gap:6px;margin:0 0 14px;flex-wrap:wrap}
+.ts-tabs a{text-decoration:none;font-weight:700;font-size:14px;color:#173E2C;padding:9px 16px;border-radius:999px;border:1px solid #ffffffcc;background:rgba(255,254,251,.6);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.ts-tabs a[aria-current="page"]{background:#173E2C;color:#fff;border-color:#173E2C}
+.ts-note{font-size:14px;color:var(--muted);margin:0 0 14px}
+.ts-grid{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;animation:lg-rise .6s var(--lg-ease) both}
+.ts-card{margin:0;padding:20px 22px;display:flex;flex-direction:column;gap:8px;color:#233E31}
+.ts-card h3{margin:0;font-size:20px;color:#173E2C}
+.ts-card .ts-desc{margin:0;flex:1;font-size:15px;line-height:1.5}
+.ts-card .btn{text-align:center;text-decoration:none;margin-top:6px}
+.ts-card.done{border-color:#173e2c55}
+.ts-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.ts-head h3,.ts-head b{margin:0;flex:1;font-size:18px;color:#173E2C}
+.ts-icon{font-size:24px;line-height:1}
+.ts-tag{display:inline-block;font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px;background:#173e2c14;color:#173E2C}
+.ts-tag.ok{background:#F46D16;color:#fff}
+.ts-sum{margin:6px 0 0;font-size:16px}.ts-sum small{color:var(--muted);margin-left:8px}
+.ts-results h2{font-size:22px;color:#173E2C;margin:26px 0 10px}
+.ts-rcard,.ts-result,.ts-q,.ts-team{padding:20px 22px;margin:0 0 14px;color:#233E31}
+.ts-rcard h3{font-size:18px}
+.ts-bars{margin-top:10px}
+.ts-bar{display:grid;grid-template-columns:minmax(90px,150px) 1fr 48px;gap:10px;align-items:center;margin:8px 0;font-size:14px}
+.ts-track{height:12px;background:#173e2c14;border-radius:99px;overflow:hidden}
+.ts-fill{height:100%;background:linear-gradient(90deg,#245742,#173E2C);border-radius:99px;transition:width .5s ease}
+.ts-help{font-size:13px;color:var(--muted);margin:6px 0 0}
+.ts-share{display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:700;cursor:pointer}
+.ts-share input{width:20px;height:20px;accent-color:#F46D16}
+.ts-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px}.ts-row.sp{justify-content:space-between}
+.ts-row .btn{text-decoration:none}
+.ts-prog{height:8px;border-radius:99px;background:#173e2c14;overflow:hidden;margin:10px 0 16px}.ts-prog b{display:block;height:100%;background:#F46D16;transition:width .3s ease}
+.ts-situation{margin:0;color:var(--muted);font-size:15px}
+.ts-stmt{font-size:22px;font-weight:700;line-height:1.3;margin:8px 0 18px;color:#173E2C}
+.ts-scale{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.ts-scale button{border:1.5px solid #ffffffcc;background:rgba(255,254,251,.7);border-radius:14px;padding:14px 4px 10px;display:grid;gap:6px;justify-items:center;cursor:pointer;font:inherit;color:#233E31;min-height:84px;box-shadow:inset 0 1px 0 #fff}
+.ts-scale button i{display:block;width:var(--s);height:var(--s);border-radius:50%;background:#173e2c40}
+.ts-scale button small{font-size:11px;line-height:1.15;text-align:center;color:var(--muted)}
+.ts-scale button:hover{border-color:#173E2C}
+.ts-scale button.on{border-color:#F46D16;background:#fff3e8}.ts-scale button.on i{background:#F46D16}
+.ts-scale button:disabled{opacity:.6}
+.ts-team table{width:100%;border-collapse:collapse;font-size:15px}.ts-team td{padding:8px 6px;border-bottom:1px solid #173e2c14}
+.ts-pill{display:inline-block;font-size:13px;font-weight:700;padding:3px 10px;border-radius:999px;background:#173e2c14;color:#173E2C}
+.ts-empty{padding:30px;text-align:center;color:var(--muted)}
+.ts-scroll{overflow-x:auto;padding:14px 16px}
+.ts-table{width:100%;border-collapse:collapse;font-size:14px}.ts-table th{text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:8px 10px;border-bottom:1px solid #173e2c22}.ts-table td{padding:8px 10px;border-bottom:1px solid #173e2c12;vertical-align:top}
+@media(max-width:600px){.ts-scale button small{font-size:10px}.ts-stmt{font-size:19px}.ts-bar{grid-template-columns:minmax(80px,110px) 1fr 44px}}

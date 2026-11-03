@@ -39,3 +39,9 @@
 - Obsah starého webu (livein-release-20261013) sa extrahuje skriptom `scripts/extract.mjs` do `content/*.json`; pôvodné animácie, kalkulačka, formulár dopytu, galéria a Adam sú zachované.
 - Dizajn zjednotený s appkou (Figtree, zelené sklo, biele logo). Staré adresy (/livein-release-20261013/…, #hash trasy) sa presmerujú.
 - Náhľad: https://livein-web-self.vercel.app ; doména new.live-in.international pridaná, čaká na CNAME v DNS (GoDaddy).
+
+## 2026-11-03 – Testy osobnosti (nový modul /testy)
+- Nová dlaždica a položka v menu Aplikácie „Testy osobnosti“ pre celý tím: DISC, Big Five, 16 typov, Tímové roly, Pracovný štýl, Kariérne hodnoty (`lib/personality-tests.js`, testy v `tests/personality-tests.test.mjs`).
+- Stránky `/testy` (zoznam + moje výsledky), `/testy/[key]` (priebeh testu, výsledok hneď), `/testy/tim` (zdieľané výsledky), `/testy/admin` (všetky výsledky, CSV).
+- Tabuľka `public.personality_results` s RLS: vlastné výsledky, zdieľané vidí tím, admin vidí všetko. Vyhodnotenie beží na serveri (server actions).
+- Pôvodný samostatný projekt livein-testy (statická stránka s vlastnou databázou DISC) bol prázdny; doména testy.live-in.international teraz slúži ako náhľad webu.
