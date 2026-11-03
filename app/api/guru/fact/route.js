@@ -33,14 +33,14 @@ Odpovedz iba JSON: {"topic":"krátky názov témy","text":"zaujímavosť"}`
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
       signal: AbortSignal.timeout(22000),
-      body: JSON.stringify({ model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5', max_tokens: 300, temperature: 1, messages: [{ role: 'user', content: prompt }] }),
+      body: JSON.stringify({ model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5', max_tokens: 1500, messages: [{ role: 'user', content: prompt }] }),
     })
     if (!r.ok) why = 'api ' + r.status + ' ' + (await r.text()).slice(0, 200)
     else {
       const j = await r.json()
       const text = (j.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('').trim()
       const m = text.match(/\{[\s\S]*\}/)
-      if (!m) why = 'nojson ' + JSON.stringify(j).slice(0, 600)
+      if (!m) why = 'nojson stop=' + j.stop_reason + ' blocks=' + (j.content || []).map((b) => b.type + ':' + String(b.text || b.thinking || '').length).join(',') + ' text=' + text.slice(0, 200)
       else { let o = null; try { o = JSON.parse(m[0]) } catch {} if (o && typeof o.text === 'string' && o.text.trim()) out = { topic: String(o.topic || topic).slice(0, 80), text: o.text.trim().slice(0, 300) }; else why = 'empty ' + text.slice(0, 200) }
       if (!out && !m && text.length > 40 && text.length < 400) out = { topic, text: text.replace(/^["„]|["“]$/g, '').trim() }
     }
