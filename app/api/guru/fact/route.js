@@ -40,8 +40,9 @@ Odpovedz iba JSON: {"topic":"krátky názov témy","text":"zaujímavosť"}`
       const j = await r.json()
       const text = (j.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('').trim()
       const m = text.match(/\{[\s\S]*\}/)
-      if (!m) why = 'nojson ' + text.slice(0, 120)
-      else { const o = JSON.parse(m[0]); if (o && typeof o.text === 'string' && o.text.trim()) out = { topic: String(o.topic || topic).slice(0, 80), text: o.text.trim().slice(0, 300) }; else why = 'empty' }
+      if (!m) why = 'nojson ' + JSON.stringify(j).slice(0, 600)
+      else { let o = null; try { o = JSON.parse(m[0]) } catch {} if (o && typeof o.text === 'string' && o.text.trim()) out = { topic: String(o.topic || topic).slice(0, 80), text: o.text.trim().slice(0, 300) }; else why = 'empty ' + text.slice(0, 200) }
+      if (!out && !m && text.length > 40 && text.length < 400) out = { topic, text: text.replace(/^["„]|["“]$/g, '').trim() }
     }
   } catch (e) { why = 'fetch ' + (e && e.message) }
   if (!out) { console.error('[guru fact] generate failed:', why); return NextResponse.json({ ok: false, error: 'generate' }) }

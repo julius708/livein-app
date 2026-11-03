@@ -197,16 +197,36 @@ export default function GuruWidget({ name = '' }) {
       sim.current = true; speaking.current = true; speechSynthesis.speak(u)
     })
   }
-  async function speak(text) {
+  // Zvuk bez kliknutia prehliadač nepustí: keď je prehrávanie zablokované, hlas čaká na prvé kliknutie alebo klávesu kdekoľvek na stránke.
+  const pending = useRef(null)
+  function armOnInteraction() {
+    if (pending.current?.armed) return
+    pending.current = { ...(pending.current || {}), armed: true }
+    const go = () => {
+      window.removeEventListener('pointerdown', go, true); window.removeEventListener('keydown', go, true)
+      const p = pending.current; pending.current = null
+      if (!p || !p.url || muted) return
+      unlock(); TL.current = p.tl; sim.current = false
+      playAudio(p.url).catch(() => {})
+    }
+    window.addEventListener('pointerdown', go, true); window.addEventListener('keydown', go, true)
+  }
+  async function speak(text, queueIfBlocked = false) {
     if (muted) { if (revealId.current) reveal(revealId.current, 1); return }
+    let url = null, tl = null
     try {
       const r = await fetch('/api/guru/tts', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text }) })
       if (!r.ok) throw new Error('tts ' + r.status)
       const j = await r.json()
       if (!j.ok || !j.audio) throw new Error('tts')
-      TL.current = timelineFrom(j.alignment)
-      await playAudio(URL.createObjectURL(b64blob(j.audio)))
-    } catch { TL.current = null; await speechFallback(text) }
+      tl = timelineFrom(j.alignment); url = URL.createObjectURL(b64blob(j.audio))
+    } catch { url = null }
+    if (url) {
+      try { TL.current = tl; await playAudio(url); return } catch (e) {
+        if (queueIfBlocked) { pending.current = { url, tl }; armOnInteraction(); sim.current = true; speaking.current = true; return }
+      }
+    }
+    TL.current = null; await speechFallback(text)
   }
 
   /* ---------- zaujímavosť dňa: ústa sa hýbu aj bez zvuku (prehliadač bez kliknutia zvuk nepustí) ---------- */
@@ -217,6 +237,8 @@ export default function GuruWidget({ name = '' }) {
     clearTimeout(factTimer2.current)
     factTimer2.current = setTimeout(() => { if (sim.current) { speaking.current = false; sim.current = false } }, secs * 1000)
     setTimeout(() => setFact((f) => (f === text ? '' : f)), Math.max(14000, secs * 1000 + 5000))
+    // skutočný hlas: hneď, ak to prehliadač dovolí, inak po prvom kliknutí
+    speak(`${greet()}${first ? ', ' + first : ''}. ${text}`, true)
   }
 
   /* ---------- chat ---------- */
