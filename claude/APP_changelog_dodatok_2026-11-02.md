@@ -33,3 +33,9 @@
 ## Guru: hlasový vstup cez nahrávku a prepis
 - `app/api/guru/stt/route.js`: nahrávka z mikrofónu (MediaRecorder) sa prepíše cez ElevenLabs Speech to Text (scribe_v1, slovenčina). Funguje v Chrome, Safari aj na iPhone; rozpoznávanie reči v prehliadači ostáva len ako záloha.
 - Klik na mikrofón začne nahrávať (max 20 s), druhý klik odošle. Jasné hlášky pri zablokovanom mikrofóne alebo zlyhaní prepisu.
+
+## 2026-11-03 – Nový web LIVE-IN (livein-web)
+- Verejný web prepísaný do Next.js 15 (rovnaká technológia ako appka): repozitár `julius708/livein-web`, Vercel projekt `livein-web` (región dub1), 135 statických stránok v 6 jazykoch.
+- Obsah starého webu (livein-release-20261013) sa extrahuje skriptom `scripts/extract.mjs` do `content/*.json`; pôvodné animácie, kalkulačka, formulár dopytu, galéria a Adam sú zachované.
+- Dizajn zjednotený s appkou (Figtree, zelené sklo, biele logo). Staré adresy (/livein-release-20261013/…, #hash trasy) sa presmerujú.
+- Náhľad: https://livein-web-self.vercel.app ; doména new.live-in.international pridaná, čaká na CNAME v DNS (GoDaddy).
