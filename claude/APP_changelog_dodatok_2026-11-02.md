@@ -45,3 +45,13 @@
 - Stránky `/testy` (zoznam + moje výsledky), `/testy/[key]` (priebeh testu, výsledok hneď), `/testy/tim` (zdieľané výsledky), `/testy/admin` (všetky výsledky, CSV).
 - Tabuľka `public.personality_results` s RLS: vlastné výsledky, zdieľané vidí tím, admin vidí všetko. Vyhodnotenie beží na serveri (server actions).
 - Pôvodný samostatný projekt livein-testy (statická stránka s vlastnou databázou DISC) bol prázdny; doména testy.live-in.international teraz slúži ako náhľad webu.
+
+## 2026-11-03 – Web: fotky bytov od Thirringa, nový úvod, oprava mobilu
+- Nasadené na https://new.live-in.international (livein-web, commity c1e3596 a 7fd1dd2). Domény new.live-in.international aj livein-web-self.vercel.app bežia, runtime chyby žiadne.
+- 12 profesionálnych fotiek z Drive „LIVE-IN Management | thirring.sk“ (Eurovea, Sky Park veža 1 a 4, Moskovská 6, Tri veže, Petržalka) prevedených do WebP (1800/900 px) do `public/assets/thirring/`; titulky uvádzajú kredit thirring.sk.
+- Úvodný „film“ na domovskej stránke: tri scény z fotiek bytov rozhýbané v Higgsfielde (Kling 3.0, 5 s, bez zvuku), klipy v `public/assets/film/`. Pôvodné vizualizácie kancelárie zostali len v galérii „vizualizácie novej kancelárie“.
+- Sekcia „Za dobrým pobytom“ prepracovaná: tmavozelený panel, kroky vľavo, veľká fotka 4:3 vpravo, popis pod krokmi (desktop aj mobil).
+- Fotky bytov na podstránkach Správa, Krátkodobá, Dlhodobá, Ako to funguje, Ubytovanie, Poradňa, Ceny, FAQ, O nás, Kontakt a v galérii/článkoch (všetkých 6 jazykov).
+- Oprava: na mobile sa oranžové tlačidlo v hlavičke skrýva (je v menu), hamburger bol predtým mimo obrazovky.
+- Doplnené chýbajúce ambientné videá (cinema-loft, cinema-terrace, autumn-apartment, office-cinema-6), ktoré sa predtým nenačítali.
+- Otvorené: Adam (widget livin-asistent) hovorí po slovensky aj na cudzojazyčných stránkach – riešiť v projekte livin-asistent; `<html lang>` je pri serverovom renderi vždy „sk“ (prepne sa až v prehliadači).
