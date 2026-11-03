@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getViewer } from '@/lib/auth'
+import { corsHeaders, corsPreflight } from '@/lib/guru-memory'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -7,7 +8,7 @@ export const maxDuration = 30
 const TOPICS = ['krátkodobý prenájom a Airbnb', 'Bratislava (história, miesta, zaujímavosti)', 'Košice (história, miesta, zaujímavosti)', 'pohostinnosť a spokojnosť hostí', 'psychológia a komunikácia v tíme', 'produktivita a zvyky', 'bývanie, interiér a dizajn', 'cestovanie a turizmus vo svete', 'technológie, ktoré pomáhajú správe bytov', 'slovenčina a jazyky', 'zdravie a energia počas pracovného dňa', 'peniaze a ekonomika prenájmov', 'história hotelierstva', 'príroda a Slovensko', 'veda a objavy, ktoré ovplyvnili bývanie', 'správanie hostí a recenzie']
 
 /** Nová zaujímavosť pre prihláseného človeka pri každom otvorení appky; neopakuje sa (pamätá si jeho predchádzajúce). */
-export async function GET() {
+async function handleGET(request) {
   const { s, user, me, blocked } = await getViewer()
   if (!user || blocked) return NextResponse.json({ ok: false }, { status: 403 })
   const key = process.env.ANTHROPIC_API_KEY
@@ -51,3 +52,6 @@ Odpovedz iba JSON: {"topic":"krátky názov témy","text":"zaujímavosť"}`
   console.log('[guru fact] ok', first, '·', out.topic)
   return NextResponse.json({ ok: true, text: out.text, topic: out.topic })
 }
+
+export async function GET(request) { const res = await handleGET(request); for (const [k, v] of Object.entries(corsHeaders(request))) res.headers.set(k, v); return res }
+export function OPTIONS(request) { return corsPreflight(request) }

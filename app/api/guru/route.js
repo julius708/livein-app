@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server'
 import { getViewer } from '@/lib/auth'
-import { recentMemory, searchMemory, searchTeamMemory, validTurnId, sameOrigin } from '@/lib/guru-memory'
+import { recentMemory, searchMemory, searchTeamMemory, validTurnId, sameOrigin, corsHeaders, corsPreflight } from '@/lib/guru-memory'
+
+export function OPTIONS(request) { return corsPreflight(request) }
+
+// Kontext appky, v ktorej je používateľ (widget pošle `app`)
+const APP_CTX = { pracovna: 'Používateľ je práve v appke Práčovňa (balenie tašiek s prádlom pre byty podľa rezervácií v Guesty; tabuľky packages, package_events, reservations, listings). Otázky bez kontextu vzťahuj na balenie a prádlo.', ring: 'Používateľ je v appke Vstupy hostí (Ring): odkazy pre hostí na otvorenie vchodov, tabuľky ring_links, ring_log, ring_shift. Otázky bez kontextu vzťahuj na vstupy a odkazy.', cs: 'Používateľ je v appke Zákaznícky servis: príchody, odchody, voľné byty, odpovede hosťom.', kb: 'Používateľ je v Znalostnej báze (SOP, mapy problémov, FAQ, dokumenty): prednostne hľadaj v znalostnej báze (search_kb).', onboarding: 'Používateľ je v appke Zaradenie bytov (nový byt od zmluvy po prvého hosťa, checklist, Asana).', economy: 'Používateľ je v appke Ekonomika (výnosy, obsadenosť, výkon bytov): odpovedaj číslami z databázy.', testy: 'Používateľ je v Testoch osobnosti (DISC, Big Five, 16 typov, roly, štýl, hodnoty; tabuľka personality_results – vidí vlastné a zdieľané).' }
 
 export const maxDuration = 60
 export const dynamic = 'force-dynamic'
@@ -31,7 +36,7 @@ const TOOLS = [
   },
 ]
 
-export async function POST(request) {
+async function handlePOST(request) {
   const { s, user, blocked } = await getViewer()
   if (!user || blocked) return NextResponse.json({ ok: false, error: 'Najprv sa prihlás.' }, { status: 403 })
   const key = process.env.ANTHROPIC_API_KEY
@@ -43,6 +48,7 @@ export async function POST(request) {
   const question = typeof body.question === 'string' ? body.question.trim() : ''
   // widget (postavička na stránke): kratšie odpovede a menej krokov, aby odpoveď prišla rýchlo
   const widget = body.mode === 'widget'
+  const appCtx = APP_CTX[String(body.app || '')] ? '\n' + APP_CTX[String(body.app || '')] : ''
   const turnId=body.turnId
   if(!question || question.length>4000 || !validTurnId(turnId))return NextResponse.json({ok:false,error:'Napíš otázku do 4 000 znakov.'},{status:400})
   const {data:previous,error:previousError}=await s.from('guru_turns').select('id,question,answer,status,updated_at').eq('id',turnId).maybeSingle()
@@ -77,7 +83,7 @@ export async function POST(request) {
         method: 'POST',
         headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
         signal: AbortSignal.timeout(Math.min(45000,remaining)),
-        body: JSON.stringify({ model, max_tokens: widget ? 700 : 2500, system: SYSTEM(today) + (widget ? '\nTeraz odpovedáš v malom okne na stránke: odpovedz stručne, 2 až 4 vety, bez úvodu a zhrnutia. Ak treba viac, povedz to a ponúkni pokračovanie.' : ''), tools: TOOLS, messages: convo }),
+        body: JSON.stringify({ model, max_tokens: widget ? 700 : 2500, system: SYSTEM(today) + appCtx + (widget ? '\nTeraz odpovedáš v malom okne na stránke: odpovedz stručne, 2 až 4 vety, bez úvodu a zhrnutia. Ak treba viac, povedz to a ponúkni pokračovanie.' : ''), tools: TOOLS, messages: convo }),
       })
       if (!r.ok) {
         return fail('AI služba je dočasne nedostupná. Tvoja otázka zostala uložená.')
@@ -127,3 +133,6 @@ export async function POST(request) {
     return fail('Guru je dočasne nedostupný. Otázka zostala uložená; skús o chvíľu.')
   }
 }
+
+// Widget Guru beží aj v ostatných appkách LIVE-IN: doplň CORS hlavičky (len *.live-in.international).
+export async function POST(request) { const res = await handlePOST(request); for (const [k, v] of Object.entries(corsHeaders(request))) res.headers.set(k, v); return res }

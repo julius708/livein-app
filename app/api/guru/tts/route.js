@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getViewer } from '@/lib/auth'
-import { sameOrigin } from '@/lib/guru-memory'
+import { sameOrigin, corsHeaders, corsPreflight } from '@/lib/guru-memory'
 import { speechText } from '@/lib/guru-widget-core'
 
 // Hlas Gura: ElevenLabs s časovaním znakov (rovnaký vzor ako api/tts.js asistenta Adama).
@@ -8,7 +8,7 @@ import { speechText } from '@/lib/guru-widget-core'
 export const maxDuration = 30
 export const dynamic = 'force-dynamic'
 
-export async function POST(request) {
+async function handlePOST(request) {
   if (!sameOrigin(request)) return NextResponse.json({ ok: false }, { status: 403 })
   const { user, blocked } = await getViewer()
   if (!user || blocked) return NextResponse.json({ ok: false, error: 'Najprv sa prihlás.' }, { status: 403 })
@@ -39,3 +39,7 @@ export async function POST(request) {
     return NextResponse.json({ ok: false, error: 'tts_failed' }, { status: 502 })
   }
 }
+
+// Widget Guru beží aj v ostatných appkách LIVE-IN: doplň CORS hlavičky (len *.live-in.international).
+export async function POST(request) { const res = await handlePOST(request); for (const [k, v] of Object.entries(corsHeaders(request))) res.headers.set(k, v); return res }
+export function OPTIONS(request) { return corsPreflight(request) }

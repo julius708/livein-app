@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server'
 import { getViewer } from '@/lib/auth'
-import { sameOrigin } from '@/lib/guru-memory'
+import { sameOrigin, corsHeaders, corsPreflight } from '@/lib/guru-memory'
 
 // Prepis hlasu pre Guru: nahrávka z mikrofónu → ElevenLabs Speech to Text (Scribe). Funguje vo všetkých prehliadačoch,
 // na rozdiel od rozpoznávania reči v prehliadači. Kľúč ELEVENLABS_API_KEY nastavuje Július vo Verceli.
 export const maxDuration = 30
 export const dynamic = 'force-dynamic'
 
-export async function POST(request) {
+async function handlePOST(request) {
   if (!sameOrigin(request)) return NextResponse.json({ ok: false }, { status: 403 })
   const { user, blocked } = await getViewer()
   if (!user || blocked) return NextResponse.json({ ok: false, error: 'Najprv sa prihlás.' }, { status: 403 })
@@ -33,3 +33,7 @@ export async function POST(request) {
     return NextResponse.json({ ok: false, error: 'stt_failed' }, { status: 502 })
   }
 }
+
+// Widget Guru beží aj v ostatných appkách LIVE-IN: doplň CORS hlavičky (len *.live-in.international).
+export async function POST(request) { const res = await handlePOST(request); for (const [k, v] of Object.entries(corsHeaders(request))) res.headers.set(k, v); return res }
+export function OPTIONS(request) { return corsPreflight(request) }

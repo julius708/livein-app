@@ -5,8 +5,17 @@
 import { useEffect, useRef, useState } from 'react'
 import { MOUTH, stripMarkdown, visAt, timelineFrom, clampPos } from '@/lib/guru-widget-core'
 
-const CHIPS = ['Čo dnes potrebuje moju pozornosť?', 'Koľko máme dnes príchodov a odchodov?', 'Aký je kód od dverí na byte…', 'Ako riešime neskorý check-in?', 'Napíš hosťovi odpoveď na sťažnosť na hluk']
-const HELLO = 'Ahoj, som LIVE-IN Guru. Opýtaj sa ma na byty, rezervácie alebo postupy.'
+// Otázky a pozdrav podľa appky, v ktorej Guru práve je (rovnaký widget vo všetkých appkách, iný obsah).
+const APP_GURU = {
+  home: { hello: 'Ahoj, som LIVE-IN Guru. Opýtaj sa ma na byty, rezervácie alebo postupy.', chips: ['Čo dnes potrebuje moju pozornosť?', 'Koľko máme dnes príchodov a odchodov?', 'Aký je kód od dverí na byte…', 'Ako riešime neskorý check-in?', 'Napíš hosťovi odpoveď na sťažnosť na hluk'] },
+  pracovna: { hello: 'Ahoj, som Guru. V Práčovni ti poradím s taškami, prádlom a kto čo balil.', chips: ['Koľko tašiek sa dnes balí a na koľko osôb?', 'Ktoré byty majú zajtra odchod aj príchod v jeden deň?', 'Ako sa počíta prádlo pre byt s deťmi?', 'Čo dať do tašky navyše pri dlhšom pobyte?', 'Kto včera balil tašky a bolo niečo zrušené?'] },
+  ring: { hello: 'Ahoj, som Guru. Pomôžem s odkazmi pre hostí a vstupmi do budov.', chips: ['Ako vytvorím odkaz pre hosťa a čo mu napísať?', 'Ktoré budovy majú Ring offline?', 'Hosť nevie otvoriť dvere – čo skontrolovať?', 'Ako dlho platí odkaz a ako ho zruším?', 'Napíš hosťovi správu k vstupu do budovy'] },
+  cs: { hello: 'Ahoj, som Guru. Pomôžem so zmenou, hosťami a odpoveďami.', chips: ['Čo dnes potrebuje moju pozornosť?', 'Koľko máme dnes príchodov a odchodov?', 'Ktoré byty sú dnes voľné?', 'Napíš hosťovi odpoveď na sťažnosť na hluk', 'Ako riešime neskorý check-in?'] },
+  kb: { hello: 'Ahoj, som Guru. Nájdem ti SOP, mapu problémov alebo odpoveď pre hosťa.', chips: ['Nájdi SOP k odovzdaniu bytu', 'Čo robiť, keď hosť nahlási poruchu kúrenia?', 'Aká je odpoveď na otázku o city tax?', 'Ktoré SOP čakajú na kontrolu?', 'Zhrň mapu problémov pre stratené kľúče'] },
+  onboarding: { hello: 'Ahoj, som Guru. Pomôžem so zaradením nového bytu od zmluvy po prvého hosťa.', chips: ['Čo všetko treba pred spustením nového bytu?', 'Ktoré byty v zaraďovaní meškajú?', 'Čo napísať do listingu pre byt s parkovaním?', 'Ako nastaviť byt v Guesty a PriceLabs?', 'Checklist pre fotenie bytu'] },
+  economy: { hello: 'Ahoj, som Guru. Pomôžem s číslami a výkonom bytov.', chips: ['Ktoré byty mali minulý mesiac najvyšší výnos?', 'Aká je obsadenosť v Bratislave a v Košiciach?', 'Koľko sme zarobili cez Booking a Airbnb?', 'Ktoré byty majú slabý výkon a prečo?', 'Zhrň mesiac pre vedenie'] },
+  testy: { hello: 'Ahoj, som Guru. Opýtaj sa, čo znamená tvoj výsledok alebo ako spolupracovať s kolegom.', chips: ['Čo znamená môj DISC výsledok v práci?', 'Ako komunikovať s kolegom, ktorý má vysokú Dominanciu?', 'Ktorý test mám vyplniť ako ďalší?', 'Čo dnes potrebuje moju pozornosť?'] },
+}
 const GREETING = 'Ahoj, som LIVE-IN Guru. Opýtaj sa na byty, rezervácie, kódy, postupy alebo čokoľvek iné. Môžeš aj hovoriť.'
 const ERR = 'Prepáč, teraz sa mi nepodarilo odpovedať. Skús to o chvíľu znova.'
 // Skutočné snímky úst z postavy (vygenerované z guru-v3.png), prelínajú sa podľa hlások. Región v % obrázka.
@@ -24,7 +33,10 @@ const ICON_OFF = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stro
 
 const greet = () => { const h = Number(new Date().toLocaleString('en-GB', { timeZone: 'Europe/Bratislava', hour: '2-digit', hour12: false })); return h < 5 ? 'Dobrú noc' : h < 10 ? 'Dobré ráno' : h < 18 ? 'Dobrý deň' : 'Dobrý večer' }
 
-export default function GuruWidget({ name = '' }) {
+export default function GuruWidget({ name = '', app = 'home', hub = '' }) {
+  const API = (hub || '').replace(/\/$/, '')
+  const CFG = APP_GURU[app] || APP_GURU.home
+  const CHIPS = CFG.chips, HELLO = CFG.hello
   const first = (name || '').split(' ')[0]
   const [open, setOpen] = useState(false)
   const [msgs, setMsgs] = useState([])           // {id, role:'u'|'a', text, words?, shown?}
@@ -62,7 +74,7 @@ export default function GuruWidget({ name = '' }) {
       if (Date.now() - last < 30 * 60 * 1000) return
       store('guru-fact-at', String(Date.now()))
       try {
-        const r = await fetch('/api/guru/fact', { cache: 'no-store' }); const j = await r.json()
+        const r = await fetch(`${API}/api/guru/fact`, { cache: 'no-store', credentials: 'include' }); const j = await r.json()
         if (!r.ok || !j.ok || !j.text || !mountedRef.current) { store('guru-fact-at', '0'); return }
         setHello(false); setFact(j.text)
         tellFact(j.text)
@@ -215,7 +227,7 @@ export default function GuruWidget({ name = '' }) {
     if (muted) { if (revealId.current) reveal(revealId.current, 1); return }
     let url = null, tl = null
     try {
-      const r = await fetch('/api/guru/tts', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text }) })
+      const r = await fetch(`${API}/api/guru/tts`, { method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text }) })
       if (!r.ok) throw new Error('tts ' + r.status)
       const j = await r.json()
       if (!j.ok || !j.audio) throw new Error('tts')
@@ -251,7 +263,7 @@ export default function GuruWidget({ name = '' }) {
     scrollEnd()
     let reply
     try {
-      const r = await fetch('/api/guru', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ question, turnId: uuid(), mode: 'widget' }), signal: AbortSignal.timeout(70000) })
+      const r = await fetch(`${API}/api/guru`, { method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ question, turnId: uuid(), mode: 'widget', app }), signal: AbortSignal.timeout(70000) })
       const j = await r.json()
       if (!r.ok || !j.ok) throw new Error(j.error || 'chat')
       reply = stripMarkdown(j.text || '').trim() || ERR
@@ -300,7 +312,7 @@ export default function GuruWidget({ name = '' }) {
   function note(text) { setMsgs((old) => [...old.filter((m) => !m.thinking), { id: uuid(), role: 'a', text }]); scrollEnd() }
   async function transcribe(blob) {
     const fd = new FormData(); fd.append('audio', blob, blob.type.includes('mp4') ? 'audio.mp4' : 'audio.webm')
-    const r = await fetch('/api/guru/stt', { method: 'POST', body: fd, signal: AbortSignal.timeout(30000) })
+    const r = await fetch(`${API}/api/guru/stt`, { method: 'POST', credentials: 'include', body: fd, signal: AbortSignal.timeout(30000) })
     const j = await r.json().catch(() => ({}))
     if (r.status === 503) throw new Error('nokey')
     if (!r.ok || !j.ok) throw new Error('stt')
@@ -357,9 +369,9 @@ export default function GuruWidget({ name = '' }) {
     <div className={'gw-fig' + (open ? ' in' : '')} ref={figRef} title={open ? undefined : 'Klikni a opýtaj sa LIVE-IN Guru · chyť a presuň'}
       onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} onClick={() => { if (open && speaking.current) stopSpeech(true) }}>
       <div className="gw-bob"><div className="gw-nod" ref={nodRef}>
-        {imgOk ? <img src="/guru-v3.png" alt="LIVE-IN Guru" draggable="false" onError={() => setImgOk(false)} /> : <div className="gw-fallback" aria-hidden="true">🧠</div>}
-        {imgOk && <img className="gw-jaw" src="/guru-v3.png" alt="" aria-hidden="true" draggable="false" ref={jawRef} />}
-        {imgOk && sprites && VIS.map((k) => <img key={k} className="gw-vis" src={`/guru-mouth/${k}.png`} alt="" aria-hidden="true" draggable="false" ref={(el) => { visRefs.current[k] = el }} onError={() => setSprites(false)} style={{ left: VIS_BOX.left + '%', top: VIS_BOX.top + '%', width: VIS_BOX.width + '%' }} />)}
+        {imgOk ? <img src={`${API}/guru-v3.png`} alt="LIVE-IN Guru" draggable="false" onError={() => setImgOk(false)} /> : <div className="gw-fallback" aria-hidden="true">🧠</div>}
+        {imgOk && <img className="gw-jaw" src={`${API}/guru-v3.png`} alt="" aria-hidden="true" draggable="false" ref={jawRef} />}
+        {imgOk && sprites && VIS.map((k) => <img key={k} className="gw-vis" src={`${API}/guru-mouth/${k}.png`} alt="" aria-hidden="true" draggable="false" ref={(el) => { visRefs.current[k] = el }} onError={() => setSprites(false)} style={{ left: VIS_BOX.left + '%', top: VIS_BOX.top + '%', width: VIS_BOX.width + '%' }} />)}
         {imgOk && <canvas className="gw-mouth" width={MOUTH.canvasW} height={MOUTH.canvasH} ref={cvRef} style={{ left: MOUTH.left + '%', top: MOUTH.top + '%', width: MOUTH.width + '%' }} />}
       </div></div>
     </div>
@@ -399,7 +411,7 @@ export default function GuruWidget({ name = '' }) {
             {micOk && <button type="button" className={'gw-ib' + (rec ? ' rec' : '')} aria-label={rec ? 'Zastaviť a odoslať' : 'Hovoriť'} title={rec ? 'Klikni, keď dopovieš' : 'Klikni a hovor, potom klikni znova'} onClick={mic}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" /></svg></button>}
             <button type="submit" className="gw-ib send" aria-label="Odoslať" disabled={busy}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg></button>
           </form>
-          <div className="gw-foot">Len pre tím LIVE-IN. Celá história a nastavenia: <a href="/guru">stránka Guru</a>.</div>
+          <div className="gw-foot">Len pre tím LIVE-IN. Celá história a nastavenia: <a href={`${API}/guru`}>stránka Guru</a>.</div>
         </div>
       )}
     </>
