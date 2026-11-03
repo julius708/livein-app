@@ -55,3 +55,11 @@
 - Oprava: na mobile sa oranžové tlačidlo v hlavičke skrýva (je v menu), hamburger bol predtým mimo obrazovky.
 - Doplnené chýbajúce ambientné videá (cinema-loft, cinema-terrace, autumn-apartment, office-cinema-6), ktoré sa predtým nenačítali.
 - Otvorené: Adam (widget livin-asistent) hovorí po slovensky aj na cudzojazyčných stránkach – riešiť v projekte livin-asistent; `<html lang>` je pri serverovom renderi vždy „sk“ (prepne sa až v prehliadači).
+
+## 2026-11-03 – Testy osobnosti: hravý priebeh, grafický výsledok, mapa tímu
+- Priebeh testu (všetkých 6): otázka ako karta, odpovede s ikonami a klávesami 1–5, kruh postupu, „Tvoj profil sa kreslí“ (pavučina sa plní počas odpovedania). Komponent `components/TestRunner.js`.
+- Výsledok: odznak typu (16 typov má aj meno, napr. ENTJ · Veliteľ – `T16_NAMES`), pavučina s prerušovaným priemerom tímu (zo zdieľaných výsledkov, min. 2 ľudia), stĺpce, „Čo to o tebe hovorí“ s radou pre spoluprácu (`COLLAB` v `lib/personality-team.js`), najmenej výrazná dimenzia, tlačidlo „Porovnať sa s tímom“. Rovnaká karta aj v „Moje výsledky“ (`components/TestResult.js`).
+- Tím (`/testy/tim`, `components/TeamBoard.js`): prepínač testov; mapa tímu s osami podľa testu (`AXES`), mierka prispôsobená tímu, krúžky s iniciálami sa neprekrývajú (odtláčanie), čiary od vybraného k ostatným podľa podobnosti; výber 1–2 ľudí → profil s pavučinou, podobnosť v % (kruh), v čom sa zhodujú/líšia, rady; rozloženie tímu po dimenziách (bodky + priemer); najpodobnejšie dvojice a najväčšie protiklady; slovník dimenzií.
+- Vlastné výsledky vidím na mape aj bez zdieľania, kolegovia vidia len zdieľané (RLS nezmenené).
+- Testy: `tests/personality-tests.test.mjs` (15 testov) – pozícia, podobnosť, dvojice, priemer, priebežné skóre, mená typov.
+- Ticker `app_updates`: „Testy osobnosti: mapa tímu a hravý priebeh“.
