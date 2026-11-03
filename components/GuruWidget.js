@@ -22,7 +22,10 @@ function b64blob(b64) { const bin = atob(b64), u = new Uint8Array(bin.length); f
 const ICON_ON = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z" /><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12" /></svg>
 const ICON_OFF = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z" /><path d="M17 9l5 6M22 9l-5 6" /></svg>
 
+const greet = () => { const h = Number(new Date().toLocaleString('en-GB', { timeZone: 'Europe/Bratislava', hour: '2-digit', hour12: false })); return h < 5 ? 'Dobrú noc' : h < 10 ? 'Dobré ráno' : h < 18 ? 'Dobrý deň' : 'Dobrý večer' }
+
 export default function GuruWidget({ name = '' }) {
+  const first = (name || '').split(' ')[0]
   const [open, setOpen] = useState(false)
   const [msgs, setMsgs] = useState([])           // {id, role:'u'|'a', text, words?, shown?}
   const [busy, setBusy] = useState(false)
@@ -53,18 +56,18 @@ export default function GuruWidget({ name = '' }) {
     const onResize = () => { setMobile(m()); setPos((p) => clampPos(p.r, p.b, { w: window.innerWidth, h: window.innerHeight }, { w: 130, h: 200 })) }
     window.addEventListener('resize', onResize)
     const t = setTimeout(() => { if (!sstore('guru-hello')) { sstore('guru-hello', '1'); setHello(true); setTimeout(() => setHello(false), 9000) } }, 1500)
-    // zaujímavosť dňa: raz za deň na zariadenie, bez otvorenia chatu; postavička pri nej hýbe ústami
-    const day = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Bratislava' })
+    // pri každom otvorení appky (nový príchod alebo po 30 min): Guru pozdraví menom a povie novú zaujímavosť, bez otvorenia chatu
     const factTimer = setTimeout(async () => {
-      if (store('guru-fact-day') === day) return
+      const last = Number(store('guru-fact-at') || 0)
+      if (Date.now() - last < 30 * 60 * 1000) return
+      store('guru-fact-at', String(Date.now()))
       try {
         const r = await fetch('/api/guru/fact', { cache: 'no-store' }); const j = await r.json()
-        if (!r.ok || !j.ok || !j.text || !mountedRef.current) return
-        store('guru-fact-day', day)
+        if (!r.ok || !j.ok || !j.text || !mountedRef.current) { store('guru-fact-at', '0'); return }
         setHello(false); setFact(j.text)
         tellFact(j.text)
-      } catch {}
-    }, sstore('guru-hello') ? 2200 : 11000)
+      } catch { store('guru-fact-at', '0') }
+    }, 2500)
     const A = new Audio(); A.preload = 'auto'; A.playsInline = true; audio.current = A
     return () => { mountedRef.current = false; window.removeEventListener('resize', onResize); clearTimeout(t); clearTimeout(factTimer); try { A.pause() } catch {} try { speechSynthesis.cancel() } catch {} }
   }, [])
@@ -209,7 +212,7 @@ export default function GuruWidget({ name = '' }) {
   /* ---------- zaujímavosť dňa: ústa sa hýbu aj bez zvuku (prehliadač bez kliknutia zvuk nepustí) ---------- */
   const factTimer2 = useRef(null)
   function tellFact(text) {
-    const secs = Math.min(18, 2 + text.split(/\s+/).length * 0.42)
+    const secs = Math.min(20, 3 + text.split(/\s+/).length * 0.42)
     sim.current = true; speaking.current = true
     clearTimeout(factTimer2.current)
     factTimer2.current = setTimeout(() => { if (sim.current) { speaking.current = false; sim.current = false } }, secs * 1000)
@@ -328,7 +331,6 @@ export default function GuruWidget({ name = '' }) {
     try { r.start() } catch { finish() }
   }
 
-  const first = (name || '').split(' ')[0]
   const figure = (
     <div className={'gw-fig' + (open ? ' in' : '')} ref={figRef} title={open ? undefined : 'Klikni a opýtaj sa LIVE-IN Guru · chyť a presuň'}
       onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} onClick={() => { if (open && speaking.current) stopSpeech(true) }}>
@@ -346,7 +348,7 @@ export default function GuruWidget({ name = '' }) {
       {!open && (
         <div className="gw-host" ref={hostRef} style={{ right: pos.r, bottom: pos.b }}>
           <div className="gw-col">
-            <button type="button" className={'gw-hello' + (fact ? ' fact show' : hello ? ' show' : '')} onClick={() => { if (fact) { const f = fact; setFact(''); speaking.current = false; sim.current = false; openWin(); setTimeout(() => addGuru('Zaujímavosť na dnes: ' + f), 50) } else openWin() }}>{fact ? <><b>Zaujímavosť na dnes</b>{fact}</> : HELLO}</button>
+            <button type="button" className={'gw-hello' + (fact ? ' fact show' : hello ? ' show' : '')} onClick={() => { if (fact) { const f = fact; setFact(''); speaking.current = false; sim.current = false; openWin(); setTimeout(() => addGuru(`${greet()}${first ? ', ' + first : ''}! ${f}`), 50) } else openWin() }}>{fact ? <><b>{greet()}{first ? `, ${first}` : ''} 👋</b>{fact}</> : HELLO}</button>
             {figure}
             <button type="button" className="gw-pill" onClick={openWin}>Opýtať sa LIVE-IN Guru</button>
           </div>
