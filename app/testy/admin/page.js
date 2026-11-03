@@ -22,7 +22,7 @@ export default async function AdminPage({ searchParams }) {
   const res = latest(rows || [])
   const people = {}
   for (const r of res) { if (!people[r.user_id]) people[r.user_id] = { id: r.user_id, name: r.name, email: r.email, by: {} }; people[r.user_id].by[r.test_key] = r }
-  const list = Object.values(people).sort((a, b) => String(a.name).localeCompare(String(b.name), 'sk'))
+  const list = Object.values(people).sort((a, b) => String(a.name || a.email || '').localeCompare(String(b.name || b.email || ''), 'sk'))
   return (
     <Shell me={me} user={user} isAdmin={isAdmin} active="testy" hideFooter>
       <section className="li-page-intro">

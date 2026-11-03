@@ -21,8 +21,9 @@ export async function saveResult(key, answers) {
 export async function setShared(id, shared) {
   const { s, user, me } = await getViewer()
   if (!user || !me) return { ok: false, error: 'Nie si prihlásený/á.' }
-  const { error } = await s.from('personality_results').update({ shared: !!shared }).eq('id', String(id)).eq('user_id', user.id)
+  const { data, error } = await s.from('personality_results').update({ shared: !!shared }).eq('id', String(id)).eq('user_id', user.id).select('id')
   if (error) return { ok: false, error: error.message }
+  if (!data || !data.length) return { ok: false, error: 'Výsledok sa nenašiel. Obnov stránku.' }
   revalidatePath('/testy'); revalidatePath('/testy/tim')
   return { ok: true }
 }
