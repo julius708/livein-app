@@ -74,3 +74,13 @@
 - **Ring (Vstupy hostí) padal v Safari** („Application error“): v `app/admin/page.js` sa používalo `<AppsMenu>` bez importu (zmena z 2. 11.). Chrome prešiel, Safari zastavilo. Opravené (livein-ring e60f32e). Pridaná záchytná obrazovka `app/error.js` po slovensky + `api/client-error`, ktorá chybu z prehliadača zapíše do logov Vercelu – tak sa chyba našla.
 - **Guru v Práčovni**: `src/ui/GuruDock.tsx` (postavička + okno s iframe `app.live-in.international/guru?embed=1`), hub má v `/guru` režim `embed=1` bez hlavičky. Rovnaké prihlásenie (same-site cookies cez app.live-in.international/pracovna).
 - **Zaujímavosť dňa**: `app/api/guru/fact` generuje jednu zaujímavosť na deň pre celý tím (Anthropic, témy sa striedajú, posledných 90 sa posiela ako „nepoužiť“), tabuľka `public.guru_daily_facts` (RLS: čítanie aj vloženie pre prihlásených). Widget ju ukáže v bubline s pohybom úst bez otvorenia chatu, raz za deň na zariadenie (`localStorage guru-fact-day`). Zvuk sa bez kliknutia nespúšťa (obmedzenie prehliadačov).
+
+## 2026-11-03 – Jednotný vzhľad všetkých appiek
+- Audit rozdielov (hlavička, menu Aplikácie, dlaždice, zdieľané CSS, Guru) → zdieľaná „súprava“ v scratchpade generovaná z hlavnej appky: `components/AppsMenu.js` (zoznam z `lib/modules.js` vrátane Testov a Voľných apartmánov, odkazy z `config.module_urls`), `components/Tile.js` + `Tilt.js` (rovnaký 3D efekt ako na domove), `components/GuruDock.js` (postavička + okno s chatom cez iframe `/guru?embed=1`), `app/livein-shared.css` (dlaždice, kompaktné dlaždice, Späť, Guru okno, navigácia v hlavičke sa pri viac položkách roluje).
+- KB (`livein-kb-`): rýchle odkazy na domove sú dlaždice; hlavný obsah má triedu `li-main-workspace` (rovnaké sklo ako hub); kratší názov „Znalostná báza“; Guru.
+- Zaradenie: karty bytov majú 3D efekt (`TiltLink`), trieda `li-main-workspace`, tretia úroveň v navigačnej ceste; Guru.
+- CS: rýchle odkazy na prehľade sú kompaktné dlaždice; Guru v appke.
+- Ring: vyrovnané stĺpce (formulár + návod vľavo, Guesty vpravo), Guru, nový zoznam v menu Aplikácie.
+- Práčovňa: nový zoznam v menu Aplikácie.
+- Ekonomika (statická): `<header>`, navigácia pred účtom, „Odhlásiť“, menu Aplikácie s popismi a stavom `.open`, pätička `.li-footer`, Guru.
+- Ring + ostatné: záchytná obrazovka chyby zatiaľ len v Ringu; odporúčam doplniť do ostatných pri najbližšej zmene.
