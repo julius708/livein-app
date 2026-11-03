@@ -27,3 +27,9 @@
 .g-memory button,.g-older,.g-retry{background:white;color:var(--ch);border:1px solid var(--line);border-radius:10px;padding:8px 12px;min-height:40px;font:inherit;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
 .g-memory button:disabled{opacity:.5;cursor:not-allowed}.g-error{margin:12px 20px;padding:12px;background:#FFF0ED;color:#8C231B;border-radius:10px}.g-retry{margin-bottom:16px}.gmsgs{min-height:260px;max-height:60vh;overflow-y:auto}.gm{white-space:pre-wrap;overflow-wrap:anywhere}
 @media(max-width:640px){.g-memory{flex-wrap:wrap}.g-memory>div{flex-basis:100%}.gform{align-items:stretch}.gmsgs{max-height:52vh}}
+
+/* Guru v okne inej appky (iframe): bez hlavičky, chat na celú výšku */
+.guru-embed{padding:8px;min-height:100vh;box-sizing:border-box;background:transparent}
+.guru-embed .gchat{margin:0;height:calc(100vh - 16px);box-sizing:border-box}
+.guru-embed .gmsgs{flex:1;max-height:none;min-height:0}
+.guru-embed .g-memory small{max-width:none}

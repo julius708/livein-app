@@ -12,6 +12,8 @@ export default async function GuruPage({ searchParams }) {
   const { user, me, isAdmin, blocked } = await getViewer()
   if (!user) redirect('/login')
   if (blocked) return <NoAccess email={user.email} />
+  // embed=1: len chat bez hlavičky – vkladá sa do okna Guru v ostatných appkách (Práčovňa, CS, Ring) cez iframe
+  if (sp && sp.embed === '1') return <main className="guru-embed"><GuruChat initial={typeof sp.q === 'string' ? sp.q.slice(0, 500) : ''} /></main>
   return (
     <Shell me={me} user={user} isAdmin={isAdmin} active="guru" hideFooter>
       <section className="guru">
