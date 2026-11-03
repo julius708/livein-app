@@ -24,7 +24,7 @@
 .li-section-heading small{color:#58665D;font-size:12px}
 .li-footer{border-top:1px solid #DCE2D9;margin-top:32px;padding:22px 0;display:flex;justify-content:space-between;gap:14px;color:#58665D;font-size:12px}
 .li-skip{position:fixed;top:-100px;left:20px;z-index:100;background:#fff;color:#173E2C;padding:12px 18px;border-radius:10px}
-.li-skip:focus{top:12px}
+.li-skip:focus-visible{top:12px}
 @media(max-width:1000px){.li-masthead-inner{gap:15px;flex-wrap:wrap}.li-nav{order:3;flex-basis:100%;overflow-x:auto;padding-bottom:3px}.li-account{margin-left:auto}.li-nav a,.li-nav button{flex-shrink:0}}
 @media(max-width:600px){.li-masthead-inner{padding:10px 16px;min-height:64px;gap:10px}.li-brand-link{gap:12px}.li-brand-link img{width:90px;height:32px}.li-product{font-size:10px;padding-left:12px;max-width:92px}.li-account>span{display:none}.li-nav{gap:3px}.li-nav a,.li-nav button{font-size:12px;padding:10px 12px}.li-page-intro{padding:26px 22px;border-radius:20px;align-items:flex-start;flex-direction:column;gap:18px}.li-page-intro p{font-size:14px}.li-trail{padding:18px 0 14px}.li-footer{flex-direction:column}.li-section-heading{align-items:flex-start;flex-direction:column;gap:5px}}
 

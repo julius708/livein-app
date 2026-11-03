@@ -16,3 +16,4 @@ coverage
 !.env.example
 .probe-token.json
 app/dev-tim/
+app/dev-eko/

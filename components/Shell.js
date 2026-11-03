@@ -10,7 +10,7 @@ import GuruWidget from '@/components/GuruWidget'
 import '@/app/guru/guru.css'
 import '@/app/guru/guru-widget.css'
 
-export default function Shell({ me, user, isAdmin, active = 'home', locked = false, hideFooter = false, children }) {
+export default function Shell({ me, user, isAdmin, active = 'home', locked = false, hideFooter = false, guruApp = 'home', children }) {
   const name = (me && me.name) || (user && user.email) || ''
   const items = [
     { href: '/', id: 'home', label: 'Domov', icon: '🏠' },
@@ -44,11 +44,11 @@ export default function Shell({ me, user, isAdmin, active = 'home', locked = fal
       </header>
       {!locked && <NewsBand />}
       <main id="workspace-content" className={"wrap li-main-workspace" + (isAdmin ? " li-admin" : "")}>
-        {active !== "home" && <div className="li-trail"><Link href="/">LIVE-IN domov</Link><span>{items.find(i => i.id === active)?.label || (active === "ideas" ? "Nápady na obsah" : active === "testy" ? "Testy osobnosti" : "Tímový priestor")}</span></div>}
+        {active !== "home" && <div className="li-trail"><Link href="/">LIVE-IN domov</Link><span>{items.find(i => i.id === active)?.label || (active === "ideas" ? "Nápady na obsah" : active === "testy" ? "Testy osobnosti" : active === "ekonomika" ? "Ekonomika" : "Tímový priestor")}</span></div>}
         {children}
         {!locked && me && <UsageTracker />}
         {/* Guru ako živý asistent na každej stránke, len pre prihlásených aktívnych členov tímu (na stránke /guru je veľký chat) */}
-        {!locked && me && active !== 'guru' && <GuruWidget name={me.name || ''} />}
+        {!locked && me && active !== 'guru' && <GuruWidget name={me.name || ''} app={guruApp} />}
         {!locked && !hideFooter && me && (
           <details className="card fbfoot" id="feedback">
             <summary><span>💬 Feedback k appke</span><small>Testujeme. Napíš nám, čo zmeniť.</small></summary>
