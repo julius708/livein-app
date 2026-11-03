@@ -22,7 +22,7 @@ export async function middleware(req) {
   const { data: { user } } = await supabase.auth.getUser()
   const path = req.nextUrl.pathname
   // Ekonomika je už sekcia hlavnej appky; staré odkazy s lomkou presmerujeme
-  if (path === '/ekonomika/' || path.startsWith('/ekonomika/index')) return new NextResponse(null, { status: 308, headers: { Location: '/ekonomika' } })
+  if (path === '/ekonomika/' || path.startsWith('/ekonomika/index')) { const url = req.nextUrl.clone(); url.pathname = '/ekonomika'; url.search = ''; return NextResponse.redirect(url, 308) }
   const isOpen = OPEN.some((o) => path === o || path.startsWith(o))
 
   if (!user && !isOpen) {
