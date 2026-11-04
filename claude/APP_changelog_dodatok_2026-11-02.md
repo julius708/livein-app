@@ -106,3 +106,10 @@
 - Viditeľnosť: projekt s prihlasovacími údajmi je skrytý pre všetkých; faktúry, účtovníctvo, dochádzka a dovolenky, obchod (Sales, Business), kontakty, meetings/report a SIFC vidia len admini. Výnimky: `config.guru_asana = { deny_all, deny_staff, allow_staff }` (gid projektov). Úlohy mimo povolených projektov sa z výsledkov vyhadzujú.
 - Systémový prompt Guru vysvetľuje, kedy Asanu použiť a aké sú hlavné projekty; v odpovedi uvádza názov, riešiteľa, termín, stav a odkaz. Widget na domove má čip „Aké opravy sú v Asane otvorené?“.
 - Testy pravidiel viditeľnosti: `tests/guru-asana.test.mjs`.
+
+## 2026-11-04 – CRM a Newsletter: krok 2 (dátový model a sync)
+- Tabuľky `leads`, `lead_events`, `notifications`, `crm_sync_queue` (RLS: rola `crm`; notifikácie len vlastné; Guru číta leady cez `guru_ro`). Realtime zapnutý pre `notifications` a `leads`. Nové roly `crm` a `newsletter` (constraint `app_users_roles_valid` rozšírený; Zuzana+Patrik crm, Július crm+newsletter, Simona newsletter).
+- `lib/crm.js` (čisté pravidlá: mestá, smerovanie, priority, telefón/wa.me, zdroj, štádiá ↔ HubSpot ↔ Asana, import, odpočet, pripomienky) + `tests/crm.test.mjs`.
+- `lib/hubspot.js` (token len na serveri, bez PII v logoch), `lib/crm-asana.js` (sekcie LEAD 1 … ✕ v projekte LIVE-IN International, vlastné polia Zdroj / Dôvod straty / Prvý kontakt / Lead prijatý), `lib/supabase-admin.js` (service role), `lib/crm-server.js` (createLead idempotentne, changeStage s frontou zápisov, flushQueue s opakovaním, importAll, syncExternal).
+- Trasy: `POST /api/crm/create-lead` (Zapier, kľúč `CRM_WEBHOOK_SECRET`), `POST /api/crm/import` (admin alebo cron kľúč), `GET /api/cron/crm-sync` každých 10 min (vercel.json).
+- Potrebné premenné vo Verceli (hub): `HUBSPOT_TOKEN`, `CRM_WEBHOOK_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`; v kroku 4 `WEB_PUSH_PRIVATE_KEY`, `NEXT_PUBLIC_WEB_PUSH_PUBLIC_KEY`, `WEB_PUSH_SUBJECT`.
