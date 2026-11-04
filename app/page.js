@@ -13,7 +13,9 @@ import Tile from '@/components/Tile'
 import Fold from '@/components/Fold'
 import { buildMaintenance, todayBA } from '@/lib/maintenance'
 import { asanaConfigured, fetchOpenDamageTasks, fetchProjectMembers } from '@/lib/asana'
+import { PLAN_KEY, PLAN_FACTS } from '@/lib/plan-2027'
 import './home.css'
+import './plan/plan.css'
 
 const CDN = 'https://d2ol7oe51mr4n9.cloudfront.net/user_3FzChznIQ3gbpo8z6ko8CWTOlI0/'
 const PHOTOS = ['86d44ae0-5ce9-4592-86c2-125434ad65f2', 'dd100b9a-0df9-40f1-96eb-26273edb8406', '6bfbc387-be9a-4408-9841-15efe37eaa51', '56dae00b-ff59-477e-bb7f-8f406fee3ad6']
@@ -36,7 +38,7 @@ export default async function Home({ searchParams }) {
 
   const today = todayBA()
   const since = new Date(Date.parse(today) - 45 * 864e5).toISOString().slice(0, 10)
-  const [{ data: cfg }, { data: ov }, { data: hf }, { data: hd }, { data: hw }, { data: noteRows }, { data: nums }, { data: myMentions }, { data: teamRows }] = await Promise.all([
+  const [{ data: cfg }, { data: ov }, { data: hf }, { data: hd }, { data: hw }, { data: noteRows }, { data: nums }, { data: myMentions }, { data: teamRows }, { data: planRead }] = await Promise.all([
     s.from('config').select('value').eq('key', 'module_urls').maybeSingle(),
     s.rpc('today_overview'),
     s.rpc('home_facts'),
@@ -47,6 +49,7 @@ export default async function Home({ searchParams }) {
     s.rpc('home_numbers'),
     s.from('board_note_mentions').select('note_id,seen_at').ilike('email', user.email),
     s.from('app_users').select('name,email').eq('active', true).order('name'),
+    s.from('plan_reads').select('user_email').eq('plan_key', PLAN_KEY).ilike('user_email', user.email).maybeSingle(),
   ])
   const notes = noteRows || []
   const mentionIds = (myMentions || []).map((m) => m.note_id)
@@ -99,7 +102,9 @@ export default async function Home({ searchParams }) {
     if (peak && peak.arr > 0) tick.push({ icon: '🔥', text: `Najrušnejší deň týždňa: ${new Date(peak.day).toLocaleDateString('sk-SK', { weekday: 'long', day: 'numeric', month: 'numeric', timeZone: 'UTC' })} s ${peak.arr} príchodmi.` })
   }
   if (hf && startApts && growth > 0) tick.push({ icon: '🌱', text: `Od začiatku roka sme vyrástli o ${growth} % (z ${startApts} na ${hf.listings} nehnuteľností).` })
+  if (facts.goal_2027) tick.push({ icon: '🚀', text: `Marketingový plán 2027: z ~130 bytov na ~${facts.goal_2027} do konca roka 2027, ${facts.pace_month || 15} nových mesačne.` })
   if (goal) tick.push({ icon: '🎯', text: `Náš cieľ: ${goal}+ nehnuteľností${facts.goal_year ? ` do roku ${facts.goal_year}` : ''}.` })
+  tick.push(...PLAN_FACTS.slice(1))
   tick.push({ icon: '💚', text: 'Win-win: majitelia majú pokoj, hostia krásny pobyt, my prácu, ktorá nás baví.' })
   const pracUrl = urls.pracovna || null
   const wk = (hd && hd.week) || []
@@ -129,6 +134,13 @@ export default async function Home({ searchParams }) {
         </div>
       </section>
 
+      {!planRead && (
+        <section className="plan-cta" aria-label="Nový marketingový plán">
+          <span className="ic" aria-hidden="true">🚀</span>
+          <div><b>Nový marketingový plán 2027: Cesta k najväčším na Slovensku</b><p>Kam ideme, čo robíme ako prvé a podľa čoho poznáme, že vyhrávame. Prečítaj si ho a potvrď, že máš prečítané.</p></div>
+          <a className="btn" href="/plan">Prečítať plán →</a>
+        </section>
+      )}
       {ready.length > 0 && (
         <section className="toolsTop" aria-label="Tvoje nástroje">
           <div className="sec"><h2>Tvoje nástroje</h2><span>{ready.length}</span></div>
@@ -242,7 +254,7 @@ export default async function Home({ searchParams }) {
           {goal ? (
             <div className="goal">
               <div className="bar" role="progressbar" aria-valuenow={pct} aria-valuemin="0" aria-valuemax="100"><i style={{ width: `${pct}%` }} /></div>
-              <div className="cap"><span>{growth ? `+${growth} % oproti ${facts.start_label || 'začiatku'}` : 'Rastieme'}</span><span>{hf.listings} / {goal}</span></div>
+              <div className="cap"><span>{growth ? `+${growth} % oproti ${facts.start_label || 'začiatku'}` : 'Rastieme'}</span><span>{facts.goal_2027 ? `míľnik 2027: ${facts.goal_2027} · ` : ''}{hf.listings} / {goal}</span></div>
             </div>
           ) : null}
           <p className="winwin">Robíme <b>win-win</b>: majitelia majú o nehnuteľnosť postarané, hostia krásny pobyt a my prácu, ktorá nás baví. 💚</p>

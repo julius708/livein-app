@@ -17,3 +17,4 @@ coverage
 .probe-token.json
 app/dev-tim/
 app/dev-eko/
+app/dev-plan/
