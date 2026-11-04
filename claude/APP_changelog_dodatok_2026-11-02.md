@@ -113,3 +113,9 @@
 - `lib/hubspot.js` (token len na serveri, bez PII v logoch), `lib/crm-asana.js` (sekcie LEAD 1 … ✕ v projekte LIVE-IN International, vlastné polia Zdroj / Dôvod straty / Prvý kontakt / Lead prijatý), `lib/supabase-admin.js` (service role), `lib/crm-server.js` (createLead idempotentne, changeStage s frontou zápisov, flushQueue s opakovaním, importAll, syncExternal).
 - Trasy: `POST /api/crm/create-lead` (Zapier, kľúč `CRM_WEBHOOK_SECRET`), `POST /api/crm/import` (admin alebo cron kľúč), `GET /api/cron/crm-sync` každých 10 min (vercel.json).
 - Potrebné premenné vo Verceli (hub): `HUBSPOT_TOKEN`, `CRM_WEBHOOK_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`; v kroku 4 `WEB_PUSH_PRIVATE_KEY`, `NEXT_PUBLIC_WEB_PUSH_PUBLIC_KEY`, `WEB_PUSH_SUBJECT`.
+
+## 2026-11-04 – Marketingový plán 2027 v appke
+- Sekcia `/plan` („Cesta k najväčším na Slovensku“): celý plán prepísaný do appky (vízia, čísla 69 → ~130 → ~310, tempo 15 bytov mesačne, mix zdrojov, 30 videí mesačne a rozpočet, päť motorov, lievik, štyri schody, úspech 2027, naša veta a výkaz, nová značka, semafor kapacity, tím, prvých 30 dní, metriky, kto za čo ručí). Dáta v `lib/plan-2027.js`, PDF v `public/plan/marketingovy-plan-2027.pdf`.
+- Potvrdenie „Prečítal/a som si plán“ → tabuľka `plan_reads` (RLS: vlastný zápis, admin vidí všetkých); admin na stránke vidí, kto čítal (x z y aktívnych).
+- Domov: výzva „Nový marketingový plán 2027“ kým človek nepotvrdí; ticker „Vedeli ste?“ má fakty z plánu; cieľ v „LIVE-IN v číslach“ ukazuje míľnik 2027 (`config.company_facts.goal_2027 = 310`, `pace_month = 15`); dlaždica modulu `plan` pre všetkých.
+- Novinka v tickeri (`app_updates`) a dokument pre Guru v znalostnej báze (`cs.kb_docs` path `KB/marketingovy_plan_2027`).
