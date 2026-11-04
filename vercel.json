@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/asana-kb",
       "schedule": "35 4 * * *"
+    },
+    {
+      "path": "/api/cron/crm-sync",
+      "schedule": "*/10 * * * *"
     }
   ],
   "regions": [
