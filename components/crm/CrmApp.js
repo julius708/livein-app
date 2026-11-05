@@ -3,12 +3,14 @@ import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { browserClient } from '@/lib/browser'
-import { STAGES, OPEN_STAGES, SOURCES, CITY_GROUPS, countdown, stageOf } from '@/lib/crm'
+import { STAGES, OPEN_STAGES, SOURCES, CITY_GROUPS, WEEKS, countdown, stageOf, weekBucket, weekRange } from '@/lib/crm'
+import { fmtDay } from '@/lib/fmt'
 import { Ring, Pill, ContactButtons, StageBar, stateOf, SCRIPT, fmtDT, fmtD, firstName } from './ui'
 import { setStage, logContact, createManualLead, setKind } from '@/app/crm/actions'
 import CrmNotifier from './CrmNotifier'
 
-const VIEWS = [['one', 'Jeden naraz', '📱'], ['queue', 'Fronta', '⏱️'], ['board', 'Tabuľa', '🗂️'], ['contacts', 'Kontakty', '👥'], ['overview', 'Prehľad', '📊']]
+const VIEWS = [['one', 'Jeden naraz', '📱'], ['queue', 'Fronta', '⏱️'], ['board', 'Tabuľa', '🗂️'], ['clients', 'Klienti', '🏠'], ['contacts', 'Kontakty', '👥'], ['overview', 'Prehľad', '📊']]
+const WEEK_VIEWS = ['one', 'queue', 'board']
 const H = 3600e3
 const byUrgency = (now) => (a, b) => {
   const da = a.due_at ? Date.parse(a.due_at) - now : Infinity, db = b.due_at ? Date.parse(b.due_at) - now : Infinity
@@ -25,6 +27,7 @@ export default function CrmApp({ initialLeads, me, people, notifications, pushPu
   const [city, setCity] = useState('all')
   const [source, setSource] = useState('all')
   const [mine, setMine] = useState(false)
+  const [week, setWeek] = useState('w0')
   const [adding, setAdding] = useState(false)
   const [msg, setMsg] = useState('')
   const [busy, start] = useTransition()
@@ -48,10 +51,18 @@ export default function CrmApp({ initialLeads, me, people, notifications, pushPu
 
   const fold = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
   const matches = (l) => (city === 'all' || l.city_group === city) && (source === 'all' || l.source === source) && (!mine || (l.assigned_to || '').toLowerCase() === me.email) && (!q || fold(l.name + ' ' + l.city + ' ' + l.email + ' ' + l.phone).includes(fold(q)))
-  const open = useMemo(() => leads.filter((l) => l.kind === 'lead' && OPEN_STAGES.includes(l.stage) && matches(l)).sort(byUrgency(now)), [leads, now, q, city, source, mine]) // eslint-disable-line react-hooks/exhaustive-deps
+  const bucketOf = (l) => weekBucket(l.received_at, now)
+  // otvorené leady za posledné 4 týždne (bez starých): z nich sa počítajú lehoty a alarmy
+  const openAll = useMemo(() => leads.filter((l) => l.kind === 'lead' && OPEN_STAGES.includes(l.stage) && matches(l)).sort(byUrgency(now)), [leads, now, q, city, source, mine]) // eslint-disable-line react-hooks/exhaustive-deps
+  const recentOpen = useMemo(() => openAll.filter((l) => bucketOf(l) !== 'old'), [openAll, now]) // eslint-disable-line react-hooks/exhaustive-deps
+  const open = useMemo(() => openAll.filter((l) => bucketOf(l) === week), [openAll, week, now]) // eslint-disable-line react-hooks/exhaustive-deps
+  const freshAll = useMemo(() => recentOpen.filter((l) => l.stage === 'new' && l.due_at), [recentOpen])
   const fresh = useMemo(() => open.filter((l) => l.stage === 'new' && l.due_at), [open])
-  const overdue = useMemo(() => fresh.filter((l) => Date.parse(l.due_at) < now), [fresh, now])
-  const soon = useMemo(() => fresh.filter((l) => { const d = Date.parse(l.due_at) - now; return d >= 0 && d < 2 * H }), [fresh, now])
+  const overdue = useMemo(() => freshAll.filter((l) => Date.parse(l.due_at) < now), [freshAll, now])
+  const overdueHere = useMemo(() => overdue.filter((l) => bucketOf(l) === week), [overdue, week, now]) // eslint-disable-line react-hooks/exhaustive-deps
+  const weekCounts = useMemo(() => { const c = {}; for (const w of WEEKS) c[w.id] = 0; for (const l of openAll) c[bucketOf(l)]++; return c }, [openAll, now]) // eslint-disable-line react-hooks/exhaustive-deps
+  const clients = useMemo(() => leads.filter((l) => l.kind === 'client' && matches(l)).sort((a, b) => a.name.localeCompare(b.name, 'sk')), [leads, q, city, source, mine]) // eslint-disable-line react-hooks/exhaustive-deps
+  const overdueWeek = overdue.length && !overdueHere.length ? bucketOf(overdue[0]) : null
 
   const patch = (id, p) => setLeads((cur) => cur.map((l) => (l.id === id ? { ...l, ...p } : l)))
   const doStage = (id, stage, opts) => start(async () => {
@@ -69,8 +80,8 @@ export default function CrmApp({ initialLeads, me, people, notifications, pushPu
       <section className="li-page-intro crm-intro">
         <div>
           <span className="li-eyebrow">CRM · leady a kontakty</span>
-          <h1>{overdue.length ? `${overdue.length} ${overdue.length === 1 ? 'lead čaká' : overdue.length < 5 ? 'leady čakajú' : 'leadov čaká'} po lehote.` : fresh.length ? `${fresh.length} ${fresh.length === 1 ? 'nový lead' : fresh.length < 5 ? 'nové leady' : 'nových leadov'} na zavolanie.` : 'Všetky leady sú vybavené.'}</h1>
-          <p>Na každý dopyt odpovedáme do jedného pracovného dňa. Zavolaj, zmeň štádium jedným klikom a appka to zapíše do HubSpotu aj Asany.</p>
+          <h1>{overdue.length ? `${overdue.length} ${overdue.length === 1 ? 'lead čaká' : overdue.length < 5 ? 'leady čakajú' : 'leadov čaká'} po lehote.` : freshAll.length ? `${freshAll.length} ${freshAll.length === 1 ? 'nový lead' : freshAll.length < 5 ? 'nové leady' : 'nových leadov'} na zavolanie.` : 'Všetky nové leady sú vybavené.'}</h1>
+          <p>Nové leady sú rozdelené po týždňoch. Pracuj na tomto týždni, na každý dopyt odpovedáme do jedného pracovného dňa. Staršie ako mesiac sú v priečinku Staré a nie sú tvoja úloha.</p>
         </div>
         <div className="crm-intro-side">
           <CrmNotifier me={me} initial={notifications} pushPublicKey={pushPublicKey} />
@@ -78,9 +89,16 @@ export default function CrmApp({ initialLeads, me, people, notifications, pushPu
         </div>
       </section>
 
-      {overdue.length > 0 && view !== 'contacts' && view !== 'overview' && <div className="crm-banner" role="alert">POZOR: {overdue.length} {overdue.length === 1 ? 'lead' : overdue.length < 5 ? 'leady' : 'leadov'} po lehote. Kontaktuj hneď.</div>}
+      {overdue.length > 0 && WEEK_VIEWS.includes(view) && <div className="crm-banner" role="alert">POZOR: {overdue.length} {overdue.length === 1 ? 'lead' : overdue.length < 5 ? 'leady' : 'leadov'} po lehote. Kontaktuj hneď.{overdueWeek && <button type="button" className="crm-banner-btn" onClick={() => setWeek(overdueWeek)}>Zobraziť ({WEEKS.find((w) => w.id === overdueWeek)?.label.toLowerCase()})</button>}</div>}
 
-      <nav className="crm-tabs" aria-label="Pohľady">{VIEWS.map(([id, l, ic]) => <button key={id} type="button" className={view === id ? 'on' : ''} aria-current={view === id ? 'page' : undefined} onClick={() => setView(id)}><span aria-hidden="true">{ic}</span>{l}{id === 'queue' && fresh.length ? <b>{fresh.length}</b> : null}</button>)}</nav>
+      <nav className="crm-tabs" aria-label="Pohľady">{VIEWS.map(([id, l, ic]) => <button key={id} type="button" className={view === id ? 'on' : ''} aria-current={view === id ? 'page' : undefined} onClick={() => setView(id)}><span aria-hidden="true">{ic}</span>{l}{id === 'queue' && freshAll.length ? <b>{freshAll.length}</b> : null}{id === 'clients' && clients.length ? <small>{clients.length}</small> : null}</button>)}</nav>
+
+      {WEEK_VIEWS.includes(view) && (
+        <div className="crm-weeks" role="tablist" aria-label="Týždeň">
+          {WEEKS.map((w) => { const r = weekRange(w.id, now); return <button key={w.id} type="button" role="tab" aria-selected={week === w.id} className={'crm-week' + (week === w.id ? ' on' : '') + (w.id === 'old' ? ' old' : '')} onClick={() => setWeek(w.id)} title={w.id === 'old' ? `prijaté pred ${fmtDay(r.to)}` : `${fmtDay(r.from)} – ${fmtDay(r.to - 1)}`}><span>{w.label}</span><b className={weekCounts[w.id] ? '' : 'zero'}>{weekCounts[w.id]}</b></button> })}
+        </div>
+      )}
+      {WEEK_VIEWS.includes(view) && week === 'old' && <p className="crm-weeknote">Staré leady: prijaté pred viac ako 4 týždňami ({fmtDay(weekRange('old', now).to)} a skôr). Nie sú v aktívnej fronte ani v alarmoch, štatistika ich počíta. Keď niekoho z nich kontaktuješ, zmeň mu štádium ako pri každom inom leade.</p>}
 
       {view !== 'one' && view !== 'overview' && (
         <div className="crm-filters">
@@ -92,9 +110,10 @@ export default function CrmApp({ initialLeads, me, people, notifications, pushPu
       )}
       {msg && <p className="msg err">{msg}</p>}
 
-      {view === 'one' && <OneAtATime leads={fresh.length ? fresh : open} now={now} onStage={doStage} onLog={doLog} people={people} busy={busy} />}
-      {view === 'queue' && <Queue leads={open} now={now} onStage={doStage} onLog={doLog} people={people} />}
-      {view === 'board' && <Board leads={leads.filter((l) => matches(l) && l.kind !== 'not_lead')} now={now} onStage={doStage} people={people} />}
+      {view === 'one' && <OneAtATime leads={fresh.length ? fresh : open} now={now} onStage={doStage} onLog={doLog} people={people} busy={busy} week={WEEKS.find((w) => w.id === week)} />}
+      {view === 'queue' && <Queue leads={open} now={now} onStage={doStage} onLog={doLog} people={people} week={WEEKS.find((w) => w.id === week)} />}
+      {view === 'board' && <Board leads={leads.filter((l) => matches(l) && l.kind !== 'not_lead' && (l.kind === 'client' ? week === 'w0' && Date.parse(l.updated_at || l.received_at) >= weekRange('w0', now).from : bucketOf(l) === week))} now={now} onStage={doStage} people={people} />}
+      {view === 'clients' && <Clients leads={clients} people={people} onLog={doLog} />}
       {view === 'contacts' && <Contacts leads={leads.filter(matches)} people={people} isAdmin={me.isAdmin} onKind={(id, k) => start(async () => { patch(id, { kind: k }); const r = await setKind(id, k); if (!r.ok) setMsg(r.error) })} />}
       {view === 'overview' && <Overview leads={leads} now={now} people={people} />}
 
@@ -117,13 +136,13 @@ function LeadRow({ l, now, onStage, onLog, people }) {
     </article>
   )
 }
-function Queue({ leads, now, onStage, onLog, people }) {
-  if (!leads.length) return <section className="card crm-empty"><h2>Fronta je prázdna</h2><p>Žiadny otvorený lead nezodpovedá filtru. Nové leady sa tu objavia samy.</p></section>
+function Queue({ leads, now, onStage, onLog, people, week }) {
+  if (!leads.length) return <section className="card crm-empty"><h2>{week && week.id === 'old' ? 'V starých nie je nič otvorené' : `${week ? week.label : 'Tento týždeň'}: fronta je prázdna`}</h2><p>Žiadny otvorený lead z tohto obdobia. Nové leady sa tu objavia samy, staršie nájdeš prepnutím týždňa.</p></section>
   return <div className="crm-queue">{leads.map((l) => <LeadRow key={l.id} l={l} now={now} onStage={onStage} onLog={onLog} people={people} />)}</div>
 }
-function OneAtATime({ leads, now, onStage, onLog, people, busy }) {
+function OneAtATime({ leads, now, onStage, onLog, people, busy, week }) {
   const l = leads[0]
-  if (!l) return <section className="card crm-empty crm-phone"><h2>Všetko vybavené 🎉</h2><p>Žiadny nový lead nečaká. Nový sa ukáže hneď, ako príde.</p></section>
+  if (!l) return <section className="card crm-empty crm-phone"><h2>{week && week.id !== 'w0' ? `${week.label}: nič nečaká` : 'Všetko vybavené 🎉'}</h2><p>Žiadny nový lead z tohto obdobia nečaká. Nový sa ukáže hneď, ako príde.</p></section>
   const c = countdown(l.due_at, now), over = c.state === 'over', st = stateOf(l, now)
   return (
     <section className={'card crm-phone ' + st}>
@@ -166,8 +185,26 @@ function Board({ leads, now, onStage, people }) {
     </div>
   )
 }
+function Clients({ leads, people, onLog }) {
+  if (!leads.length) return <section className="card crm-empty"><h2>Žiadny klient nezodpovedá filtru</h2><p>Klient je kontakt, ktorému už spravujeme byt. Lead sa stane klientom zmenou štádia na „Klient“.</p></section>
+  return (
+    <div className="crm-queue crm-clients">
+      <p className="crm-weeknote">Existujúci klienti ({leads.length}): majitelia, ktorým už spravujeme byt. Nie sú to leady, lehoty sa na nich nevzťahujú.</p>
+      {leads.map((l) => (
+        <article key={l.id} className="crm-row client">
+          <div className="crm-avatar" aria-hidden="true">{String(l.name || '?').trim().split(/\s+/).slice(0, 2).map((x) => x[0]).join('').toUpperCase()}</div>
+          <div className="crm-row-main">
+            <div className="crm-row-head"><Link href={`/crm/lead/${l.id}`} className="crm-name">{l.name}</Link><span className="crm-pill s-client">Klient</span>{l.email_optout && <span className="crm-low">odhlásený z newslettera</span>}</div>
+            <div className="crm-meta">{l.city_group !== 'Iné' ? l.city_group : l.city || 'bez mesta'}{l.property_address ? ` · ${l.property_address}` : ''} · klient od {fmtD(l.first_contact_at || l.received_at)}{l.assigned_to ? ` · ${firstName(l.assigned_to, people)}` : ''}</div>
+          </div>
+          <ContactButtons lead={l} onLog={(t) => onLog(l.id, t)} />
+        </article>
+      ))}
+    </div>
+  )
+}
 function Contacts({ leads, people, isAdmin, onKind }) {
-  const [tab, setTab] = useState('clients')
+  const [tab, setTab] = useState('leads')
   const list = leads.filter((l) => (tab === 'clients' ? l.kind === 'client' : tab === 'leads' ? l.kind === 'lead' : l.kind === 'not_lead')).sort((a, b) => a.name.localeCompare(b.name, 'sk'))
   const counts = { clients: leads.filter((l) => l.kind === 'client').length, leads: leads.filter((l) => l.kind === 'lead').length, not: leads.filter((l) => l.kind === 'not_lead').length }
   return (
@@ -195,7 +232,7 @@ function Overview({ leads, now, people }) {
       <section className="eko-kpis four">
         <div className="metric eko-metric primary"><small>Po lehote</small><strong>{over.length}</strong><p>nových leadov s prekročenou lehotou</p></div>
         <div className="metric eko-metric"><small>Čas do prvého kontaktu</small><strong>{avgH == null ? '—' : avgH < 48 ? Math.round(avgH) + ' h' : Math.round(avgH / 24) + ' dní'}</strong><p>priemer z {contacted.length} leadov (cieľ do 24 h)</p></div>
-        <div className="metric eko-metric"><small>Nové za 7 dní</small><strong>{recent.length}</strong><p>{recent.filter((l) => l.first_contact_at).length} už kontaktovaných</p></div>
+        <div className="metric eko-metric"><small>Nové za 7 dní</small><strong>{recent.length}</strong><p>{recent.filter((l) => l.first_contact_at).length} už kontaktovaných · {L.filter((l) => l.kind === 'client').length} klientov spolu</p></div>
         <div className="metric eko-metric"><small>Otvorené leady</small><strong>{L.filter((l) => l.kind === 'lead' && OPEN_STAGES.includes(l.stage)).length}</strong><p>{Object.entries(byPerson).map(([k, v]) => `${k} ${v}`).join(' · ')}</p></div>
       </section>
       <div className="eko-two">

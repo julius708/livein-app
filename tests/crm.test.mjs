@@ -41,3 +41,14 @@ test('mená, odpočet, pripomienky, identita', () => {
   assert.deepEqual(C.dueReminders({ ...lead, stage: 'contacted' }, now), [])
   assert.deepEqual(C.leadIdentity({ email: 'A@B.sk' }), { field: 'email', value: 'a@b.sk' }); assert.deepEqual(C.leadIdentity({ asana_task_gid: '12' }), { field: 'asana_task_gid', value: '12' })
 })
+test('týždne: pondelok 00:00 v Bratislave, 4 týždne dozadu, potom staré', () => {
+  const now = Date.parse('2026-11-05T10:00:00Z') // štvrtok
+  assert.equal(new Date(C.weekStart(now)).toISOString(), '2026-11-01T23:00:00.000Z') // pondelok 2. 11. 00:00 CET
+  assert.equal(C.weekBucket('2026-11-03T08:00:00Z', now), 'w0')
+  assert.equal(C.weekBucket('2026-11-01T22:00:00Z', now), 'w1') // nedeľa 1. 11. 23:00 CET
+  assert.equal(C.weekBucket('2026-10-20T08:00:00Z', now), 'w2')
+  assert.equal(C.weekBucket('2026-10-13T08:00:00Z', now), 'w3')
+  assert.equal(C.weekBucket('2026-10-11T08:00:00Z', now), 'old')
+  assert.equal(C.weekBucket(null, now), 'old')
+  assert.equal(C.weekRange('old', now).from, null)
+})

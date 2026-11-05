@@ -105,3 +105,14 @@
   .crm-intro{flex-direction:column}.crm-intro-side{justify-content:flex-start}
   .crm-dhead{grid-template-columns:1fr}.crm-hist li{grid-template-columns:1fr}.crm-two{grid-template-columns:1fr}
 }
+/* týždne */
+.crm-weeks{display:flex;gap:6px;flex-wrap:wrap}
+.crm-week{display:inline-flex;align-items:center;gap:8px;border:1px solid #173e2c26;background:#fff;color:#173E2C;padding:8px 12px;border-radius:999px;font-weight:700;font-size:13.5px;cursor:pointer}
+.crm-week b{background:#F46D16;color:#fff;border-radius:999px;padding:1px 8px;font-size:12px}.crm-week b.zero{background:#173e2c14;color:#58665D}
+.crm-week.on{background:#173E2C;color:#fff;border-color:#173E2C}.crm-week.old{border-style:dashed;color:#58665D}.crm-week.old.on{background:#58665D;border-color:#58665D;color:#fff}
+.crm-weeknote{font-size:13.5px;color:#58665D;line-height:1.5;background:#F4F6F1;border-radius:12px;padding:10px 14px}
+.crm-banner-btn{margin-left:12px;border:0;background:#fff;color:#C23B3B;border-radius:999px;padding:5px 12px;font-weight:800;font-size:13px;cursor:pointer}
+.crm-tabs button small{background:#173e2c14;color:#173E2C;border-radius:999px;padding:1px 8px;font-size:12px;font-weight:800}.crm-tabs button.on small{background:#ffffff33;color:#fff}
+.crm-row.client{border-color:#173e2c22;background:rgba(255,254,251,.85)}
+.crm-avatar{width:48px;height:48px;border-radius:50%;background:#173E2C;color:#fff;display:grid;place-items:center;font-weight:800;font-size:15px;flex:none}
+@media(max-width:760px){.crm-weeks{overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none;padding-bottom:2px}.crm-weeks::-webkit-scrollbar{display:none}.crm-week{flex:0 0 auto}}
