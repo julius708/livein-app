@@ -24,7 +24,7 @@ export default async function CrmPage() {
   const team = (people || []).filter((p) => !p.email.startsWith('crm-bot'))
   return (
     <Shell me={me} user={user} isAdmin={isAdmin} active="crm" guruApp="crm" hideFooter>
-      <Suspense fallback={null}><CrmApp initialLeads={leads || []} me={{ email: user.email.toLowerCase(), name: me.name || '', isAdmin }} people={team} notifications={notifs || []} pushPublicKey={process.env.NEXT_PUBLIC_WEB_PUSH_PUBLIC_KEY || ''} /></Suspense>
+      <Suspense fallback={null}><CrmApp initialLeads={leads || []} me={{ email: user.email.toLowerCase(), name: me.name || '', isAdmin }} people={team} notifications={notifs || []} pushPublicKey={process.env.NEXT_PUBLIC_WEB_PUSH_PUBLIC_KEY || ''} serverNow={Date.now()} /></Suspense>
     </Shell>
   )
 }

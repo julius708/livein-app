@@ -7,7 +7,7 @@ import { TESTS, validAnswers, score, summary } from '@/lib/personality-tests'
 export async function saveResult(key, answers) {
   const { s, user, me } = await getViewer()
   if (!user || !me) return { ok: false, error: 'Nie si prihlásený/á.' }
-  if (!TESTS[key]) return { ok: false, error: 'Neznámy test.' }
+  if (!Object.hasOwn(TESTS, String(key))) return { ok: false, error: 'Neznámy test.' }
   if (!validAnswers(key, answers)) return { ok: false, error: 'Odpovedz na všetky otázky.' }
   const sc = score(key, answers)
   const row = { user_id: user.id, email: user.email.toLowerCase(), name: me.name || user.email, test_key: key, scores: sc, summary: summary(key, sc), answers, shared: false }

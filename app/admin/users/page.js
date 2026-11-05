@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation'
 import { getViewer } from '@/lib/auth'
 import UsersAdmin from '@/components/UsersAdmin'
 
@@ -6,6 +7,7 @@ export const metadata = { title: 'Ľudia a práva' }
 
 export default async function UsersPage() {
   const { s, user } = await getViewer()
+  if (!user) redirect('/login')
   const [{ data: users }, { data: logins }, { data: cities }, { data: authCfg }] = await Promise.all([
     s.from('app_users').select('*').order('name'),
     s.rpc('admin_user_logins'),

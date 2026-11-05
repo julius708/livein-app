@@ -1,13 +1,14 @@
 'use client'
 import { useRef, useState, useTransition } from 'react'
 import { ROLES } from '@/lib/modules'
+import { fmtDateTime } from '@/lib/fmt'
 import { addUser, updateUser, removeUser, resetPassword } from '@/app/admin/users/actions'
 
 const EMPTY = { email: '', name: '', title: '', scope_city: '', roles: [] }
 
 function fmt(iso) {
   if (!iso) return 'ešte nikdy'
-  return new Date(iso).toLocaleString('sk-SK', { day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Bratislava' })
+  return fmtDateTime(iso)
 }
 
 function RoleChips({ value, onChange, idp }) {

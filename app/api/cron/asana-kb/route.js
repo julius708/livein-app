@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { buildKbDocs } from '@/lib/asana-kb'
+import { SUPABASE_URL, SUPABASE_ANON } from '@/lib/env'
 export const maxDuration = 60
 export const dynamic = 'force-dynamic'
 
@@ -11,7 +12,7 @@ export async function GET(req) {
   if (!process.env.ASANA_TOKEN || !process.env.KB_IMPORT_SECRET) return Response.json({ ok: false, error: 'chýba ASANA_TOKEN alebo KB_IMPORT_SECRET' }, { status: 500 })
   try {
     const docs = await buildKbDocs()
-    const s = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY, { auth: { persistSession: false } })
+    const s = createClient(SUPABASE_URL, SUPABASE_ANON, { auth: { persistSession: false } })
     let written = 0
     for (let i = 0; i < docs.length; i += 40) {
       const { data, error } = await s.rpc('kb_import_docs', { p_secret: process.env.KB_IMPORT_SECRET, p_docs: docs.slice(i, i + 40), p_prefix: 'asana/portfolio/' })

@@ -55,7 +55,7 @@ async function handlePOST(request) {
   const question = typeof body.question === 'string' ? body.question.trim() : ''
   // widget (postavička na stránke): kratšie odpovede a menej krokov, aby odpoveď prišla rýchlo
   const widget = body.mode === 'widget'
-  const appCtx = APP_CTX[String(body.app || '')] ? '\n' + APP_CTX[String(body.app || '')] : ''
+  const appCtx = Object.hasOwn(APP_CTX, String(body.app || '')) ? '\n' + APP_CTX[String(body.app || '')] : ''
   const turnId=body.turnId
   if(!question || question.length>4000 || !validTurnId(turnId))return NextResponse.json({ok:false,error:'Napíš otázku do 4 000 znakov.'},{status:400})
   const {data:previous,error:previousError}=await s.from('guru_turns').select('id,question,answer,status,updated_at').eq('id',turnId).maybeSingle()
@@ -64,7 +64,8 @@ async function handlePOST(request) {
   if(previous?.status==='complete')return NextResponse.json({ok:true,text:previous.answer,turnId})
   let claim
   if(previous){
-    const expired=previous.status==='pending' && Date.now()-Date.parse(previous.updated_at)>120000
+    const age=Date.now()-Date.parse(previous.updated_at)
+    const expired=previous.status==='pending' && (!Number.isFinite(age) || age>120000)
     if(previous.status!=='error'&&!expired)return NextResponse.json({ok:false,error:'Táto otázka sa ešte spracúva. O chvíľu obnov históriu.'},{status:409})
     claim=await s.from('guru_turns').update({status:'pending',updated_at:new Date().toISOString()}).eq('id',turnId).eq('updated_at',previous.updated_at).select('id')
   }else{

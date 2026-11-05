@@ -13,7 +13,8 @@ export async function POST(request) {
   const given = request.headers.get('x-crm-secret') || new URL(request.url).searchParams.get('k') || ''
   if (!secrets.length || !secrets.includes(given)) return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401 })
   let body = {}
-  try { body = await request.json() } catch { try { const f = await request.formData(); body = Object.fromEntries(f.entries()) } catch { body = {} } }
+  const ct = request.headers.get('content-type') || ''
+  try { body = /json/i.test(ct) || !ct ? await request.json() : Object.fromEntries((await request.formData()).entries()) } catch { body = {} }
   try {
     const r = await createLead({ name: body.name || body.meno || [body.first_name, body.last_name].filter(Boolean).join(' '), phone: body.phone || body.telefon, email: body.email, city: body.city || body.mesto || body.lokalita, source: body.source || body.zdroj, asana_task_gid: body.asana_task_gid || body.asana_gid, created_at: body.created_at, note: body.note || body.sprava || body.message, hubspot_contact_id: body.hubspot_contact_id }, { via: body.hubspot_contact_id ? 'hubspot' : 'zapier' })
     return NextResponse.json(r, { status: r.ok ? 200 : 400 })

@@ -20,7 +20,7 @@ export default async function TestPage({ params }) {
   const { s, user, me, isAdmin, blocked } = await getViewer()
   if (!user) redirect('/login')
   if (blocked) return <NoAccess email={user.email} />
-  const T = TESTS[key]
+  const T = Object.hasOwn(TESTS, key) ? TESTS[key] : null
   if (!T) notFound()
   // Priemer tímu zo zdieľaných výsledkov (ukáže sa vo výsledku ako prerušovaná čiara).
   const { data: shared } = await s.from('personality_results').select('user_id,test_key,scores,created_at').eq('shared', true).eq('test_key', key)

@@ -16,11 +16,11 @@ const byUrgency = (now) => (a, b) => {
   return Date.parse(b.received_at) - Date.parse(a.received_at)
 }
 
-export default function CrmApp({ initialLeads, me, people, notifications, pushPublicKey }) {
+export default function CrmApp({ initialLeads, me, people, notifications, pushPublicKey, serverNow }) {
   const sp = useSearchParams(), router = useRouter()
   const [leads, setLeads] = useState(initialLeads)
   const [view, setViewState] = useState(sp.get('v') || '')
-  const [now, setNow] = useState(() => Date.now())
+  const [now, setNow] = useState(() => serverNow || Date.now())
   const [q, setQ] = useState('')
   const [city, setCity] = useState('all')
   const [source, setSource] = useState('all')
@@ -33,7 +33,7 @@ export default function CrmApp({ initialLeads, me, people, notifications, pushPu
   // predvolený pohľad: telefón → Jeden naraz, admin → Tabuľa, inak Fronta
   useEffect(() => { if (!view) setViewState(window.matchMedia('(max-width: 760px)').matches ? 'one' : me.isAdmin ? 'board' : 'queue') }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const setView = (v) => { setViewState(v); const u = new URL(window.location.href); u.searchParams.set('v', v); window.history.replaceState(null, '', u); window.scrollTo({ top: 0 }) }
-  useEffect(() => { const t = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(t) }, [])
+  useEffect(() => { setNow(Date.now()); const t = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(t) }, [])
   // živé zmeny leadov (nový lead zo Zapieru, zmena kolegu)
   useEffect(() => {
     const c = browserClient()

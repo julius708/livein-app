@@ -54,7 +54,7 @@ export async function duplicateNewsletter(id) {
 async function claude(system, user, max_tokens = 2500) {
   const key = process.env.ANTHROPIC_API_KEY
   if (!key) throw new Error('Chýba ANTHROPIC_API_KEY.')
-  const r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' }, signal: AbortSignal.timeout(55000), body: JSON.stringify({ model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5', max_tokens, system, messages: [{ role: 'user', content: user }] }) })
+  const r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' }, signal: AbortSignal.timeout(55000), body: JSON.stringify({ model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5', max_tokens, system, messages: [{ role: 'user', content: user }] }) })
   if (!r.ok) throw new Error('AI služba je dočasne nedostupná.')
   const j = await r.json()
   return (j.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('\n')
@@ -96,7 +96,8 @@ export async function sendTest(id, extra) {
   if (!n) return { ok: false, error: 'Newsletter sa nenašiel.' }
   const to = [v.user.email.toLowerCase(), ...parseEmails(extra)].slice(0, 5)
   const html = (e) => renderEmail({ subject: n.subject, preheader: n.preheader, bodyHtml: n.body_html, unsubscribeUrl: unsubscribeUrl(e), name: v.me.name || '' })
-  const r = await sendBatch(to.map((e) => ({ to: e, subject: `[TEST] ${n.subject || 'bez predmetu'}`, html: html(e), text: htmlToText(n.body_html) })))
+  let r
+  try { r = await sendBatch(to.map((e) => ({ to: e, subject: `[TEST] ${n.subject || 'bez predmetu'}`, html: html(e), text: htmlToText(n.body_html) }))) } catch (e) { return { ok: false, error: 'Odoslanie testu zlyhalo: ' + String(e.message || e).slice(0, 160) } }
   const bad = r.find((x) => !x.ok)
   if (bad) return { ok: false, error: bad.error }
   await v.s.from('newsletters').update({ test_sent_at: new Date().toISOString() }).eq('id', id)
@@ -114,12 +115,15 @@ export async function sendNewsletter(id, confirm) {
   if (n.status !== 'draft') return { ok: false, error: 'Tento newsletter už bol odoslaný.' }
   if (!n.subject || !n.body_html) return { ok: false, error: 'Chýba predmet alebo text.' }
   const [{ data: leads }, { data: unsubs }] = await Promise.all([a.from('leads').select(LEAD_COLS).not('email', 'is', null).limit(5000), a.from('newsletter_unsubscribes').select('email')])
-  const list = pickRecipients(leads || [], n.audience, { unsubscribed: (unsubs || []).map((u) => u.email) })
+  const { data: already } = await a.from('newsletter_sends').select('email').eq('newsletter_id', id).eq('status', 'sent')
+  const done = new Set((already || []).map((x) => String(x.email).toLowerCase()))
+  const list = pickRecipients(leads || [], n.audience, { unsubscribed: (unsubs || []).map((u) => u.email) }).filter((p) => !done.has(p.email))
   if (!list.length) return { ok: false, error: 'Publikum je prázdne.' }
   // zámok proti dvojitému odoslaniu
-  const { data: locked } = await a.from('newsletters').update({ status: 'sending', recipients_count: list.length, updated_at: new Date().toISOString() }).eq('id', id).eq('status', 'draft').select('id')
+  const { data: locked } = await a.from('newsletters').update({ status: 'sending', recipients_count: list.length + done.size, updated_at: new Date().toISOString() }).eq('id', id).eq('status', 'draft').select('id')
   if (!locked?.length) return { ok: false, error: 'Odosielanie už beží.' }
-  let sent = 0, failed = 0
+  let sent = done.size, failed = 0
+  try {
   for (let i = 0; i < list.length; i += 50) {
     const chunk = list.slice(i, i + 50)
     const r = await sendBatch(chunk.map((p) => ({ to: p.email, subject: n.subject, html: renderEmail({ subject: n.subject, preheader: n.preheader, bodyHtml: n.body_html, unsubscribeUrl: unsubscribeUrl(p.email), name: p.name }), text: htmlToText(n.body_html), unsubscribeUrl: unsubscribeUrl(p.email) })))
@@ -128,7 +132,13 @@ export async function sendNewsletter(id, confirm) {
     sent += r.filter((x) => x.ok).length; failed += r.filter((x) => !x.ok).length
     await a.from('newsletters').update({ sent_count: sent, failed_count: failed }).eq('id', id)
   }
+  } catch (e) {
+    // výpadok Resendu alebo siete: newsletter vrátime do návrhu s počtami, čo sa stihlo, aby sa dal poslať znova
+    await a.from('newsletters').update({ status: 'draft', sent_count: sent, failed_count: failed, updated_at: new Date().toISOString() }).eq('id', id)
+    revalidatePath('/newsletter')
+    return { ok: false, error: `Odosielanie zlyhalo po ${sent} správach: ${String(e.message || e).slice(0, 160)}. Skús znova, už odoslaným sa e-mail nepošle druhýkrát.` }
+  }
   await a.from('newsletters').update({ status: 'sent', sent_at: new Date().toISOString(), sent_count: sent, failed_count: failed }).eq('id', id)
   revalidatePath('/newsletter')
-  return { ok: true, sent, failed, total: list.length }
+  return { ok: true, sent, failed, total: list.length + done.size }
 }

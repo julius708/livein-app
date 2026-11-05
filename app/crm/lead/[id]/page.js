@@ -24,7 +24,7 @@ export default async function LeadPage({ params }) {
   if (!lead) notFound()
   return (
     <Shell me={me} user={user} isAdmin={isAdmin} active="crm" guruApp="crm" hideFooter>
-      <LeadDetail lead={lead} events={events || []} people={(people || []).filter((p) => !p.email.startsWith('crm-bot'))} me={{ email: user.email.toLowerCase(), name: me.name || '' }} />
+      <LeadDetail lead={lead} events={events || []} people={(people || []).filter((p) => !p.email.startsWith('crm-bot'))} me={{ email: user.email.toLowerCase(), name: me.name || '' }} serverNow={Date.now()} />
     </Shell>
   )
 }

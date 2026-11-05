@@ -1,5 +1,5 @@
 'use client'
-import { useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { countdown, stageOf, SOURCES } from '@/lib/crm'
@@ -17,14 +17,16 @@ function describe(e, people) {
   return p.note ? p.note : ''
 }
 
-export default function LeadDetail({ lead: initial, events: initialEvents, people, me }) {
+export default function LeadDetail({ lead: initial, events: initialEvents, people, me, serverNow }) {
   const router = useRouter()
   const [lead, setLead] = useState(initial)
   const [events, setEvents] = useState(initialEvents)
   const [note, setNote] = useState('')
   const [err, setErr] = useState('')
   const [busy, start] = useTransition()
-  const now = Date.now(), st = stateOf(lead, now), c = countdown(lead.due_at, now)
+  const [now, setNow] = useState(() => serverNow || Date.now())
+  useEffect(() => { setNow(Date.now()); const t = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(t) }, [])
+  const st = stateOf(lead, now), c = countdown(lead.due_at, now)
   const refresh = () => router.refresh()
   const doStage = (stage, opts) => start(async () => { setErr(''); const r = await setStage(lead.id, stage, opts || {}); if (!r.ok) { setErr(r.error); return } setLead({ ...lead, stage, kind: stage === 'client' ? 'client' : lead.kind, first_contact_at: lead.first_contact_at || (lead.stage === 'new' && stage !== 'new' ? new Date().toISOString() : null) }); refresh() })
   const doLog = (type) => { logContact(lead.id, type).then(() => refresh()).catch(() => {}) }

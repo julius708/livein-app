@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { fmtDayTime, fmtDate } from '@/lib/fmt'
 import { countdown, remainingPct, telLink, waLink, normalizePhone, STAGES, stageOf, LOST_REASONS } from '@/lib/crm'
 
 export const COLORS = { ok: '#1E8A5A', soon: '#D98A00', critical: '#C23B3B', over: '#C23B3B', none: '#9BB0A5' }
@@ -58,6 +59,6 @@ export function StageBar({ lead, onStage, compact = false }) {
     </div>
   )
 }
-export const fmtDT = (d) => (d ? new Date(d).toLocaleString('sk-SK', { timeZone: 'Europe/Bratislava', day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—')
-export const fmtD = (d) => (d ? new Date(d).toLocaleDateString('sk-SK', { timeZone: 'Europe/Bratislava' }) : '—')
+export const fmtDT = (d) => fmtDayTime(d)
+export const fmtD = (d) => fmtDate(d)
 export const firstName = (email, people) => { const p = (people || []).find((x) => x.email.toLowerCase() === String(email || '').toLowerCase()); return p ? p.name.split(' ')[0] : (email || '').split('@')[0] }

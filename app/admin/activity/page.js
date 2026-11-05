@@ -3,7 +3,8 @@ import {getViewer} from '@/lib/auth'
 import ActivityRefresh from './refresh'
 const apps={app:'LIVE-IN domov',pracovna:'Práčovňa',cs:'Zákaznícky servis',ring:'Vstupy hostí',ekonomika:'Ekonomika'}
 const pages={home:'Prehľad',guru:'Guru',feedback:'Feedback',password:'Heslo',users:'Ľudia a práva',settings:'Nastavenia',feedback_admin:'Správa feedbacku',activity:'Aktivita',apartments:'Byty',knowledge:'Znalosti',team:'Tím',audit:'Audit',apartment_detail:'Detail bytu',history:'História',packing_history:'História balenia',status:'Stav',entrances:'Vstupy',overview:'Prehľad',bank:'Banka',forecast:'Výhľad',compare:'Porovnanie',map:'Mapa',insights:'Zistenia'}
-const dt=value=>new Intl.DateTimeFormat('sk-SK',{dateStyle:'short',timeStyle:'short',timeZone:'Europe/Bratislava'}).format(new Date(value))
+const FMT=new Intl.DateTimeFormat('sk-SK',{dateStyle:'short',timeStyle:'short',timeZone:'Europe/Bratislava'})
+const dt=value=>{const d=new Date(value);return Number.isFinite(d.getTime())?FMT.format(d):'—'}
 export const dynamic='force-dynamic'
 export default async function Activity(){
  const {s,isAdmin}=await getViewer();if(!isAdmin)redirect('/')

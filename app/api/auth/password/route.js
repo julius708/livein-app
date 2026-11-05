@@ -9,7 +9,8 @@ export async function POST(req) {
   if (!EMAIL_RE.test(email) || !password) return NextResponse.json({ ok: false, error: 'Zadaj e-mail aj heslo.' })
 
   const s = await sb()
-  const { data: allowed } = await s.rpc('is_allowed_email', { e: email })
+  const { data: allowed, error: rpcErr } = await s.rpc('is_allowed_email', { e: email })
+  if (rpcErr) return NextResponse.json({ ok: false, error: 'Overenie e-mailu teraz nejde. Skús o chvíľu.' }, { status: 503 })
   if (!allowed) return NextResponse.json({ ok: false, error: 'Tento e-mail nie je v zozname používateľov LIVE-IN. Ak si člen tímu, napíš Júliusovi.' })
 
   const { data, error } = await s.auth.signInWithPassword({ email, password })

@@ -56,12 +56,9 @@ function Panel({ eyebrow, title, action, children, className = '' }) {
 
 // ---------------- Prehľad ----------------
 export function Overview({ D, m, onDetail, go }) {
-  if (!m.intervalA) return <p className="msg err">Vyberte platné obdobie A.</p>
-  const t = m.total, tp = m.totalPrev, future = m.intervalA[0] >= M.todayIndex(D)
-  const top = [...m.rows].sort((x, y) => y.revenue - x.revenue)
-  const topShare = t.cents ? (top.slice(0, 10).reduce((n, r) => n + r.cents, 0) / t.cents) * 100 : null
-  const lead = m.channelParts[0]
+  // hooky vždy v rovnakom poradí (aj keď obdobie A nie je platné), inak React zhodí stránku
   const movers = useMemo(() => {
+    if (!m.intervalA) return null
     // oproti rovnako dlhému obdobiu pred A; pri dlhom A bez predchodcu porovnáme posledných 30 dní s predchádzajúcimi 30 vo vnútri A
     let cur = m.rows, prev = m.rowsPrev, note
     if (prev) note = `Porovnanie s rovnako dlhým obdobím tesne pred obdobím A (${prettyDate(M.dateOf(D, m.prevInterval[0]))} – ${prettyDate(M.dateOf(D, m.prevInterval[1]))}).`
@@ -72,9 +69,15 @@ export function Overview({ D, m, onDetail, go }) {
   }, [m.rows, m.rowsPrev, m.intervalA, m.prevInterval, D])
   const cities = useMemo(() => {
     const g = new Map()
+    if (!m.intervalA) return []
     for (const r of m.rows) { const c = cityOf(r.p); if (!g.has(c)) g.set(c, []); g.get(c).push(r) }
     return [...g.entries()].map(([name, list]) => ({ name, n: list.length, ...M.totals(list) })).sort((x, y) => y.revenue - x.revenue)
-  }, [m.rows])
+  }, [m.rows, m.intervalA])
+  if (!m.intervalA) return <p className="msg err">Vyberte platné obdobie A.</p>
+  const t = m.total, tp = m.totalPrev, future = m.intervalA[0] >= M.todayIndex(D)
+  const top = [...m.rows].sort((x, y) => y.revenue - x.revenue)
+  const topShare = t.cents ? (top.slice(0, 10).reduce((n, r) => n + r.cents, 0) / t.cents) * 100 : null
+  const lead = m.channelParts[0]
   const d = M.days(m.intervalA)
   const dec = tp ? M.decompose(t, tp) : null
   return (
@@ -283,6 +286,7 @@ export function ForecastView({ D, m }) {
   const props = m.props
   const f = useMemo(() => {
     const future = M.range(D, D.asOf, D.futureTo), histEnd = M.dayOf(D, D.historicalTo), hist = [Math.max(0, histEnd - 89), histEnd], annual = M.range(D, D.rangeFrom, D.historicalTo)
+    if (!future || !annual) return null
     const booked = M.totals(props.map((p) => M.stats(p, future))).revenue
     const reference = (M.totals(props.map((p) => M.stats(p, hist))).revenue * 90) / M.days(hist)
     const total = M.totals(props.map((p) => M.stats(p, annual)))
@@ -297,7 +301,8 @@ export function ForecastView({ D, m }) {
     const months = M.monthly(D, props.map((p) => M.stats(p, future)), future).map((x) => ({ ...x, label: M.monthLabel(x.key), future: true }))
     return { future, booked, reference, total, sim, last, prior, dec, topShare, leading, chTotal: Object.values(ch).reduce((x, y) => x + y, 0), overlap, low, months, annual }
   }, [D, props, o])
-  const ev = M.EVENTS.find((e) => e.id === o.event)
+  const ev = M.EVENTS.find((e) => e.id === o.event) || M.EVENTS[0]
+  if (!f) return <Panel eyebrow="Výhľad" title="Výhľad sa nedá spočítať."><p className="eko-fine">Snímok nemá platné obdobie (dátum „k dnešku“ alebo koniec výhľadu je mimo rozsahu dát). Po ďalšom obnovení snímku sa výhľad vráti.</p></Panel>
   const report = `<span class="eyebrow">Názor analytika · ${props.length} bytov vo výbere</span><h2>Výkon rezervácií je merateľný. Finančné zdravie ešte potrebuje náklady.</h2>
 <p>Ročný výnos rezervácií vo výbere dosiahol <strong>${money(f.total.revenue)}</strong> pri ${nf.format(f.total.nights)} obsadených nociach a obsadenosti ${pct(f.total.occupancy)}. Vážená cena na noc je ${money(f.total.adr)}. Ide o výnos ubytovania podľa rezervácií, nie o príjem firmy.</p>
 <h3>Momentum posledných 30 dní</h3><p>Oproti predchádzajúcim 30 dňom sa výnos zmenil o ${deltaText(f.last.revenue, f.prior.revenue)}. Rozklad: počet nocí ${money(f.dec.volume)}, cena za noc ${money(f.dec.price)}. Rozklad vysvetľuje aritmetiku, nie príčinu; nové byty a sezónnosť výsledok ovplyvňujú.</p>
@@ -357,8 +362,8 @@ export function BankView({ D }) {
   const x = valid ? M.bankMonths(b, { entity, account: accounts.includes(account) ? account : 'all', from, to }) : null
   const e = b.entityYTD && b.entityYTD.entities ? b.entityYTD.entities.find((z) => z.entity === entity) : null
   const fee = b.managementFees && b.managementFees.entity === entity ? b.managementFees : null
-  const allBalanced = b.rows.every((r) => r.differenceCents === 0), continuous = b.continuity.every((r) => r.differenceCents === 0 && r.gapDays === 0)
-  const cats = e ? e.candidate_categories.filter((c) => c.category !== 'Párovaný prevod medzi účtami tej istej firmy') : []
+  const allBalanced = b.rows.every((r) => r.differenceCents === 0), continuous = (b.continuity || []).every((r) => r.differenceCents === 0 && r.gapDays === 0)
+  const cats = e ? (e.candidate_categories || []).filter((c) => c.category !== 'Párovaný prevod medzi účtami tej istej firmy') : []
   return (
     <div className="eko-view">
       <div className="eko-section-head"><div><span className="eyebrow">Overené výpisy</span><h2>Peniaze na účtoch. Pohyby v čase.</h2></div></div>
@@ -401,7 +406,7 @@ export function BankView({ D }) {
                     <tr><td>Ostatné poplatky a opravy netto</td><td>{money2(fee.otherCents / 100)}</td><td>doložené v Management Fee; účtovné zaradenie overiť</td></tr>
                     <tr><td><strong>Management Fee spolu</strong></td><td><strong>{money2(fee.totalCents / 100)}</strong></td><td>{fee.statements} výkazov · schválené {money2(fee.approvedCents / 100)}, označené {money2(fee.flaggedCents / 100)}, čakajúce {money2(fee.pendingCents / 100)}</td></tr>
                   </> : <tr><td>Výnosy firmy</td><td>neuzavreté</td><td>vlastné nájomné a služby podľa právnej roly bytu; doklady, DPH a obdobie plnenia</td></tr>}
-                  <tr><td>Bankové príjmy (bez párovaných prevodov)</td><td>{money2(e.cash_excluding_same_holder_pairs_only.credit_cents / 100)}</td><td>{nf.format(e.cash_excluding_same_holder_pairs_only.count)} pohybov</td></tr>
+                  <tr><td>Bankové príjmy (bez párovaných prevodov)</td><td>{money2((e.cash_excluding_same_holder_pairs_only || {}).credit_cents || 0 / 100)}</td><td>{nf.format((e.cash_excluding_same_holder_pairs_only || {}).count || 0)} pohybov</td></tr>
                   <tr><td>Bankové výdavky (bez párovaných prevodov)</td><td>{money2(e.cash_excluding_same_holder_pairs_only.debit_cents / 100)}</td><td>obsahujú aj výplaty majiteľom a interné toky</td></tr>
                   <tr><td><strong>Čistý bankový pohyb</strong></td><td><strong>{money2(e.cash_excluding_same_holder_pairs_only.net_cash_cents / 100)}</strong></td><td>nie zisk</td></tr>
                 </tbody></table></div>

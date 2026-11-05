@@ -10,7 +10,7 @@ export async function sendFeedback(prev, formData) {
   const kind = String(formData.get('kind') || 'napad')
   const message = String(formData.get('message') || '').trim()
   const page = String(formData.get('page') || '').slice(0, 200)
-  if (!KINDS[kind]) return { ok: false, error: 'Vyber typ správy.' }
+  if (!Object.hasOwn(KINDS, kind)) return { ok: false, error: 'Vyber typ správy.' }
   if (message.length < 3) return { ok: false, error: 'Napíš aspoň pár slov.' }
   if (message.length > 4000) return { ok: false, error: 'Správa je príliš dlhá (max 4000 znakov).' }
   const ua = (await headers()).get('user-agent') || ''
