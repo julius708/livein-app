@@ -2,7 +2,7 @@
 import { revalidatePath } from 'next/cache'
 import { getViewer } from '@/lib/auth'
 import { changeStage, flushQueue } from '@/lib/crm-server'
-import { cityGroup, route, normalizePhone, normalizeSource, STAGE_IDS, LOST_REASONS } from '@/lib/crm'
+import { cityGroup, route, normalizePhone, normalizeSource, STAGE_IDS, LOST_REASONS, CITY_GROUPS } from '@/lib/crm'
 
 async function crmViewer() {
   const v = await getViewer()
@@ -66,6 +66,20 @@ export async function createManualLead(form) {
   await flushQueue(v.s, 3).catch(() => {})
   revalidatePath('/crm')
   return { ok: true, id: data.id }
+}
+/** Mesto leadu (skupina Bratislava / Košice / Trnava / Iné): rozhoduje o smerovaní aj o tom, či sa lead počíta do úspešnosti. */
+export async function setCity(leadId, group) {
+  const v = await crmViewer(); if (v.error) return { ok: false, error: v.error }
+  if (!isUuid(leadId)) return { ok: false, error: 'Neplatný lead.' }
+  const g = CITY_GROUPS.includes(group) ? group : null
+  if (!g) return { ok: false, error: 'Neznáme mesto.' }
+  const { data: cur } = await v.s.from('leads').select('city').eq('id', leadId).maybeSingle()
+  const patch = { city_group: g, ...(g !== 'Iné' && (!cur || !cur.city || cityGroup(cur.city) !== g) ? { city: g } : {}) }
+  const { error } = await v.s.from('leads').update(patch).eq('id', leadId)
+  if (error) return { ok: false, error: error.message }
+  await v.s.from('lead_events').insert({ lead_id: leadId, type: 'system', payload: { city_group: g, by: who(v).name }, user_email: who(v).email, user_name: who(v).name })
+  revalidatePath('/crm'); revalidatePath(`/crm/lead/${leadId}`)
+  return { ok: true, patch }
 }
 export async function assignLead(leadId, email) {
   const v = await crmViewer(); if (v.error) return { ok: false, error: v.error }

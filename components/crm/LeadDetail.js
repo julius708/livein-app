@@ -2,9 +2,9 @@
 import { useEffect, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { countdown, stageOf, SOURCES } from '@/lib/crm'
+import { countdown, stageOf, SOURCES, CITY_GROUPS } from '@/lib/crm'
 import { Ring, Pill, ContactButtons, StageBar, stateOf, fmtDT, firstName } from './ui'
-import { setStage, logContact, addNote, assignLead } from '@/app/crm/actions'
+import { setStage, logContact, addNote, assignLead, setCity } from '@/app/crm/actions'
 
 const TYPES = { stage_change: 'Zmena štádia', call: 'Hovor', whatsapp: 'WhatsApp', email: 'E-mail', sms: 'SMS', note: 'Poznámka', system: 'Systém' }
 const HUB = 'https://app.hubspot.com/contacts/48987752/record/0-1/'
@@ -56,7 +56,7 @@ export default function LeadDetail({ lead: initial, events: initialEvents, peopl
           <dl className="crm-dl">
             <dt>Telefón</dt><dd>{lead.phone || '—'}</dd>
             <dt>E-mail</dt><dd>{lead.email || '—'}{lead.email_optout ? ' (odhlásený z e-mailov)' : ''}</dd>
-            <dt>Mesto</dt><dd>{lead.city || lead.city_group}</dd>
+            <dt>Mesto</dt><dd><select value={lead.city_group || 'Iné'} onChange={(e) => start(async () => { const g = e.target.value; const r = await setCity(lead.id, g); if (r.ok) setLead({ ...lead, ...r.patch }); else setErr(r.error) })}>{CITY_GROUPS.map((c) => <option key={c} value={c}>{c}</option>)}</select>{lead.city && lead.city !== lead.city_group ? <small className="muted"> {lead.city}</small> : null}{(lead.city_group === 'Iné' || !lead.city_group) && <small className="crm-low"> · mimo našich miest, nepočíta sa do úspešnosti</small>}</dd>
             <dt>Zdroj</dt><dd>{lead.source || '—'}</dd>
             <dt>Komu</dt><dd><select value={lead.assigned_to || ''} onChange={(e) => start(async () => { const v = e.target.value; const r = await assignLead(lead.id, v); if (r.ok) setLead({ ...lead, assigned_to: v }); else setErr(r.error) })}><option value="">nepriradený</option>{people.map((p) => <option key={p.email} value={p.email}>{p.name}</option>)}</select></dd>
             <dt>Priorita</dt><dd>{lead.priority === 'high' ? 'vysoká' : lead.priority === 'normal' ? 'bežná' : 'nižšia (mimo BA, KE, TT)'}</dd>
