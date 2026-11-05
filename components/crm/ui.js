@@ -13,7 +13,7 @@ export function Ring({ lead, now, size = 58 }) {
   const col = done ? COLORS.ok : COLORS[c.state] || COLORS.none
   return (
     <div className={'crm-ring' + (c.state === 'over' && !done ? ' over' : '')} style={{ '--p': done ? 100 : pct, '--c': col, width: size, height: size }} title={done ? 'Vybavené' : c.state === 'over' ? 'Po lehote' : 'Do konca lehoty'}>
-      <span>{done ? 'OK' : lead.due_at ? c.label : '—'}</span>
+      <span suppressHydrationWarning>{done ? 'OK' : lead.due_at ? c.label : '—'}</span>
     </div>
   )
 }

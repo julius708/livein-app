@@ -1,4 +1,5 @@
 'use client'
+import { fmtDate } from '@/lib/fmt'
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { TESTS, ranked, typeLabel } from '@/lib/personality-tests'
@@ -29,7 +30,7 @@ export default function ResultCard({ row, own = false }) {
     <article className="card ts-rcard">
       <div className="ts-rcard-grid">
         <div>
-          <div className="ts-head"><span className="ts-icon" aria-hidden="true">{T.icon}</span><h3>{T.title}</h3><span className="muted">{new Date(row.created_at).toLocaleDateString('sk-SK')}</span></div>
+          <div className="ts-head"><span className="ts-icon" aria-hidden="true">{T.icon}</span><h3>{T.title}</h3><span className="muted">{fmtDate(row.created_at)}</span></div>
           <p className="tg-type small">{typeLabel(row.test_key, row.summary)}</p>
           <ResultBars testKey={row.test_key} scores={row.scores} />
           <ul className="tb-advice small">{advice(row.test_key, row.scores || {}).map((x) => <li key={x.d}><b>{x.name}</b><span>{x.text}</span></li>)}</ul>

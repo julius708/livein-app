@@ -1,4 +1,5 @@
 'use client'
+import { fmtDate } from '@/lib/fmt'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import * as M from '@/lib/economy-math'
 import { money, money2, nf, pct, decimal, prettyDate, signed, cityOf, skPlural } from '@/lib/economy-math'
@@ -483,7 +484,7 @@ export function DetailDialog({ D, m, id, onClose }) {
             <MonthlyChart months={data.months} label={`Výnos bytu ${p.name} po mesiacoch`} />
             <div className="eko-two tight">
               <div><h3 className="eko-h3">Kanály v období A</h3><Donut parts={data.parts} total={data.total} /></div>
-              <div><h3 className="eko-h3">Zdroje a odkazy</h3><p className="eko-fine">Guesty + PriceLabs · katalóg načítaný {new Date(D.readAt).toLocaleString('sk-SK', { timeZone: 'Europe/Bratislava' })}. PriceLabs snímok bytu: {p.sourceRefreshed ? new Date(p.sourceRefreshed).toLocaleDateString('sk-SK') : 'neuvedený'}.</p>
+              <div><h3 className="eko-h3">Zdroje a odkazy</h3><p className="eko-fine">Guesty + PriceLabs · katalóg načítaný {new Date(D.readAt).toLocaleString('sk-SK', { timeZone: 'Europe/Bratislava' })}. PriceLabs snímok bytu: {p.sourceRefreshed ? fmtDate(p.sourceRefreshed) : 'neuvedený'}.</p>
                 {airbnbUrl(p) && <a className="btn line" href={airbnbUrl(p)} target="_blank" rel="noopener noreferrer">Otvoriť na Airbnb ↗</a>}
                 {p.overlaps > 0 && <p className="msg err">Zdrojové rezervácie sa prekrývajú v {p.overlaps} nociach; treba preveriť jednotky a duplicity.</p>}
                 <p className="eko-fine">Príjem LIVE-IN a zisk nie sú vyčíslené. Ročná obsadenosť čaká na dostupné noci a blokácie.</p></div>

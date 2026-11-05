@@ -98,7 +98,7 @@ export default function LoginForm({ google, err }) {
     <div className="login">
       <div className="box">
         <div className="lh"><img src="/logo.png" alt="LIVE-IN" /></div>
-        <h2>Vitaj späť</h2>
+        <h2>Vitaj <em>späť</em></h2>
         <p className="term">{fromMail ? 'Prihlasujem ťa z odkazu…' : mode === 'password' ? 'Prihlás sa e-mailom a heslom, ktoré máš v LIVE-IN.' : mode === 'reset' ? 'Pošleme ti e-mail s odkazom na nastavenie nového hesla.' : 'Pošleme ti na e-mail jednorazový prihlasovací odkaz.'}</p>
 
         {google && (

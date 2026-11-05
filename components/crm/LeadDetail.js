@@ -36,7 +36,7 @@ export default function LeadDetail({ lead: initial, events: initialEvents, peopl
         <Ring lead={lead} now={now} size={72} />
         <div className="crm-dhead-main">
           <div className="crm-row-head"><h1>{lead.name}</h1><Pill lead={lead} />{lead.kind === 'not_lead' && <span className="crm-low">označený ako nie lead</span>}</div>
-          <div className="crm-meta">{lead.city_group !== 'Iné' ? lead.city_group : ''}{lead.city ? ` · ${lead.city}` : ''} · {lead.source || 'zdroj neznámy'} · prijatý {fmtDT(lead.received_at)}{lead.due_at && lead.stage === 'new' ? ` · lehota ${c.state === 'over' ? 'prekročená o ' + c.label.slice(1) : 'do ' + fmtDT(lead.due_at)}` : ''}</div>
+          <div className="crm-meta" suppressHydrationWarning>{lead.city_group !== 'Iné' ? lead.city_group : ''}{lead.city ? ` · ${lead.city}` : ''} · {lead.source || 'zdroj neznámy'} · prijatý {fmtDT(lead.received_at)}{lead.due_at && lead.stage === 'new' ? ` · lehota ${c.state === 'over' ? 'prekročená o ' + c.label.slice(1) : 'do ' + fmtDT(lead.due_at)}` : ''}</div>
           <div className="crm-meta">{lead.first_contact_at ? `Prvý kontakt ${fmtDT(lead.first_contact_at)} (${firstName(lead.contacted_by, people)})` : 'Zatiaľ bez kontaktu'}{lead.lost_reason ? ` · dôvod straty: ${lead.lost_reason}` : ''}{lead.property_address ? ` · nehnuteľnosť: ${lead.property_address}` : ''}</div>
           <ContactButtons lead={lead} onLog={doLog} big />
           <StageBar lead={lead} onStage={doStage} />

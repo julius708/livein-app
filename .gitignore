@@ -18,3 +18,4 @@ coverage
 app/dev-tim/
 app/dev-eko/
 app/dev-plan/
+lib/mock-supabase.js

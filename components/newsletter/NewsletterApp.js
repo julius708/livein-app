@@ -18,7 +18,7 @@ export default function NewsletterApp({ list, open, me, status }) {
       <section className="li-page-intro nl-intro">
         <div>
           <span className="li-eyebrow">Newsletter · majitelia bytov</span>
-          <h1>{open ? (open.status === 'sent' ? 'Odoslaný newsletter' : 'Pripravujeme newsletter') : 'Newsletter pre majiteľov.'}</h1>
+          <h1>{open ? (open.status === 'sent' ? 'Odoslaný newsletter' : 'Pripravujeme newsletter') : <>Newsletter pre <em>majiteľov</em>.</>}</h1>
           <p>Nápad, text, publikum, test na seba a až potom ostré odoslanie s potvrdením. Odhlásenie funguje jedným klikom a zapíše sa do HubSpotu.</p>
         </div>
         <div className="nl-intro-side">

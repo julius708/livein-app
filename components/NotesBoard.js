@@ -1,4 +1,5 @@
 'use client'
+import { fmtDay } from '@/lib/fmt'
 import { useActionState, useEffect, useRef, useState } from 'react'
 import { addBoardNote, markMentionsSeen } from '@/app/note/actions'
 
@@ -9,7 +10,7 @@ function dayLabel(d, today) {
   const diff = Math.round((Date.parse(d) - Date.parse(today)) / 864e5)
   if (diff === 1) return 'zajtra'
   if (diff === -1) return 'včera'
-  return new Date(d + 'T00:00:00').toLocaleDateString('sk-SK', { day: 'numeric', month: 'numeric' })
+  return fmtDay(d)
 }
 
 /** Nástenka tímu: posledné oznamy, najnovšie hore; 3 viditeľné, zvyšok na rozkliknutie. */

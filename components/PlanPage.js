@@ -1,4 +1,5 @@
 'use client'
+import { fmtDate } from '@/lib/fmt'
 import { useState, useTransition } from 'react'
 import { PLAN, PLAN_PDF } from '@/lib/plan-2027'
 import { markPlanRead } from '@/app/plan/actions'
@@ -36,7 +37,7 @@ export default function PlanPage({ read, readers, total, isAdmin, first }) {
       <section className="li-page-intro pl-hero">
         <div>
           <span className="li-eyebrow">Marketingový plán 2027</span>
-          <h1>{PLAN.title}</h1>
+          <h1>Cesta k <em>najväčším</em> na Slovensku.</h1>
           <p>{PLAN.subtitle}</p>
           <div className="pl-actions">
             {done ? <span className="pl-done">✓ Prečítané{first ? `, ${first}` : ''}. Ďakujeme.</span> : <button type="button" className="btn o" onClick={ack} disabled={busy}>{busy ? 'Ukladám…' : 'Prečítal/a som si plán'}</button>}
@@ -180,7 +181,7 @@ export default function PlanPage({ read, readers, total, isAdmin, first }) {
         <section className="card pl-sec">
           <span className="eyebrow">Kto si plán prečítal</span>
           <h2>{readers.length} z {total} ľudí</h2>
-          <div className="pl-readers">{readers.map((r) => <span key={r.user_email} className="pl-reader">✓ {r.user_name || r.user_email}<small>{new Date(r.read_at).toLocaleDateString('sk-SK')}</small></span>)}</div>
+          <div className="pl-readers">{readers.map((r) => <span key={r.user_email} className="pl-reader">✓ {r.user_name || r.user_email}<small>{fmtDate(r.read_at)}</small></span>)}</div>
         </section>
       )}
     </div>

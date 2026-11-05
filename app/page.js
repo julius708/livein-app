@@ -125,7 +125,7 @@ export default async function Home({ searchParams }) {
         <div className="dot" aria-hidden="true" />
         <div className="in">
           <div className="kick">{dateLabel}</div>
-          <h1>{greeting(now)}, {first}</h1>
+          <h1>{greeting(now)}, <em>{first}</em></h1>
           <p>Ďakujeme, že každý deň robíte LIVE-IN lepším. Hostia sa vracajú, lebo sa o nich staráte vy.</p>
           <div className="chips">
             {(me.roles || []).map((r) => <span className="chip" key={r}>{ROLES[r] || r}</span>)}

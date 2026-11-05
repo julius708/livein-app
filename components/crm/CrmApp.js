@@ -128,7 +128,7 @@ function OneAtATime({ leads, now, onStage, onLog, people, busy }) {
   return (
     <section className={'card crm-phone ' + st}>
       <div className="crm-phone-top"><span className={'crm-pill s-wait ' + st}>Čaká {leads.length} {leads.length === 1 ? 'lead' : leads.length < 5 ? 'leady' : 'leadov'}</span><Link href={`/crm/lead/${l.id}`} className="eko-link">Detail ↗</Link></div>
-      <div className={'crm-timer ' + st}>{l.due_at ? c.label : '—'}</div>
+      <div className={'crm-timer ' + st} suppressHydrationWarning>{l.due_at ? c.label : '—'}</div>
       <div className="crm-timer-sub">{l.due_at ? (over ? 'po lehote' : 'do konca lehoty') : 'bez lehoty (starší lead)'}</div>
       <h2>{l.name}</h2>
       <div className="crm-meta">{l.city_group !== 'Iné' ? l.city_group : l.city || 'bez mesta'} · {l.source || 'zdroj neznámy'} · {fmtDT(l.received_at)}</div>

@@ -1,9 +1,10 @@
 'use client'
+import { fmtDate } from '@/lib/fmt'
 import { useActionState, useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { addIdea, setIdeaStatus } from '@/app/napady/actions'
 
 export const STATUS = { new: 'Nový', selected: 'Vybraný', script_done: 'Scenár hotový' }
-const fmt = (d) => new Date(d).toLocaleDateString('sk-SK', { day: 'numeric', month: 'numeric', year: 'numeric' })
+const fmt = (d) => fmtDate(d)
 
 function Card({ idea }) {
   const [busy, start] = useTransition()

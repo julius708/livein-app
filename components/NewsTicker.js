@@ -1,7 +1,8 @@
 'use client'
+import { fmtDay } from '@/lib/fmt'
 import { useState } from 'react'
 
-const fmt = (d) => new Date(d).toLocaleDateString('sk-SK', { day: 'numeric', month: 'numeric' })
+const fmt = (d) => fmtDay(d)
 
 /** Bežiaci pás noviniek o appkách (ako burzový ticker). Ťuknutie otvorí zoznam s plným textom. */
 export default function NewsTicker({ items }) {

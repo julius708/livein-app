@@ -1,4 +1,5 @@
 'use client'
+import { fmtDate } from '@/lib/fmt'
 import { useMemo, useState } from 'react'
 import { TESTS, TEST_KEYS } from '@/lib/personality-tests'
 import { AXES, position, similarity, teamAverage, pairs, compare, advice, personColor, initials } from '@/lib/personality-team'
@@ -68,7 +69,7 @@ export default function TeamBoard({ people, meId }) {
               <g key={p.id} className={'tb-dot' + (on ? ' on' : '') + (dim ? ' dim' : '')} transform={`translate(${cx} ${cy})`} onClick={() => toggle(p.id)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(p.id) } }} aria-label={p.name} aria-pressed={on}>
                 <circle r={on ? R + 3 : R} fill={p.color} stroke="#fff" strokeWidth={on ? 4 : 2.5} />
                 <text y="5" textAnchor="middle" className="tb-ini">{initials(p.name)}</text>
-                {(on || list.length <= 8) && <text y={on ? R + 18 : R + 15} textAnchor="middle" className="tb-name">{p.name.split(' ')[0]}</text>}<title>{p.name} · {p.res.summary}</title>
+                {(on || list.length <= 8) && <text y={on ? R + 18 : R + 15} textAnchor="middle" className="tb-name">{p.name.split(' ')[0]}</text>}<title>{p.name + ' · ' + p.res.summary}</title>
               </g>
             ) })}
           </svg>
@@ -78,7 +79,7 @@ export default function TeamBoard({ people, meId }) {
       {a && (
         <section className="tb-two">
           <article className="card tb-person" style={{ '--c': a.color }}>
-            <div className="tb-ph"><i className="tb-av">{initials(a.name)}</i><div><h3>{a.name}</h3><p>{a.res.summary} · {new Date(a.res.created_at).toLocaleDateString('sk-SK')}</p></div></div>
+            <div className="tb-ph"><i className="tb-av">{initials(a.name)}</i><div><h3>{a.name}</h3><p>{a.res.summary} · {fmtDate(a.res.created_at)}</p></div></div>
             <Radar dims={dims} labels={Object.fromEntries(dims.map((d) => [d, T.dims[d][0].split(" (")[0].split(" /")[0]]))} series={[{ scores: a.res.scores, color: a.color }, ...(b ? [{ scores: b.res.scores, color: b.color }] : []), { scores: avg, color: '#98A39B', dashed: true }]} />
             <p className="tb-note"><span className="tb-sw" style={{ background: a.color }} />{a.name.split(' ')[0]}{b && <><span className="tb-sw" style={{ background: b.color }} />{b.name.split(' ')[0]}</>}<span className="tb-sw tb-sw-avg" />priemer tímu</p>
             <ul className="tb-advice">{advice(key, a.res.scores).map((x) => <li key={x.d}><b>{x.name} {x.pct} %</b><span>{x.text}</span></li>)}</ul>
