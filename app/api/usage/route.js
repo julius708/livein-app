@@ -1,5 +1,5 @@
 import { getViewer } from '@/lib/auth'
-const allowed=new Set(['home','guru','feedback','password','users','settings','feedback_admin','activity','apartments','knowledge','team','audit','apartment_detail','history','packing_history','status','entrances','economy','economy_overview','economy_compare','economy_apartments','economy_map','economy_forecast','economy_bank','economy_insights','plan'])
+const allowed=new Set(['home','guru','feedback','password','users','settings','feedback_admin','activity','apartments','knowledge','team','audit','apartment_detail','history','packing_history','status','entrances','economy','economy_overview','economy_compare','economy_apartments','economy_map','economy_forecast','economy_bank','economy_insights','plan','crm','crm_lead','newsletter'])
 export async function POST(request){
  const origin=request.headers.get('origin');if(origin&&origin!==new URL(request.url).origin)return Response.json({ok:false},{status:403})
  const {s,user,blocked}=await getViewer(); if(!user||blocked)return Response.json({ok:false},{status:403})

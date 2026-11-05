@@ -1,0 +1,107 @@
+/* CRM – leady a kontakty (vzor: prototyp Fronta / Tabuľa / Jeden naraz; farby appky). */
+.crm{display:flex;flex-direction:column;gap:14px;color:#233E31}
+.crm-intro{margin-bottom:0;align-items:flex-start}
+.crm-intro h1{font-size:clamp(24px,3vw,36px);line-height:1.1}
+.crm-intro-side{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.crm-banner{background:#C23B3B;color:#fff;border-radius:14px;padding:12px 16px;font-weight:800;animation:crm-blink 1s steps(2,end) infinite}
+@keyframes crm-blink{50%{box-shadow:0 0 0 5px #c23b3b55}}
+.crm-tabs{display:flex;gap:4px;padding:6px;border-radius:999px;background:rgba(255,254,251,.78);border:1px solid #ffffffcc;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);overflow-x:auto;scrollbar-width:none;position:sticky;top:64px;z-index:9}
+.crm-tabs::-webkit-scrollbar{display:none}
+.crm-tabs button{flex:1 0 auto;border:0;background:none;padding:10px 14px;border-radius:999px;font-weight:700;font-size:14px;color:#173E2C;display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+.crm-tabs button.on{background:#173E2C;color:#fff}.crm-tabs button b{background:#F46D16;color:#fff;border-radius:999px;padding:1px 8px;font-size:12px}
+.crm-filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.crm-filters input,.crm-filters select{padding:9px 12px;border:1px solid #173e2c2e;border-radius:12px;background:#fff;font-size:14px;font-weight:600;color:#173E2C}
+.crm-filters input{flex:1 1 220px}
+.crm-check{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;font-weight:700;color:#58665D}.crm-check input{accent-color:#F46D16;width:16px;height:16px}
+.crm-empty{padding:28px;text-align:center}.crm-empty p{color:#66716A;margin-top:6px}
+/* kruh + pilulky */
+.crm-ring{--p:0;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--c) calc(var(--p)*1%),#173e2c14 0);position:relative;flex:none}
+.crm-ring::after{content:'';position:absolute;inset:6px;border-radius:50%;background:#fff}
+.crm-ring span{position:relative;z-index:1;font-size:11.5px;font-weight:800;font-variant-numeric:tabular-nums;color:#173E2C}
+.crm-ring.over{animation:crm-blink 1s steps(2,end) infinite}
+.crm-pill{display:inline-block;font-size:11.5px;font-weight:800;padding:3px 9px;border-radius:999px;background:#173e2c12;color:#173E2C;white-space:nowrap}
+.crm-pill.s-new{background:#F46D16;color:#fff}.crm-pill.s-contacted{background:#FBF0D3;color:#8A5A00}.crm-pill.s-viewing,.crm-pill.s-offer{background:#DDF1E6;color:#1E6B45}.crm-pill.s-client{background:#173E2C;color:#fff}.crm-pill.s-lost{background:#FBE4E2;color:#C23B3B}
+.crm-pill.s-wait.over,.crm-pill.s-wait.critical{background:#FBE4E2;color:#C23B3B}.crm-pill.s-wait.soon{background:#FBF0D3;color:#8A5A00}
+.crm-low{font-size:11.5px;font-weight:700;color:#8A948C}
+/* fronta */
+.crm-queue{display:grid;gap:10px}
+.crm-row{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;background:rgba(255,254,251,.8);border:1px solid #ffffffcc;border-radius:18px;padding:12px 14px;box-shadow:0 10px 26px -18px #173e2c4d}
+.crm-row.soon{border-color:#D98A00}.crm-row.critical{border-color:#C23B3B}.crm-row.over{border-color:#C23B3B;background:#FBE4E2;animation:crm-blink 1s steps(2,end) infinite}
+.crm-row-main{min-width:0;display:flex;flex-direction:column;gap:5px}
+.crm-row-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.crm-name{font-weight:800;color:#173E2C;text-decoration:none;font-size:16px}.crm-name:hover{text-decoration:underline}
+.crm-meta{font-size:12.5px;color:#66716A;overflow-wrap:anywhere}
+.crm-stagebar{display:flex;gap:5px;flex-wrap:wrap;position:relative}
+.crm-stagebar button{font-size:12px;font-weight:700;border:1px solid #173e2c26;background:#fff;color:#173E2C;padding:4px 9px;border-radius:999px;cursor:pointer}
+.crm-stagebar button.on{background:#173E2C;color:#fff;border-color:#173E2C}.crm-stagebar button:disabled{cursor:default}
+.crm-lost{position:absolute;z-index:5;top:100%;left:0;margin-top:6px;background:#fff;border:1px solid #173e2c26;border-radius:14px;padding:12px;display:grid;gap:8px;min-width:280px;box-shadow:0 14px 30px -14px #173e2c66}
+.crm-lost select,.crm-lost input{padding:8px 10px;border:1px solid #173e2c2e;border-radius:10px;font-size:13.5px}
+.crm-row{--x:0}.crm-row .crm-contact{display:flex;flex-direction:column;gap:6px;align-items:stretch}
+.crm-contact{display:flex;gap:8px;flex-wrap:wrap}
+.crm-contact .btn{padding:10px 14px;font-size:14px;text-decoration:none;text-align:center}
+.crm-contact.big{flex-direction:column}.crm-contact.big .crm-call{padding:18px;font-size:20px;background:#F46D16}
+.crm .btn.line{background:#fff;color:#173E2C;border:1px solid #173e2c33;box-shadow:none}
+.crm-nophone{font-size:13px;color:#8A948C;font-weight:700}
+.crm-row-main .crm-contact,.crm-row .crm-contact .btn{font-size:13px}
+/* jeden naraz */
+.crm-phone{max-width:460px;margin:0 auto;padding:22px;display:flex;flex-direction:column;gap:10px}
+.crm-phone.over{border-color:#C23B3B}
+.crm-phone-top{display:flex;justify-content:space-between;align-items:center}
+.crm-timer{font-size:52px;font-weight:800;line-height:1;text-align:center;font-variant-numeric:tabular-nums;color:#1E8A5A;letter-spacing:-.02em}
+.crm-timer.soon{color:#D98A00}.crm-timer.critical,.crm-timer.over{color:#C23B3B}.crm-timer.over{animation:crm-blink 1s steps(2,end) infinite}
+.crm-timer-sub{text-align:center;font-size:13px;color:#66716A;margin-top:-6px}
+.crm-phone h2{font-size:24px;margin-top:4px}
+.crm-script{background:#FFF3E8;border-radius:12px;padding:12px;font-size:13.5px;line-height:1.5}
+.crm-note{background:#F4F6F1;border-radius:12px;padding:10px 12px;font-size:14px;white-space:pre-wrap}
+.crm-two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.crm-more summary{cursor:pointer;font-weight:700;font-size:13.5px;color:#58665D}
+/* tabuľa */
+.crm-board{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(220px,1fr);gap:10px;overflow-x:auto;padding-bottom:6px}
+.crm-col{background:rgba(255,254,251,.7);border:1px solid #ffffffcc;border-radius:16px;padding:10px;min-height:200px}
+.crm-col h4{display:flex;justify-content:space-between;font-size:13px;margin:0 0 8px;color:#173E2C}.crm-col h4 span{color:#66716A}
+.crm-col.s-new h4{color:#F46D16}.crm-col.s-lost h4{color:#C23B3B}
+.crm-kcard{background:#fff;border:1px solid #173e2c14;border-radius:12px;padding:10px;margin-bottom:8px;font-size:13px;cursor:grab}
+.crm-kcard a{text-decoration:none;color:#173E2C}.crm-kcard.over{border-color:#C23B3B;animation:crm-blink 1s steps(2,end) infinite}.crm-kcard.critical{border-color:#C23B3B}.crm-kcard.soon{border-color:#D98A00}
+.crm-kt{font-weight:800;font-variant-numeric:tabular-nums;color:#1E8A5A;margin-top:4px}.crm-kt.soon{color:#D98A00}.crm-kt.critical,.crm-kt.over{color:#C23B3B}
+.crm-next{margin-top:6px;border:1px solid #173e2c26;background:#fff;border-radius:999px;padding:3px 9px;font-size:12px;font-weight:700;cursor:pointer}
+/* kontakty */
+.crm-contacts{padding:18px 20px;margin:0}
+.crm-seg{display:inline-flex;background:#173e2c12;border-radius:999px;padding:3px;margin-bottom:12px}
+.crm-seg button{border:0;background:none;padding:7px 14px;border-radius:999px;font-weight:700;font-size:13.5px;color:#173E2C}.crm-seg button.on{background:#173E2C;color:#fff}.crm-seg b{margin-left:4px;opacity:.7}
+/* prehľad */
+.crm-sum{list-style:none;margin:0;padding:0;display:grid;gap:8px}.crm-sum li{font-size:15px}.crm-sum b{font-size:20px;color:#173E2C;margin-right:6px}
+/* detail */
+.crm-dhead{display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:start;margin:0}
+.crm-dhead.over{border-color:#C23B3B}
+.crm-dhead h1{font-size:26px}
+.crm-dhead-main{display:flex;flex-direction:column;gap:8px;min-width:0}
+.crm-noteform{display:grid;gap:8px;margin-bottom:14px}.crm-noteform textarea{padding:10px;border:1px solid #173e2c2e;border-radius:12px;font-size:14px}
+.crm-hist{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.crm-hist li{display:grid;grid-template-columns:110px 1fr;gap:10px;align-items:start;font-size:14px}
+.crm-hist b{font-weight:600;white-space:pre-wrap}.crm-hist small{display:block;color:#66716A;font-size:12px}
+.crm-ev{font-size:11.5px;font-weight:800;padding:3px 8px;border-radius:999px;background:#173e2c12;color:#173E2C;text-align:center}
+.crm-ev.t-call{background:#DDF1E6;color:#1E6B45}.crm-ev.t-note{background:#FBF0D3;color:#8A5A00}.crm-ev.t-stage_change{background:#F46D16;color:#fff}
+.crm-dl{display:grid;grid-template-columns:auto 1fr;gap:8px 14px;font-size:14px;margin:0}.crm-dl dt{color:#66716A}.crm-dl dd{margin:0;font-weight:600;overflow-wrap:anywhere}.crm-dl select{padding:6px 8px;border:1px solid #173e2c2e;border-radius:10px;font-size:13.5px}
+/* modál + notifikácie */
+.crm-modal{position:fixed;inset:0;background:#173e2c66;display:grid;place-items:center;z-index:50;padding:16px}
+.crm-form{width:min(520px,100%);display:grid;gap:10px;margin:0;max-height:calc(100vh - 40px);overflow:auto}
+.crm-form label{display:grid;gap:4px;font-size:13px;font-weight:700;color:#58665D}
+.crm-form input,.crm-form select,.crm-form textarea{padding:10px 12px;border:1px solid #173e2c2e;border-radius:12px;font-size:15px;font-weight:500;color:#173E2C}
+.crm-row{display:flex;gap:8px;flex-wrap:wrap}
+.crm-bell-wrap{position:relative}
+.crm-bell{position:relative;border:1px solid #ffffff55;background:#ffffff1f;color:#fff;border-radius:999px;width:44px;height:44px;font-size:20px;cursor:pointer}
+.crm-bell.has{background:#F46D16;border-color:#F46D16}.crm-bell b{position:absolute;top:-6px;right:-6px;background:#C23B3B;color:#fff;border-radius:999px;font-size:11px;padding:2px 6px}
+.crm-notifs{position:absolute;right:0;top:52px;width:min(360px,calc(100vw - 32px));background:#fff;color:#233E31;border-radius:18px;box-shadow:0 20px 50px -20px #173e2c99;padding:14px;z-index:40}
+.crm-notifs-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.crm-notifs ul{list-style:none;margin:0;padding:0;display:grid;gap:6px;max-height:60vh;overflow:auto}
+.crm-notifs li a{display:block;text-decoration:none;color:inherit;padding:8px 10px;border-radius:12px;background:#F4F6F1}.crm-notifs li.new a{background:#FFF3E8}
+.crm-notifs li b{display:block;font-size:14px;color:#173E2C}.crm-notifs li span{font-size:12.5px;color:#58665D}.crm-notifs li small{display:block;font-size:11px;color:#8A948C}
+.crm-push-on{font-size:12px;color:#1E8A5A;font-weight:700}
+.crm-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:60;background:#173E2C;color:#fff;border-radius:16px;padding:12px 18px;text-decoration:none;box-shadow:0 20px 50px -20px #000;max-width:calc(100vw - 32px);border-left:5px solid #F46D16}
+.crm-toast b{display:block}.crm-toast span{font-size:13px;color:#D7E4DA}
+@media(prefers-reduced-motion:reduce){.crm-banner,.crm-ring.over,.crm-row.over,.crm-timer.over,.crm-kcard.over{animation:none}}
+@media(max-width:760px){
+  .crm-tabs{top:58px}.crm-row{grid-template-columns:auto 1fr}.crm-row .crm-contact{grid-column:1/-1;flex-direction:row}.crm-row .crm-contact .btn{flex:1}
+  .crm-intro{flex-direction:column}.crm-intro-side{justify-content:flex-start}
+  .crm-dhead{grid-template-columns:1fr}.crm-hist li{grid-template-columns:1fr}.crm-two{grid-template-columns:1fr}
+}
