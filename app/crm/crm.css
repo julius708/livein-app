@@ -116,3 +116,4 @@
 .crm-row.client{border-color:#173e2c22;background:rgba(255,254,251,.85)}
 .crm-avatar{width:48px;height:48px;border-radius:50%;background:#173E2C;color:#fff;display:grid;place-items:center;font-weight:800;font-size:15px;flex:none}
 @media(max-width:760px){.crm-weeks{overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none;padding-bottom:2px}.crm-weeks::-webkit-scrollbar{display:none}.crm-week{flex:0 0 auto}}
+.crm-dim td{color:#8A948C}

@@ -62,7 +62,7 @@ async function claude(system, user, max_tokens = 2500) {
 async function companyContext(s) {
   const { data } = await s.from('config').select('value').eq('key', 'company_facts').maybeSingle()
   const facts = data?.value ? JSON.stringify(data.value).slice(0, 3000) : ''
-  return `LIVE-IN je správca bytov na krátkodobý prenájom (Bratislava, Košice, Trnava). Majiteľom bytov zabezpečuje kompletnú prevádzku: hostia, upratovanie, ceny, údržba, výplaty. Veta pre majiteľov: „Každodennú prevádzku riešime my. Vy vidíte, čo Vám zostáva.“ Cieľ 2027: ~310 bytov v správe.\nFakty o firme: ${facts}\nPlán 2027 (skratka): ${JSON.stringify({ vision: PLAN.vision, numbers: PLAN.numbers, sentence: PLAN.sentence, success: PLAN.success, rule: PLAN.rule }).slice(0, 2500)}`
+  return `LIVE-IN je správca bytov na krátkodobý prenájom (Bratislava, Košice, Trnava). Majiteľom bytov zabezpečuje kompletnú prevádzku: hostia, upratovanie, ceny, údržba, výplaty. Veta pre majiteľov: „Každodennú prevádzku riešime my. Vy vidíte, čo Vám zostáva.“ Cieľ: 160 až 170 bytov do konca roka 2026, ~345 bytov v správe na konci roka 2027.\nFakty o firme: ${facts}\nPlán 2027 (skratka): ${JSON.stringify({ vision: PLAN.vision, numbers: PLAN.numbers, sentence: PLAN.sentence, success: PLAN.success, rule: PLAN.rule }).slice(0, 2500)}`
 }
 const RULES = 'Píš po slovensky, ľudsky, bez marketingových fráz a bez vykričníkov v každej vete. Vykaj. Krátke vety. Konkrétne čísla a príklady z prevádzky, nie všeobecné reči. Nikdy nevymýšľaj čísla, ktoré nie sú v podkladoch; ak chýbajú, nechaj zátvorku [doplniť].'
 /** 5 nápadov na tému newslettera. */

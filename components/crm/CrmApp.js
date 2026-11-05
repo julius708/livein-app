@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { browserClient } from '@/lib/browser'
-import { STAGES, OPEN_STAGES, SOURCES, CITY_GROUPS, WEEKS, countdown, stageOf, weekBucket, weekRange } from '@/lib/crm'
+import { STAGES, OPEN_STAGES, SOURCES, CITY_GROUPS, CORE_CITIES, WEEKS, countdown, stageOf, weekBucket, weekRange, isCoreCity } from '@/lib/crm'
 import { fmtDay } from '@/lib/fmt'
 import { Ring, Pill, ContactButtons, StageBar, stateOf, SCRIPT, fmtDT, fmtD, firstName } from './ui'
 import { setStage, logContact, createManualLead, setKind } from '@/app/crm/actions'
@@ -223,8 +223,14 @@ function Overview({ leads, now, people }) {
   const contacted = L.filter((l) => l.first_contact_at && l.received_at)
   const avgH = contacted.length ? contacted.reduce((s, l) => s + (Date.parse(l.first_contact_at) - Date.parse(l.received_at)) / H, 0) / contacted.length : null
   const recent = L.filter((l) => Date.parse(l.received_at) >= week)
+  // Úspešnosť počítame len z miest, v ktorých operujeme (Bratislava, Košice). Leady z iných miest často ani nekontaktujeme.
+  const isClient = (l) => l.kind === 'client' || l.stage === 'client'
+  const core = L.filter(isCoreCity)
+  const coreClients = core.filter(isClient).length
+  const successPct = core.length ? Math.round((coreClients / core.length) * 100) : null
+  const byCity = CITY_GROUPS.map((c) => { const g = L.filter((l) => (l.city_group || 'Iné') === c); return { c, n: g.length, client: g.filter(isClient).length, lost: g.filter((l) => l.stage === 'lost').length, contacted: g.filter((l) => l.first_contact_at || isClient(l)).length, core: CORE_CITIES.includes(c) } })
   const bySource = {}
-  for (const l of L) { const k = l.source || 'Iné / neznáme'; bySource[k] = bySource[k] || { n: 0, client: 0, lost: 0 }; bySource[k].n++; if (l.kind === 'client' || l.stage === 'client') bySource[k].client++; if (l.stage === 'lost') bySource[k].lost++ }
+  for (const l of core) { const k = l.source || 'Iné / neznáme'; bySource[k] = bySource[k] || { n: 0, client: 0, lost: 0 }; bySource[k].n++; if (isClient(l)) bySource[k].client++; if (l.stage === 'lost') bySource[k].lost++ }
   const byPerson = {}
   for (const l of L.filter((x) => OPEN_STAGES.includes(x.stage) && x.kind === 'lead')) { const k = firstName(l.assigned_to, people) || '—'; byPerson[k] = (byPerson[k] || 0) + 1 }
   return (
@@ -233,10 +239,11 @@ function Overview({ leads, now, people }) {
         <div className="metric eko-metric primary"><small>Po lehote</small><strong>{over.length}</strong><p>nových leadov s prekročenou lehotou</p></div>
         <div className="metric eko-metric"><small>Čas do prvého kontaktu</small><strong>{avgH == null ? '—' : avgH < 48 ? Math.round(avgH) + ' h' : Math.round(avgH / 24) + ' dní'}</strong><p>priemer z {contacted.length} leadov (cieľ do 24 h)</p></div>
         <div className="metric eko-metric"><small>Nové za 7 dní</small><strong>{recent.length}</strong><p>{recent.filter((l) => l.first_contact_at).length} už kontaktovaných · {L.filter((l) => l.kind === 'client').length} klientov spolu</p></div>
-        <div className="metric eko-metric"><small>Otvorené leady</small><strong>{L.filter((l) => l.kind === 'lead' && OPEN_STAGES.includes(l.stage)).length}</strong><p>{Object.entries(byPerson).map(([k, v]) => `${k} ${v}`).join(' · ')}</p></div>
+        <div className="metric eko-metric"><small>Úspešnosť v BA a KE</small><strong>{successPct == null ? '—' : successPct + ' %'}</strong><p>{coreClients} {coreClients === 1 ? 'klient' : coreClients < 5 ? 'klienti' : 'klientov'} z {core.length} leadov v Bratislave a Košiciach. Iné mestá sa nepočítajú.</p></div>
       </section>
+      <section className="card"><h2>Podľa mesta</h2><div className="eko-table"><table><thead><tr><th>Mesto</th><th>Leadov</th><th>Kontaktovaných</th><th>Klientov</th><th>Stratených</th><th>Úspešnosť</th><th></th></tr></thead><tbody>{byCity.map((r) => <tr key={r.c} className={r.core ? '' : 'crm-dim'}><td><b>{r.c}</b></td><td>{r.n}</td><td>{r.contacted}</td><td>{r.client}</td><td>{r.lost}</td><td>{r.n ? Math.round((r.client / r.n) * 100) + ' %' : '—'}</td><td>{r.core ? <span className="crm-pill s-client">počíta sa</span> : <span className="crm-low">mimo našich miest</span>}</td></tr>)}</tbody></table></div><p className="eko-fine">Do úspešnosti rátame len Bratislavu a Košice, kde naozaj operujeme. Leady z iných miest (Trnava, Levoča…) evidujeme, ale nekazia štatistiku. Keď začneme v ďalšom meste, pridáme ho. Otvorené leady: {Object.entries(byPerson).map(([k, v]) => `${k} ${v}`).join(' · ') || '0'}.</p></section>
       <div className="eko-two">
-        <section className="card"><h2>Konverzia podľa zdroja</h2><div className="eko-table"><table><thead><tr><th>Zdroj</th><th>Leadov</th><th>Klientov</th><th>Stratených</th><th>Konverzia</th></tr></thead><tbody>{Object.entries(bySource).sort((a, b) => b[1].n - a[1].n).map(([k, v]) => <tr key={k}><td>{k}</td><td>{v.n}</td><td>{v.client}</td><td>{v.lost}</td><td>{v.n ? Math.round((v.client / v.n) * 100) + ' %' : '—'}</td></tr>)}</tbody></table></div><p className="eko-fine">Zdroj starých kontaktov z HubSpotu nepoznáme (Iné / neznáme). Nové leady zo Zapieru majú zdroj správne.</p></section>
+        <section className="card"><h2>Konverzia podľa zdroja (BA a KE)</h2><div className="eko-table"><table><thead><tr><th>Zdroj</th><th>Leadov</th><th>Klientov</th><th>Stratených</th><th>Konverzia</th></tr></thead><tbody>{Object.entries(bySource).sort((a, b) => b[1].n - a[1].n).map(([k, v]) => <tr key={k}><td>{k}</td><td>{v.n}</td><td>{v.client}</td><td>{v.lost}</td><td>{v.n ? Math.round((v.client / v.n) * 100) + ' %' : '—'}</td></tr>)}</tbody></table></div><p className="eko-fine">Len leady z Bratislavy a Košíc. Zdroj starých kontaktov z HubSpotu nepoznáme (Iné / neznáme), nové leady zo Zapieru majú zdroj správne.</p></section>
         <section className="card"><h2>Týždenný súhrn</h2><ul className="crm-sum"><li><b>{recent.length}</b> nových leadov za 7 dní</li><li><b>{L.filter((l) => l.first_contact_at && Date.parse(l.first_contact_at) >= week).length}</b> prvých kontaktov</li><li><b>{L.filter((l) => l.stage === 'client' && Date.parse(l.updated_at) >= week).length}</b> nových klientov</li><li><b>{L.filter((l) => l.stage === 'lost' && Date.parse(l.updated_at) >= week).length}</b> stratených</li><li><b>{over.length}</b> po lehote práve teraz</li></ul></section>
       </div>
     </div>

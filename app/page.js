@@ -102,7 +102,7 @@ export default async function Home({ searchParams }) {
     if (peak && peak.arr > 0) tick.push({ icon: '🔥', text: `Najrušnejší deň týždňa: ${new Date(peak.day).toLocaleDateString('sk-SK', { weekday: 'long', day: 'numeric', month: 'numeric', timeZone: 'UTC' })} s ${peak.arr} príchodmi.` })
   }
   if (hf && startApts && growth > 0) tick.push({ icon: '🌱', text: `Od začiatku roka sme vyrástli o ${growth} % (z ${startApts} na ${hf.listings} nehnuteľností).` })
-  if (facts.goal_2027) tick.push({ icon: '🚀', text: `Marketingový plán 2027: z ~130 bytov na ~${facts.goal_2027} do konca roka 2027, ${facts.pace_month || 15} nových mesačne.` })
+  if (facts.goal_2027) tick.push({ icon: '🚀', text: `Marketingový plán 2027: zo 137 bytov na ${facts.end_2026 || '160 až 170'} do konca roka 2026 a na ~${facts.goal_2027} na konci roka 2027, ${facts.pace_month || 15} nových mesačne.` })
   if (goal) tick.push({ icon: '🎯', text: `Náš cieľ: ${goal}+ nehnuteľností${facts.goal_year ? ` do roku ${facts.goal_year}` : ''}.` })
   tick.push(...PLAN_FACTS.slice(1))
   tick.push({ icon: '💚', text: 'Win-win: majitelia majú pokoj, hostia krásny pobyt, my prácu, ktorá nás baví.' })

@@ -9,19 +9,21 @@ function GrowthChart({ n }) {
   const W = 760, H = 300, L = 44, R = 90, T = 24, B = 40, pw = W - L - R, ph = H - T - B
   const x = (m) => L + (m / 23) * pw, y = (v) => T + ph - (v / 400) * ph
   const lines = [[n.base, '#9BB0A5', 'Základ'], [n.goal, '#F46D16', 'Cieľ'], [n.growth, '#F46D16', 'Rastový']]
+  const e26 = n.end2026 || n.now, M_NOW = 10 // dnes = november 2026
   return (
     <figure className="pl-chart">
-      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Počet apartmánov v správe: ${n.start} v januári 2026, ~${n.now} dnes, cieľ ~${n.goal} na konci roka 2027`}>
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Počet apartmánov v správe: ${n.start} v januári 2026, ${n.now} dnes, ${n.end2026Label || e26} do konca roka 2026, cieľ ~${n.goal} na konci roka 2027`}>
         {[0, 100, 200, 300, 400].map((v) => <g key={v}><line x1={L} x2={W - R} y1={y(v)} y2={y(v)} stroke="#173e2c14" strokeDasharray={v === 400 ? '4 4' : undefined} /><text x={L - 8} y={y(v) + 4} textAnchor="end" className="pl-ax">{v}</text></g>)}
         <text x={L + 4} y={y(400) - 6} className="pl-ax o">Ambícia: {n.ambition} bytov</text>
-        <path d={`M${x(0)},${y(n.start)} L${x(11)},${y(n.now)} L${x(11)},${y(0)} L${x(0)},${y(0)} Z`} fill="#F46D1622" />
-        <polyline fill="none" stroke="#F46D16" strokeWidth="3" points={`${x(0)},${y(n.start)} ${x(11)},${y(n.now)}`} />
-        {lines.map(([v, c, l], i) => <g key={l}><polyline fill="none" stroke={c} strokeWidth={l === 'Cieľ' ? 4 : 2.5} strokeOpacity={l === 'Rastový' ? 0.55 : 1} points={`${x(11)},${y(n.now)} ${x(23)},${y(v)}`} /><circle cx={x(23)} cy={y(v)} r="4" fill={c} /><text x={x(23) + 8} y={y(v) + 4} className="pl-ax" style={{ fontWeight: 800, fill: c }}>{l} ~{v}</text></g>)}
+        <path d={`M${x(0)},${y(n.start)} L${x(M_NOW)},${y(n.now)} L${x(11)},${y(e26)} L${x(11)},${y(0)} L${x(0)},${y(0)} Z`} fill="#F46D1622" />
+        <polyline fill="none" stroke="#F46D16" strokeWidth="3" points={`${x(0)},${y(n.start)} ${x(M_NOW)},${y(n.now)} ${x(11)},${y(e26)}`} />
+        {lines.map(([v, c, l], i) => <g key={l}><polyline fill="none" stroke={c} strokeWidth={l === 'Cieľ' ? 4 : 2.5} strokeOpacity={l === 'Rastový' ? 0.55 : 1} points={`${x(11)},${y(e26)} ${x(23)},${y(v)}`} /><circle cx={x(23)} cy={y(v)} r="4" fill={c} /><text x={x(23) + 8} y={y(v) + 4} className="pl-ax" style={{ fontWeight: 800, fill: c }}>{l} ~{v}</text></g>)}
         <circle cx={x(0)} cy={y(n.start)} r="5" fill="#fff" stroke="#F46D16" strokeWidth="2" /><text x={x(0) + 8} y={y(n.start) - 8} className="pl-ax b">{n.start}</text>
-        <circle cx={x(11)} cy={y(n.now)} r="5" fill="#fff" stroke="#F46D16" strokeWidth="2" /><text x={x(11)} y={y(n.now) - 10} textAnchor="middle" className="pl-ax b">~{n.now} dnes</text>
+        <circle cx={x(M_NOW)} cy={y(n.now)} r="5" fill="#fff" stroke="#F46D16" strokeWidth="2" /><text x={x(M_NOW) - 6} y={y(n.now) + 16} textAnchor="middle" className="pl-ax b">{n.now} dnes</text>
+        <circle cx={x(11)} cy={y(e26)} r="5" fill="#fff" stroke="#F46D16" strokeWidth="2" /><text x={x(11) - 12} y={y(e26) - 14} textAnchor="end" className="pl-ax o">cieľ {n.end2026Label || e26} do 12/2026</text>
         {[['jan 26', 0], ['máj', 4], ['sep', 8], ['jan 27', 12], ['máj', 16], ['sep', 20], ['dec 27', 23]].map(([l, m]) => <text key={l + m} x={x(m)} y={H - 14} textAnchor="middle" className="pl-ax">{l}</text>)}
       </svg>
-      <figcaption>Čiary ukazujú tri tempá od dnešných ~{n.now} bytov bez prírastkov do konca roka 2026. Tempo zvyšujeme po schodoch, len keď to kapacita tímu unesie.</figcaption>
+      <figcaption>Čiary ukazujú tri tempá od cieľa {e26} bytov na konci roka 2026 (dnes máme {n.now}). Tempo zvyšujeme po schodoch, len keď to kapacita tímu unesie.</figcaption>
     </figure>
   )
 }
@@ -65,11 +67,11 @@ export default function PlanPage({ read, readers, total, isAdmin, first }) {
 
       <section className="card pl-sec">
         <span className="eyebrow">Kde sme a kam ideme</span>
-        <h2>Z {n.start} bytov na ~{n.now} za rok. Rok 2027 má byť rýchlejší.</h2>
+        <h2>Z {n.start} bytov na {n.now} a do konca roka na {n.end2026Label || n.end2026}.</h2>
         <div className="pl-two">
           <GrowthChart n={n} />
           <div className="pl-pace">
-            <div className="pl-pace-big"><b>{n.paceGoal}</b><span>nových bytov mesačne</span><p>Dnešných ~{n.paceNow} nám nestačí. Ide o {n.goal} bytov na konci roka 2027.</p></div>
+            <div className="pl-pace-big"><b>{n.paceGoal}</b><span>nových bytov mesačne</span><p>Do konca roka 2026 ideme na {n.end2026Label || n.end2026} bytov a na konci roka 2027 na ~{n.goal}. Dnešných ~{n.paceNow} mesačne nám nestačí.</p></div>
             <ul className="pl-bars">{[['Dnes', n.paceNow, '#9BB0A5'], ['Základ', n.paceBase, '#9BB0A5'], ['Cieľ', n.paceGoal, '#FFB27A'], ['Rastový', n.paceGrowth, '#F46D16']].map(([l, v, c]) => <li key={l}><span>{l}</span><i><b style={{ width: (v / 20) * 100 + '%', background: c }} /></i><strong>{v}</strong></li>)}</ul>
           </div>
         </div>
@@ -88,6 +90,7 @@ export default function PlanPage({ read, readers, total, isAdmin, first }) {
           <div>
             <h3>Mesačný rozpočet na sociálne siete (~3 800 €)</h3>
             <ul className="pl-bars small">{PLAN.budget.map(([l, v]) => <li key={l}><span>{l}</span><i><b style={{ width: (v / 1500) * 100 + '%', background: '#173E2C' }} /></i><strong>{v.toLocaleString('sk-SK')} €</strong></li>)}</ul>
+            {PLAN.budgetNote && <p className="pl-budget-note">{PLAN.budgetNote}</p>}
             <p className="pl-fine"><b>Pravidlo reklamy:</b> rozpočet zvyšujeme, keď tím stíha. <b>Meriame</b> dopyty z každého videa a reklamy cez UTM a QR, hlavne cenu za spustený byt.</p>
           </div>
         </div>
