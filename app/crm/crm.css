@@ -148,3 +148,8 @@
 .crm-cs-sec.never summary{color:#B84A08}
 .crm-script-link{text-decoration:none;white-space:nowrap}
 @media (max-width:720px){.crm-cs-toggle{font-size:13px;padding:11px 14px}.crm-cs-toggle span{display:none}}
+/* úprava údajov leadu */
+.crm-editform{display:grid;gap:10px}
+.crm-editform label{display:grid;gap:4px;font-size:13px;color:#66716A;font-weight:600}
+.crm-editform input,.crm-editform select{padding:9px 11px;border:1px solid #173e2c2e;border-radius:10px;font:inherit;font-size:14.5px;background:#fff;color:#1F2A24}
+.crm-editform input:focus,.crm-editform select:focus{outline:2px solid #F46D16;outline-offset:1px}

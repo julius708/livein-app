@@ -2,7 +2,7 @@
 import { revalidatePath } from 'next/cache'
 import { getViewer } from '@/lib/auth'
 import { changeStage, flushQueue } from '@/lib/crm-server'
-import { cityGroup, route, normalizePhone, normalizeSource, STAGE_IDS, LOST_REASONS, CITY_GROUPS } from '@/lib/crm'
+import { cityGroup, route, normalizePhone, normalizeSource, splitName, STAGE_IDS, LOST_REASONS, CITY_GROUPS } from '@/lib/crm'
 
 async function crmViewer() {
   const v = await getViewer()
@@ -68,6 +68,40 @@ export async function createManualLead(form) {
   return { ok: true, id: data.id }
 }
 /** Mesto leadu (skupina Bratislava / Košice / Trnava / Iné): rozhoduje o smerovaní aj o tom, či sa lead počíta do úspešnosti. */
+/** Úprava základných údajov leadu (meno, telefón, e-mail, mesto, zdroj, adresa bytu). Zapíše sa do histórie a do HubSpotu. */
+export async function updateLead(leadId, form = {}) {
+  const v = await crmViewer(); if (v.error) return { ok: false, error: v.error }
+  if (!isUuid(leadId)) return { ok: false, error: 'Neplatný lead.' }
+  const { data: cur } = await v.s.from('leads').select('name,phone,email,city,city_group,source,property_address,hubspot_contact_id').eq('id', leadId).maybeSingle()
+  if (!cur) return { ok: false, error: 'Lead neexistuje.' }
+  const name = String(form.name || '').trim().slice(0, 160)
+  const phoneRaw = String(form.phone || '').trim(), phone = phoneRaw ? normalizePhone(phoneRaw) : ''
+  if (phoneRaw && !phone) return { ok: false, error: 'Telefón nemá správny tvar (napr. +421 900 123 456).' }
+  const email = String(form.email || '').trim().toLowerCase().slice(0, 160)
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { ok: false, error: 'E-mail nemá správny tvar.' }
+  if (!name && !phone && !email) return { ok: false, error: 'Zadaj aspoň meno a telefón.' }
+  const city = String(form.city || '').trim().slice(0, 120)
+  const source = form.source ? normalizeSource(form.source) : (cur.source || null)
+  const property_address = String(form.property_address || '').trim().slice(0, 300)
+  const patch = { name: name || cur.name, phone: phone || null, email: email || null, city: city || null, source, property_address: property_address || null }
+  if (city !== (cur.city || '')) patch.city_group = cityGroup(city)
+  const changed = Object.keys(patch).filter((k) => (patch[k] || '') !== (cur[k] || ''))
+  if (!changed.length) return { ok: true, patch: {} }
+  const { error } = await v.s.from('leads').update(patch).eq('id', leadId)
+  if (error) return { ok: false, error: error.code === '23505' ? 'Lead s týmto e-mailom alebo telefónom už existuje.' : error.message }
+  await v.s.from('lead_events').insert({ lead_id: leadId, type: 'system', payload: { edited: changed, by: who(v).name }, user_email: who(v).email, user_name: who(v).name })
+  if (cur.hubspot_contact_id) {
+    const props = {}
+    if (changed.includes('name')) Object.assign(props, splitName(patch.name))
+    if (changed.includes('phone')) props.phone = patch.phone || ''
+    if (changed.includes('email') && patch.email) props.email = patch.email
+    if (changed.includes('city')) props.city = patch.city || ''
+    if (changed.includes('property_address')) props.address = patch.property_address || ''
+    if (Object.keys(props).length) { await v.s.from('crm_sync_queue').insert({ lead_id: leadId, target: 'hubspot', action: 'update', payload: { props, note: `Údaje upravené v appke (${who(v).name}): ${changed.join(', ')}` } }); await flushQueue(v.s, 3).catch(() => {}) }
+  }
+  revalidatePath('/crm'); revalidatePath(`/crm/lead/${leadId}`)
+  return { ok: true, patch }
+}
 export async function setCity(leadId, group) {
   const v = await crmViewer(); if (v.error) return { ok: false, error: v.error }
   if (!isUuid(leadId)) return { ok: false, error: 'Neplatný lead.' }
