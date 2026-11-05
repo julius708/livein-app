@@ -1,4 +1,5 @@
 'use client'
+import CallScript from './CallScript'
 import { useEffect, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -45,6 +46,7 @@ export default function LeadDetail({ lead: initial, events: initialEvents, peopl
           {err && <p className="msg err">{err}</p>}
         </div>
       </section>
+      <CallScript compact />
       <div className="eko-two">
         <section className="card">
           <h2>História</h2>

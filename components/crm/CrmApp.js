@@ -1,11 +1,12 @@
 'use client'
+import CallScript from './CallScript'
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { browserClient } from '@/lib/browser'
 import { STAGES, OPEN_STAGES, SOURCES, CITY_GROUPS, CORE_CITIES, WEEKS, countdown, stageOf, weekBucket, weekRange, isCoreCity, originLabel, isFreshOrigin } from '@/lib/crm'
 import { fmtDay } from '@/lib/fmt'
-import { Ring, Pill, ContactButtons, StageBar, stateOf, SCRIPT, fmtDT, fmtD, firstName } from './ui'
+import { Ring, Pill, ContactButtons, StageBar, stateOf, fmtDT, fmtD, firstName } from './ui'
 import { setStage, logContact, createManualLead, setKind } from '@/app/crm/actions'
 import CrmNotifier from './CrmNotifier'
 
@@ -68,7 +69,7 @@ export default function CrmApp({ initialLeads, me, people, notifications, pushPu
   const doStage = (id, stage, opts) => start(async () => {
     setMsg('')
     const before = leads.find((l) => l.id === id)
-    patch(id, { stage, kind: stage === 'client' ? 'client' : 'lead', first_contact_at: before && before.stage === 'new' && stage !== 'new' && !before.first_contact_at ? new Date().toISOString() : before && before.first_contact_at, lost_reason: opts && opts.lost_reason })
+    patch(id, { stage, kind: stage === 'client' ? 'client' : 'lead', client_since: stage === 'client' ? (before && before.client_since) || new Date().toISOString() : before && before.client_since, first_contact_at: before && before.stage === 'new' && stage !== 'new' && !before.first_contact_at ? new Date().toISOString() : before && before.first_contact_at, lost_reason: opts && opts.lost_reason })
     const r = await setStage(id, stage, opts || {})
     if (!r.ok) { setMsg(r.error); if (before) patch(id, before) }
   })
@@ -93,7 +94,7 @@ export default function CrmApp({ initialLeads, me, people, notifications, pushPu
         </div>
         <div className="crm-intro-side">
           <CrmNotifier me={me} initial={notifications} pushPublicKey={pushPublicKey} />
-          <button type="button" className="btn o" onClick={() => setAdding(true)}>+ Pridať lead</button>
+          <Link href="/crm/skript" className="btn line crm-script-link">📞 Skript hovoru</Link><button type="button" className="btn o" onClick={() => setAdding(true)}>+ Pridať lead</button>
         </div>
       </section>
 
@@ -120,7 +121,7 @@ export default function CrmApp({ initialLeads, me, people, notifications, pushPu
 
       {view === 'one' && <OneAtATime leads={fresh.length ? fresh : open} now={now} onStage={doStage} onLog={doLog} onNotLead={doNotLead} people={people} busy={busy} week={WEEKS.find((w) => w.id === week)} />}
       {view === 'queue' && <Queue leads={open} now={now} onStage={doStage} onLog={doLog} onNotLead={doNotLead} people={people} week={WEEKS.find((w) => w.id === week)} {...more('queue', 12)} />}
-      {view === 'board' && <Board leads={leads.filter((l) => matches(l) && l.kind !== 'not_lead' && (l.kind === 'client' ? week === 'w0' && Date.parse(l.updated_at || l.received_at) >= weekRange('w0', now).from : bucketOf(l) === week))} now={now} onStage={doStage} people={people} {...more('board', 10)} />}
+      {view === 'board' && <Board leads={leads.filter((l) => matches(l) && l.kind !== 'not_lead' && (l.kind === 'client' ? !!l.client_since && weekBucket(l.client_since, now) === week : bucketOf(l) === week))} now={now} onStage={doStage} people={people} {...more('board', 10)} />}
       {view === 'clients' && <Clients leads={clients} people={people} onLog={doLog} {...more('clients', 12)} />}
       {view === 'contacts' && <Contacts leads={leads.filter(matches)} people={people} isAdmin={me.isAdmin} {...more('contacts', 15)} onKind={(id, k) => start(async () => { patch(id, { kind: k }); const r = await setKind(id, k); if (!r.ok) setMsg(r.error) })} />}
       {view === 'overview' && <Overview leads={leads} now={now} people={people} />}
@@ -170,7 +171,7 @@ function OneAtATime({ leads, now, onStage, onLog, onNotLead, people, busy, week 
       <div className="crm-meta">{l.city_group !== 'Iné' ? l.city_group : l.city || 'bez mesta'} · {l.source || 'zdroj neznámy'} · {fmtDT(l.received_at)}{l.origin ? <> · <Origin l={l} /></> : null}</div>
       {l.notes && <p className="crm-note">{l.notes}</p>}
       <ContactButtons lead={l} onLog={(t) => onLog(l.id, t)} big />
-      <div className="crm-script"><b>Čo povedať:</b> {SCRIPT}</div>
+      <CallScript compact />
       <div className="crm-two">
         <button type="button" className="btn" disabled={busy} onClick={() => onStage(l.id, 'contacted', { connected: true, note: 'Zavolané' })}>Zavolané → ďalší</button>
         <button type="button" className="btn line" disabled={busy} onClick={() => { onLog(l.id, 'sms'); onStage(l.id, 'contacted', { connected: false, note: 'Nedvíha, poslaná SMS' }) }}>Nedvíha → SMS</button>
@@ -213,7 +214,7 @@ function Clients({ leads, people, onLog, cap = Infinity, onMore }) {
           <div className="crm-avatar" aria-hidden="true">{String(l.name || '?').trim().split(/\s+/).slice(0, 2).map((x) => x[0]).join('').toUpperCase()}</div>
           <div className="crm-row-main">
             <div className="crm-row-head"><Link href={`/crm/lead/${l.id}`} className="crm-name">{l.name}</Link><span className="crm-pill s-client">Klient</span>{l.email_optout && <span className="crm-low">odhlásený z newslettera</span>}</div>
-            <div className="crm-meta">{l.city_group !== 'Iné' ? l.city_group : l.city || 'bez mesta'}{l.property_address ? ` · ${l.property_address}` : ''} · klient od {fmtD(l.first_contact_at || l.received_at)}{l.assigned_to ? ` · ${firstName(l.assigned_to, people)}` : ''}</div>
+            <div className="crm-meta">{l.city_group !== 'Iné' ? l.city_group : l.city || 'bez mesta'}{l.property_address ? ` · ${l.property_address}` : ''} · {l.client_since ? `klient od ${fmtD(l.client_since)}` : 'existujúci klient'}{l.source ? ` · ${l.source}` : ''}{l.assigned_to ? ` · ${firstName(l.assigned_to, people)}` : ''}</div>
           </div>
           <ContactButtons lead={l} onLog={(t) => onLog(l.id, t)} />
         </article>
@@ -230,7 +231,7 @@ function Contacts({ leads, people, isAdmin, onKind, cap = Infinity, onMore }) {
     <section className="card crm-contacts">
       <div className="crm-seg" role="tablist"><button type="button" className={tab === 'clients' ? 'on' : ''} onClick={() => setTab('clients')}>Klienti <b>{counts.clients}</b></button><button type="button" className={tab === 'leads' ? 'on' : ''} onClick={() => setTab('leads')}>Leady <b>{counts.leads}</b></button>{isAdmin && <button type="button" className={tab === 'not' ? 'on' : ''} onClick={() => setTab('not')}>Nie leady <b>{counts.not}</b></button>}</div>
       <div className="eko-table"><table><thead><tr><th>Meno</th><th>Mesto</th><th>Telefón</th><th>E-mail</th><th>Štádium</th><th>Pôvod</th><th>Komu</th><th>Od</th>{isAdmin && <th></th>}</tr></thead><tbody>
-        {list.slice(0, cap).map((l) => <tr key={l.id}><td><Link href={`/crm/lead/${l.id}`} className="crm-name">{l.name}</Link>{l.property_address && <small className="muted"> · {l.property_address}</small>}</td><td>{l.city_group !== 'Iné' ? l.city_group : l.city || '—'}</td><td>{l.phone ? <a href={`tel:${l.phone}`}>{l.phone}</a> : '—'}</td><td>{l.email ? <a href={`mailto:${l.email}`}>{l.email}</a> : '—'}{l.email_optout && <small className="crm-low"> · odhlásený</small>}</td><td><Pill lead={l} /></td><td><Origin l={l} /></td><td>{firstName(l.assigned_to, people)}</td><td>{fmtD(l.received_at)}</td>{isAdmin && <td>{l.kind === 'not_lead' ? <button type="button" className="eko-link" onClick={() => onKind(l.id, 'lead')}>je lead</button> : l.kind === 'lead' ? <button type="button" className="eko-link" onClick={() => onKind(l.id, 'not_lead')}>nie lead</button> : null}</td>}</tr>)}
+        {list.slice(0, cap).map((l) => <tr key={l.id}><td><Link href={`/crm/lead/${l.id}`} className="crm-name">{l.name}</Link>{l.property_address && <small className="muted"> · {l.property_address}</small>}</td><td>{l.city_group !== 'Iné' ? l.city_group : l.city || '—'}</td><td>{l.phone ? <a href={`tel:${l.phone}`}>{l.phone}</a> : '—'}</td><td>{l.email ? <a href={`mailto:${l.email}`}>{l.email}</a> : '—'}{l.email_optout && <small className="crm-low"> · odhlásený</small>}</td><td><Pill lead={l} /></td><td><Origin l={l} /></td><td>{firstName(l.assigned_to, people)}</td><td>{l.kind === 'client' ? (l.client_since ? fmtD(l.client_since) : <span className="muted">existujúci</span>) : fmtD(l.received_at)}</td>{isAdmin && <td>{l.kind === 'not_lead' ? <button type="button" className="eko-link" onClick={() => onKind(l.id, 'lead')}>je lead</button> : l.kind === 'lead' ? <button type="button" className="eko-link" onClick={() => onKind(l.id, 'not_lead')}>nie lead</button> : null}</td>}</tr>)}
       </tbody></table><More shown={Math.min(list.length, cap)} total={list.length} onMore={onMore} what="kontaktov" />{!list.length && <p className="eko-empty">Nič tu nie je.</p>}</div>
     </section>
   )
@@ -263,7 +264,7 @@ function Overview({ leads, now, people }) {
       <section className="card"><h2>Podľa mesta</h2><div className="eko-table"><table><thead><tr><th>Mesto</th><th>Leadov</th><th>Kontaktovaných</th><th>Klientov</th><th>Stratených</th><th>Úspešnosť</th><th></th></tr></thead><tbody>{byCity.map((r) => <tr key={r.c} className={r.core ? '' : 'crm-dim'}><td><b>{r.c}</b></td><td>{r.n}</td><td>{r.contacted}</td><td>{r.client}</td><td>{r.lost}</td><td>{r.n ? Math.round((r.client / r.n) * 100) + ' %' : '—'}</td><td>{r.core ? <span className="crm-pill s-client">počíta sa</span> : <span className="crm-low">mimo našich miest</span>}</td></tr>)}</tbody></table></div><p className="eko-fine">Do úspešnosti rátame len Bratislavu a Košice, kde naozaj operujeme. Leady z iných miest (Trnava, Levoča…) evidujeme, ale nekazia štatistiku. Keď začneme v ďalšom meste, pridáme ho. Otvorené leady: {Object.entries(byPerson).map(([k, v]) => `${k} ${v}`).join(' · ') || '0'}.</p></section>
       <div className="eko-two">
         <section className="card"><h2>Konverzia podľa zdroja (BA a KE)</h2><div className="eko-table"><table><thead><tr><th>Zdroj</th><th>Leadov</th><th>Klientov</th><th>Stratených</th><th>Konverzia</th></tr></thead><tbody>{Object.entries(bySource).sort((a, b) => b[1].n - a[1].n).map(([k, v]) => <tr key={k}><td>{k}</td><td>{v.n}</td><td>{v.client}</td><td>{v.lost}</td><td>{v.n ? Math.round((v.client / v.n) * 100) + ' %' : '—'}</td></tr>)}</tbody></table></div><p className="eko-fine">Len leady z Bratislavy a Košíc. Zdroj starých kontaktov z HubSpotu nepoznáme (Iné / neznáme), nové leady zo Zapieru majú zdroj správne.</p></section>
-        <section className="card"><h2>Týždenný súhrn</h2><ul className="crm-sum"><li><b>{recent.length}</b> nových leadov za 7 dní</li><li><b>{L.filter((l) => l.first_contact_at && Date.parse(l.first_contact_at) >= week).length}</b> prvých kontaktov</li><li><b>{L.filter((l) => l.stage === 'client' && Date.parse(l.updated_at) >= week).length}</b> nových klientov</li><li><b>{L.filter((l) => l.stage === 'lost' && Date.parse(l.updated_at) >= week).length}</b> stratených</li><li><b>{over.length}</b> po lehote práve teraz</li></ul></section>
+        <section className="card"><h2>Týždenný súhrn</h2><ul className="crm-sum"><li><b>{recent.length}</b> nových leadov za 7 dní</li><li><b>{L.filter((l) => l.first_contact_at && Date.parse(l.first_contact_at) >= week).length}</b> prvých kontaktov</li><li><b>{L.filter((l) => l.client_since && Date.parse(l.client_since) >= week).length}</b> nových klientov</li><li><b>{L.filter((l) => l.stage === 'lost' && Date.parse(l.updated_at) >= week).length}</b> stratených</li><li><b>{over.length}</b> po lehote práve teraz</li></ul></section>
       </div>
     </div>
   )
