@@ -58,7 +58,7 @@ export async function createManualLead(form) {
   if (!name && !phone && !email) return { ok: false, error: 'Zadaj aspoň meno a telefón.' }
   const now = new Date().toISOString()
   const assignee = (form.assigned_to && await crmPerson(v.s, form.assigned_to)) || r.assigned_to
-  const { data, error } = await v.s.from('leads').insert({ name: name || phone || email, phone, email, city, city_group: group, source, kind: 'lead', stage: 'new', priority: r.priority, received_at: now, due_at: new Date(Date.now() + r.alarm_hours * 3600e3).toISOString(), alarm_hours: r.alarm_hours, assigned_to: assignee, notes: String(form.note || '').slice(0, 2000) || null }).select('id').single()
+  const { data, error } = await v.s.from('leads').insert({ name: name || phone || email, phone, email, city, city_group: group, source, kind: 'lead', stage: 'new', priority: r.priority, received_at: now, due_at: new Date(Date.now() + r.alarm_hours * 3600e3).toISOString(), alarm_hours: r.alarm_hours, assigned_to: assignee, notes: String(form.note || '').slice(0, 2000) || null, origin: 'manual' }).select('id').single()
   if (error) return { ok: false, error: error.message }
   await v.s.from('lead_events').insert({ lead_id: data.id, type: 'system', payload: { via: 'manual', by: who(v).name }, user_email: who(v).email, user_name: who(v).name })
   await v.s.from('crm_sync_queue').insert({ lead_id: data.id, target: 'hubspot', action: 'create', payload: {} })
@@ -92,13 +92,21 @@ export async function assignLead(leadId, email) {
   revalidatePath('/crm'); return { ok: true }
 }
 /** Skryť z fronty (nie lead: banky, dodávatelia…) alebo vrátiť. */
-export async function setKind(leadId, kind) {
+/** „Nie je lead“: zlý alebo nerelevantný kontakt. Zmizne z fronty a tabule, v HubSpote dostane stav Unqualified. Dá sa vrátiť (kind 'lead'). */
+export async function setKind(leadId, kind, reason = '') {
   const v = await crmViewer(); if (v.error) return { ok: false, error: v.error }
   if (!isUuid(leadId)) return { ok: false, error: 'Neplatný lead.' }
   if (!['lead', 'not_lead'].includes(kind)) return { ok: false, error: 'Neznámy typ.' }
-  const { error } = await v.s.from('leads').update({ kind }).eq('id', leadId)
+  const { data: lead } = await v.s.from('leads').select('id,kind,hubspot_contact_id,lost_reason').eq('id', leadId).maybeSingle()
+  if (!lead) return { ok: false, error: 'Lead neexistuje.' }
+  const note = String(reason || '').slice(0, 300)
+  const patch = kind === 'not_lead' ? { kind, lost_reason: note || lead.lost_reason || 'Nie je lead' } : { kind }
+  const { error } = await v.s.from('leads').update(patch).eq('id', leadId)
   if (error) return { ok: false, error: error.message }
-  revalidatePath('/crm'); return { ok: true }
+  await v.s.from('lead_events').insert({ lead_id: leadId, type: 'system', payload: { kind, note: note || undefined, by: who(v).name }, user_email: who(v).email, user_name: who(v).name })
+  if (kind === 'not_lead' && lead.hubspot_contact_id) await v.s.from('crm_sync_queue').insert({ lead_id: leadId, target: 'hubspot', action: 'update', payload: { props: { hs_lead_status: 'UNQUALIFIED' }, note: `Nie je lead${note ? ': ' + note : ''} (${who(v).name})` } })
+  await flushQueue(v.s, 2).catch(() => {})
+  revalidatePath('/crm'); revalidatePath(`/crm/lead/${leadId}`); return { ok: true }
 }
 export async function markNotificationsRead(ids) {
   const v = await crmViewer(); if (v.error) return { ok: false, error: v.error }

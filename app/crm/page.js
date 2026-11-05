@@ -17,7 +17,7 @@ export default async function CrmPage() {
   const can = (me.roles || []).includes('crm')
   if (!can) return <Shell me={me} user={user} isAdmin={isAdmin} active="crm" hideFooter><section className="card eko-locked"><h2>CRM je pre obchodný tím</h2><p>Leady a kontakty spravujú Zuzana, Patrik a Július. Ak ich potrebuješ, napíš Júliusovi.</p></section></Shell>
   const [{ data: leads }, { data: notifs }, { data: people }] = await Promise.all([
-    s.from('leads').select('id,name,phone,email,city,city_group,source,kind,stage,priority,received_at,due_at,alarm_hours,assigned_to,first_contact_at,contacted_by,lost_reason,notes,property_address,hubspot_contact_id,asana_task_gid,email_optout,updated_at').order('received_at', { ascending: false }).limit(4000),
+    s.from('leads').select('id,name,phone,email,city,city_group,source,kind,stage,priority,received_at,due_at,alarm_hours,assigned_to,first_contact_at,contacted_by,lost_reason,notes,property_address,hubspot_contact_id,asana_task_gid,email_optout,updated_at,origin,origin_detail,hs_created_at').order('received_at', { ascending: false }).limit(4000),
     s.from('notifications').select('id,lead_id,kind,title,body,url,created_at,read_at').ilike('user_email', user.email).order('created_at', { ascending: false }).limit(30),
     s.from('app_users').select('email,name').eq('active', true).contains('roles', ['crm']).order('name'),
   ])

@@ -16,7 +16,7 @@ export async function POST(request) {
   const ct = request.headers.get('content-type') || ''
   try { body = /json/i.test(ct) || !ct ? await request.json() : Object.fromEntries((await request.formData()).entries()) } catch { body = {} }
   try {
-    const r = await createLead({ name: body.name || body.meno || [body.first_name, body.last_name].filter(Boolean).join(' '), phone: body.phone || body.telefon, email: body.email, city: body.city || body.mesto || body.lokalita, source: body.source || body.zdroj, asana_task_gid: body.asana_task_gid || body.asana_gid, created_at: body.created_at, note: body.note || body.sprava || body.message, hubspot_contact_id: body.hubspot_contact_id }, { via: body.hubspot_contact_id ? 'hubspot' : 'zapier' })
+    const r = await createLead({ name: body.name || body.meno || [body.first_name, body.last_name].filter(Boolean).join(' '), phone: body.phone || body.telefon, email: body.email, city: body.city || body.mesto || body.lokalita, source: body.source || body.zdroj, asana_task_gid: body.asana_task_gid || body.asana_gid, created_at: body.created_at, note: body.note || body.sprava || body.message, hubspot_contact_id: body.hubspot_contact_id, origin_label: body.origin_label, origin_detail: body.origin_detail }, { via: body.hubspot_contact_id ? 'hubspot' : 'zapier' })
     return NextResponse.json(r, { status: r.ok ? 200 : 400 })
   } catch (e) {
     console.error('[crm] create-lead', e && e.message)

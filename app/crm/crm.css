@@ -117,3 +117,11 @@
 .crm-avatar{width:48px;height:48px;border-radius:50%;background:#173E2C;color:#fff;display:grid;place-items:center;font-weight:800;font-size:15px;flex:none}
 @media(max-width:760px){.crm-weeks{overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none;padding-bottom:2px}.crm-weeks::-webkit-scrollbar{display:none}.crm-week{flex:0 0 auto}}
 .crm-dim td{color:#8A948C}
+.crm-origin{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#E8ECE4;color:#173E2C;white-space:nowrap}
+.crm-origin.bulk{background:#F4F6F1;color:#66716A;border:1px dashed #c9d2c4}
+.crm-row-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.crm-notlead{border:1px solid #c23b3b55;background:#fff;color:#C23B3B;border-radius:999px;padding:4px 10px;font-size:12px;font-weight:800;cursor:pointer}
+.crm-notlead:hover{background:#FBE4E2}
+.crm-more-btn{display:block;width:100%;border:1px dashed #173e2c33;background:#ffffffb3;color:#173E2C;border-radius:14px;padding:10px;font-weight:800;font-size:13.5px;cursor:pointer;margin-top:4px}
+.crm-more-btn:hover{background:#fff}
+.crm-meta i{color:#58665D;font-style:italic}

@@ -2,9 +2,9 @@
 import { useEffect, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { countdown, stageOf, SOURCES, CITY_GROUPS } from '@/lib/crm'
+import { countdown, stageOf, SOURCES, CITY_GROUPS, originLabel, isFreshOrigin } from '@/lib/crm'
 import { Ring, Pill, ContactButtons, StageBar, stateOf, fmtDT, firstName } from './ui'
-import { setStage, logContact, addNote, assignLead, setCity } from '@/app/crm/actions'
+import { setStage, logContact, addNote, assignLead, setCity, setKind } from '@/app/crm/actions'
 
 const TYPES = { stage_change: 'Zmena štádia', call: 'Hovor', whatsapp: 'WhatsApp', email: 'E-mail', sms: 'SMS', note: 'Poznámka', system: 'Systém' }
 const HUB = 'https://app.hubspot.com/contacts/48987752/record/0-1/'
@@ -58,6 +58,7 @@ export default function LeadDetail({ lead: initial, events: initialEvents, peopl
             <dt>E-mail</dt><dd>{lead.email || '—'}{lead.email_optout ? ' (odhlásený z e-mailov)' : ''}</dd>
             <dt>Mesto</dt><dd><select value={lead.city_group || 'Iné'} onChange={(e) => start(async () => { const g = e.target.value; const r = await setCity(lead.id, g); if (r.ok) setLead({ ...lead, ...r.patch }); else setErr(r.error) })}>{CITY_GROUPS.map((c) => <option key={c} value={c}>{c}</option>)}</select>{lead.city && lead.city !== lead.city_group ? <small className="muted"> {lead.city}</small> : null}{(lead.city_group === 'Iné' || !lead.city_group) && <small className="crm-low"> · mimo našich miest, nepočíta sa do úspešnosti</small>}</dd>
             <dt>Zdroj</dt><dd>{lead.source || '—'}</dd>
+            <dt>Pôvod záznamu</dt><dd>{lead.origin ? <>{originLabel(lead.origin)}{lead.origin_detail ? <small className="muted"> · {lead.origin_detail}</small> : null}{!isFreshOrigin(lead.origin) && <small className="crm-low"> · hromadný prenos, nie čerstvý dopyt</small>}</> : '—'}{lead.hs_created_at ? <small className="muted"> · v HubSpote od {fmtDT(lead.hs_created_at)}</small> : null}</dd>
             <dt>Komu</dt><dd><select value={lead.assigned_to || ''} onChange={(e) => start(async () => { const v = e.target.value; const r = await assignLead(lead.id, v); if (r.ok) setLead({ ...lead, assigned_to: v }); else setErr(r.error) })}><option value="">nepriradený</option>{people.map((p) => <option key={p.email} value={p.email}>{p.name}</option>)}</select></dd>
             <dt>Priorita</dt><dd>{lead.priority === 'high' ? 'vysoká' : lead.priority === 'normal' ? 'bežná' : 'nižšia (mimo BA, KE, TT)'}</dd>
             <dt>HubSpot</dt><dd>{lead.hubspot_contact_id ? <a href={HUB + lead.hubspot_contact_id} target="_blank" rel="noopener noreferrer">otvoriť kontakt ↗</a> : 'čaká na prepojenie'}</dd>
@@ -66,6 +67,7 @@ export default function LeadDetail({ lead: initial, events: initialEvents, peopl
           </dl>
           {lead.notes && <><h3 className="eko-h3">Posledná poznámka</h3><p className="crm-note">{lead.notes}</p></>}
           <p className="eko-fine">Zmeny štádia sa zapisujú do HubSpotu aj Asany na pozadí (do minúty). {s.id === 'client' ? 'Klient: v HubSpote má lifecycle Customer.' : ''}</p>
+          {lead.kind === 'lead' ? <button type="button" className="crm-notlead" onClick={() => { const reason = window.prompt('Prečo to nie je lead? (spam, mimo našich miest, nemá byt, duplicita)', 'Nerelevantný dopyt'); if (reason === null) return; start(async () => { setErr(''); const r = await setKind(lead.id, 'not_lead', reason); if (r.ok) { setLead({ ...lead, kind: 'not_lead', lost_reason: reason || 'Nie je lead' }); refresh() } else setErr(r.error) }) }}>✕ Nie je lead</button> : lead.kind === 'not_lead' ? <button type="button" className="eko-link" onClick={() => start(async () => { const r = await setKind(lead.id, 'lead'); if (r.ok) { setLead({ ...lead, kind: 'lead' }); refresh() } else setErr(r.error) })}>Predsa je to lead</button> : null}
           <Link className="eko-link" href="/crm">← Späť na leady</Link>
         </section>
       </div>
