@@ -51,7 +51,7 @@ export async function createManualLead(form) {
   await v.s.from('lead_events').insert({ lead_id: data.id, type: 'system', payload: { via: 'manual', by: who(v).name }, user_email: who(v).email, user_name: who(v).name })
   await v.s.from('crm_sync_queue').insert({ lead_id: data.id, target: 'hubspot', action: 'create', payload: {} })
   if ((form.assigned_to || r.assigned_to) !== who(v).email) await v.s.from('notifications').insert({ user_email: form.assigned_to || r.assigned_to, lead_id: data.id, kind: 'new_lead', title: `Nový lead: ${name || phone || email}`, body: [group !== 'Iné' ? group : city || '', source].filter(Boolean).join(' · '), url: `/crm/lead/${data.id}` })
-  flushQueue(v.s, 3).catch(() => {})
+  await flushQueue(v.s, 3).catch(() => {})
   revalidatePath('/crm')
   return { ok: true, id: data.id }
 }
