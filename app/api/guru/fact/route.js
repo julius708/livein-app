@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { callClaude } from '@/lib/anthropic'
 import { getViewer } from '@/lib/auth'
 import { corsHeaders, corsPreflight } from '@/lib/guru-memory'
 
@@ -30,15 +31,10 @@ ${used || '(zatiaľ žiadne)'}
 Odpovedz iba JSON: {"topic":"krátky názov témy","text":"zaujímavosť"}`
   let out = null, why = ''
   try {
-    const r = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
-      signal: AbortSignal.timeout(22000),
-      body: JSON.stringify({ model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5', max_tokens: 1500, messages: [{ role: 'user', content: prompt }] }),
-    })
-    if (!r.ok) why = 'api ' + r.status + ' ' + (await r.text()).slice(0, 200)
+    const call = await callClaude(key, { max_tokens: 1500, messages: [{ role: 'user', content: prompt }] }, { timeoutMs: 22000 })
+    if (!call.ok) why = 'api ' + call.status + ' ' + String(call.error).slice(0, 200)
     else {
-      const j = await r.json()
+      const j = call.json
       const text = (j.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('').trim()
       const m = text.match(/\{[\s\S]*\}/)
       if (!m) why = 'nojson stop=' + j.stop_reason + ' blocks=' + (j.content || []).map((b) => b.type + ':' + String(b.text || b.thinking || '').length).join(',') + ' text=' + text.slice(0, 200)

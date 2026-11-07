@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getViewer } from '@/lib/auth'
 import { recentMemory, searchMemory, searchTeamMemory, validTurnId, sameOrigin, corsHeaders, corsPreflight } from '@/lib/guru-memory'
 import { runAsanaTool, asanaReady } from '@/lib/guru-asana'
+import { callClaude } from '@/lib/anthropic'
 
 export function OPTIONS(request) { return corsPreflight(request) }
 
@@ -83,22 +84,16 @@ async function handlePOST(request) {
   let asanaCfg
   const tools = asanaReady() ? TOOLS : TOOLS.filter((t) => t.name !== 'asana')
   const today = new Date().toLocaleDateString('sk-SK', { timeZone: 'Europe/Bratislava', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-  const model = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5'
   const deadline = Date.now()+50000
   try {
     for (let step = 0; step < (widget ? 4 : 7); step++) {
       const remaining=deadline-Date.now()
       if(remaining<1000)return fail('Spracovanie trvá dlhšie. Tvoja otázka je uložená; skús ju znova.')
-      const r = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
-        signal: AbortSignal.timeout(Math.min(45000,remaining)),
-        body: JSON.stringify({ model, max_tokens: widget ? 700 : 2500, system: SYSTEM(today) + appCtx + (widget ? '\nTeraz odpovedáš v malom okne na stránke: odpovedz stručne, 2 až 4 vety, bez úvodu a zhrnutia. Ak treba viac, povedz to a ponúkni pokračovanie.' : ''), tools, messages: convo }),
-      })
-      if (!r.ok) {
+      const call = await callClaude(key, { max_tokens: widget ? 700 : 2500, system: SYSTEM(today) + appCtx + (widget ? '\nTeraz odpovedáš v malom okne na stránke: odpovedz stručne, 2 až 4 vety, bez úvodu a zhrnutia. Ak treba viac, povedz to a ponúkni pokračovanie.' : ''), tools, messages: convo }, { timeoutMs: Math.min(45000, remaining) })
+      if (!call.ok) {
         return fail('AI služba je dočasne nedostupná. Tvoja otázka zostala uložená.')
       }
-      const j = await r.json()
+      const j = call.json
       const content = j.content || []
       if (j.stop_reason !== 'tool_use') {
         const text = content.filter((b) => b.type === 'text').map((b) => b.text).join('\n').trim()
