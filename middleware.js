@@ -24,7 +24,9 @@ export async function middleware(req) {
   // Ekonomika je už sekcia hlavnej appky; staré odkazy s lomkou presmerujeme
   // (plain URL, nie nextUrl.clone(): ten by zachoval koncovú lomku a presmeroval sám na seba)
   if (path === '/ekonomika/' || path.startsWith('/ekonomika/index')) return NextResponse.redirect(new URL('/ekonomika', req.url), 308)
-  const isOpen = OPEN.some((o) => path === o || path.startsWith(o))
+  // Guru API z ostatných appiek: CORS preflight (OPTIONS) a volania s Bearer tokenom si overí samotná route, nie presmerovanie na /login
+  const guruApi = path.startsWith('/api/guru') && (req.method === 'OPTIONS' || /^Bearer /i.test(req.headers.get('authorization') || ''))
+  const isOpen = guruApi || OPEN.some((o) => path === o || path.startsWith(o))
 
   if (!user && !isOpen) {
     const url = req.nextUrl.clone()
