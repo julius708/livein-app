@@ -43,7 +43,7 @@ export default function GuruWidget({ name = '', app = 'home', hub = '' }) {
   const [busy, setBusy] = useState(false)
   const [muted, setMuted] = useState(false)
   const [hello, setHello] = useState(false)
-  const [fact, setFact] = useState('')          // zaujímavosť dňa: Guru ju povie sám pri otvorení appky, raz za deň
+  const [fact, setFact] = useState('')          // pozdrav menom pri otvorení appky (raz za otvorenie)
   const [imgOk, setImgOk] = useState(true)
   const [q, setQ] = useState('')
   const [rec, setRec] = useState(false)
@@ -237,7 +237,7 @@ export default function GuruWidget({ name = '', app = 'home', hub = '' }) {
     TL.current = null; await speechFallback(text)
   }
 
-  /* ---------- zaujímavosť dňa: ústa sa hýbu aj bez zvuku (prehliadač bez kliknutia zvuk nepustí) ---------- */
+  /* ---------- pozdrav: ústa sa hýbu aj bez zvuku (prehliadač bez kliknutia zvuk nepustí) ---------- */
   const factTimer2 = useRef(null)
   function tellFact(text) {
     sim.current = true; speaking.current = true

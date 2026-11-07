@@ -54,7 +54,7 @@
 .gw-vis{position:absolute;height:auto;pointer-events:none;-webkit-user-drag:none;opacity:0;will-change:opacity}
 .gw-nod{will-change:transform;transition:none}
 
-/* zaujímavosť dňa: širšia bublina, nadpis oranžový */
+/* pozdrav menom pri otvorení appky: širšia bublina, nadpis oranžový */
 .gw-hello.fact{width:300px;text-align:left;line-height:1.4;font-size:13.5px}
 .gw-hello.fact b{display:block;color:#F46D16;font-size:11px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px}
 @media(max-width:700px){.gw-hello.fact{width:min(300px,calc(100vw - 24px))}}
