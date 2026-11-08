@@ -1,0 +1,60 @@
+/* Údržba (pilot): prípady, ponuky, súhlasy. Farby appky. */
+.ud{display:flex;flex-direction:column;gap:14px;color:#233E31}
+.ud-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.ud-head h1{font-size:clamp(24px,3vw,34px);line-height:1.1;margin:0}
+.ud-nav{display:flex;gap:6px;flex-wrap:wrap}
+.ud-nav a{font-size:13.5px;font-weight:700;padding:8px 13px;border-radius:999px;background:#fff;border:1px solid #173e2c26;color:#173E2C;text-decoration:none}
+.ud-nav a.on{background:#173E2C;color:#fff;border-color:#173E2C}
+.ud-pilot{border-radius:14px;padding:10px 14px;font-size:13.5px;font-weight:700;background:#FBF0D3;color:#8A5A00}
+.ud-pilot.on{background:#DDF1E6;color:#1E6B45}
+.ud-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;align-items:start}
+.ud .card{margin-top:0}
+.ud form.ud-form{display:grid;gap:10px}
+.ud label{display:grid;gap:4px;font-size:13px;font-weight:700;color:#58665D}
+.ud input[type=text],.ud input[type=email],.ud input[type=number],.ud input[type=url],.ud input[type=datetime-local],.ud input[type=date],.ud select,.ud textarea{padding:10px 12px;border:1px solid #173e2c2e;border-radius:12px;background:#fff;font:inherit;font-size:14px;color:#173E2C;width:100%}
+.ud textarea{min-height:84px;resize:vertical}
+.ud .chk{display:flex;align-items:center;gap:8px;font-size:14px;color:#233E31;font-weight:600}
+.ud .chk input{accent-color:#F46D16;width:17px;height:17px}
+.ud .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.ud .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ud .btn{padding:10px 16px;font-size:14px}
+.ud .btn.line{background:#fff;color:#173E2C;border:1px solid #173e2c33;box-shadow:none}
+.ud .btn.danger{background:#C23B3B}
+.ud .err{color:#C23B3B;font-weight:700;font-size:13.5px}
+.ud .okmsg{color:#1E6B45;font-weight:700;font-size:13.5px}
+.ud .hint{color:#66716A;font-size:13px}
+.ud-pill{display:inline-block;font-size:11.5px;font-weight:800;padding:3px 9px;border-radius:999px;background:#173e2c12;color:#173E2C;white-space:nowrap}
+.ud-pill.emergency{background:#C23B3B;color:#fff}.ud-pill.affects_stay{background:#F46D16;color:#fff}.ud-pill.routine{background:#DDF1E6;color:#1E6B45}.ud-pill.cosmetic{background:#EEF0EA;color:#58665D}
+.ud-pill.st-awaiting_approval,.ud-pill.st-question{background:#FBF0D3;color:#8A5A00}.ud-pill.st-declined,.ud-pill.st-no_response{background:#FBE4E2;color:#C23B3B}.ud-pill.st-approved,.ud-pill.st-ordered,.ud-pill.st-done{background:#173E2C;color:#fff}
+.ud-list{display:grid;gap:8px}
+.ud-item{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;background:rgba(255,254,251,.85);border:1px solid #ffffffcc;border-radius:16px;padding:11px 14px;text-decoration:none;color:inherit;box-shadow:0 10px 26px -18px #173e2c4d}
+.ud-item.over{border-color:#C23B3B}
+.ud-ref{font-weight:800;color:#173E2C;font-variant-numeric:tabular-nums}
+.ud-item .t{font-weight:700;color:#173E2C}.ud-item .m{font-size:12.5px;color:#66716A}
+.ud-filters{display:flex;gap:8px;flex-wrap:wrap}
+.ud-filters button{font-size:12.5px;font-weight:700;border:1px solid #173e2c26;background:#fff;color:#173E2C;padding:5px 10px;border-radius:999px;cursor:pointer}
+.ud-filters button.on{background:#173E2C;color:#fff}
+.ud-kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:14px}
+.ud-kv b{color:#58665D;font-weight:700;font-size:12.5px;text-transform:uppercase;letter-spacing:.02em}
+.ud-quote{border:1px solid #173e2c1f;border-radius:14px;padding:12px;display:grid;gap:6px;background:#fff}
+.ud-quote.sel{border-color:#173E2C;box-shadow:inset 0 0 0 1px #173E2C}.ud-quote.old{opacity:.6}.ud-quote.draft{border-style:dashed;background:#FFF9F2}
+.ud-quote .tot{font-size:20px;font-weight:800;color:#173E2C}
+.ud-items{font-size:13px;color:#233E31;margin:0;padding-left:18px}
+.ud-log{display:grid;gap:6px;font-size:13px}
+.ud-log li{list-style:none;display:grid;grid-template-columns:auto 1fr;gap:10px;color:#58665D}
+.ud-log time{font-variant-numeric:tabular-nums;white-space:nowrap}
+.ud-steps{display:flex;gap:4px;flex-wrap:wrap;font-size:12px}
+.ud-steps span{padding:4px 9px;border-radius:999px;background:#173e2c0f;color:#58665D}.ud-steps span.on{background:#173E2C;color:#fff}.ud-steps span.done{background:#DDF1E6;color:#1E6B45}
+.ud-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.ud-metric{background:#fff;border:1px solid #173e2c1f;border-radius:14px;padding:12px}
+.ud-metric b{display:block;font-size:26px;color:#173E2C;line-height:1.1}.ud-metric span{font-size:12.5px;color:#66716A;font-weight:700}
+.ud table{width:100%;border-collapse:collapse;font-size:13.5px}.ud th,.ud td{text-align:left;padding:7px 8px;border-bottom:1px solid #173e2c14;vertical-align:top}.ud th{font-size:12px;color:#58665D;text-transform:uppercase}
+/* verejné stránky (dodávateľ, majiteľ) */
+.pub{max-width:640px;margin:0 auto;padding:24px 16px 48px;color:#233E31;display:grid;gap:14px}
+.pub-brand{display:flex;align-items:center;gap:10px;font-weight:800;color:#173E2C}.pub-brand img{height:30px}
+.pub h1{font-size:24px;line-height:1.15;margin:0}
+.pub .card{margin-top:0}
+.pub .big{font-size:17px;padding:16px 20px}
+.pub .choice{display:grid;gap:10px}
+.pub footer{font-size:12px;color:#8A948C}
+@media (max-width:640px){.ud-item{grid-template-columns:1fr}.ud .two{grid-template-columns:1fr}}

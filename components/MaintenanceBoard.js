@@ -46,6 +46,7 @@ export default function MaintenanceBoard({ issues = [], flats = [], asana = fals
     <section className="card mt" aria-label="Údržba">
       <h2>🔧 Údržba</h2>
       <p className="mt-sub">Čo treba opraviť a kedy je byt voľný na opravu (podľa rezervácií v systéme, 14 dní dopredu). Opravy prichádzajú z Asany <a href="https://app.asana.com/0/1218054437943454/list" target="_blank" rel="noreferrer">Damages Reporting</a>{nAsana ? ` (${nAsana})` : ''} a z tohto zoznamu.</p>
+      <p className="hint">Pilot s dopytmi, ponukami a súhlasom majiteľa: <a href="/udrzba">Údržba a hlas →</a></p>
       {!asana && <p className="hint">Asana zatiaľ nie je pripojená (chýba ASANA_TOKEN vo Verceli), zobrazujú sa len opravy zadané tu.</p>}
       {issues.length === 0 && <p className="hint">Žiadna otvorená oprava.</p>}
       <ul className="mt-l">
