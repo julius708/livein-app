@@ -11,6 +11,10 @@
     {
       "path": "/api/cron/maint-jobs",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/guide-sync",
+      "schedule": "20 5 * * *"
     }
   ],
   "regions": [

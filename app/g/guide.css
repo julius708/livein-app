@@ -1,0 +1,53 @@
+/* Digitálny sprievodca bytom (verejný, mobil). Figtree, zelená #173E2C, oranžová #F46D16, krémová #F6F2EA. */
+.gd{min-height:100dvh;background:#F6F2EA;color:#1F2A24;font-family:var(--font-figtree),Figtree,system-ui,sans-serif;-webkit-text-size-adjust:100%}
+.gd *{box-sizing:border-box}
+.gd-top{background:#173E2C;color:#fff;padding:14px 16px 18px}
+.gd-top-row{display:flex;align-items:center;justify-content:space-between;gap:10px;max-width:640px;margin:0 auto}
+.gd-top img{height:30px;display:block}
+.gd-lang{display:inline-flex;border:1px solid #ffffff66;border-radius:999px;overflow:hidden}
+.gd-lang button{background:none;border:0;color:#fff;font:inherit;font-weight:700;padding:6px 12px;cursor:pointer}
+.gd-lang button.on{background:#F46D16}
+.gd-top h1{font-size:22px;line-height:1.15;margin:14px auto 0;max-width:640px}
+.gd-top p{margin:4px auto 0;max-width:640px;color:#ffffffcc;font-size:14px}
+.gd-main{max-width:640px;margin:0 auto;padding:14px 16px 48px;display:grid;gap:12px}
+.gd-card{background:#fff;border-radius:18px;padding:16px;border:1px solid #173e2c14;box-shadow:0 8px 24px -18px #173e2c66}
+.gd-card h2{font-size:17px;margin:0 0 8px;display:flex;align-items:center;gap:8px}
+.gd-card p{margin:6px 0;line-height:1.5;font-size:15px;white-space:pre-wrap}
+.gd-card.wifi{border:2px solid #F46D16}
+.gd-form{display:grid;gap:8px}
+.gd-form label{display:grid;gap:4px;font-size:13px;font-weight:700;color:#58665D}
+.gd-form input{padding:12px;border:1px solid #173e2c33;border-radius:12px;font:inherit;font-size:16px;width:100%}
+.gd-btn{border:0;border-radius:999px;padding:13px 20px;font:inherit;font-weight:800;font-size:15px;color:#fff;background:#173E2C;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.gd-btn.o{background:#F46D16}.gd-btn.line{background:#fff;color:#173E2C;border:1px solid #173e2c33}.gd-btn:disabled{opacity:.6}
+.gd-btn.w{width:100%}
+.gd-err{color:#C23B3B;font-weight:700;font-size:14px}
+.gd-wifi{display:grid;gap:8px;background:#F4F6F1;border-radius:14px;padding:12px}
+.gd-wifi .ssid{font-size:18px;font-weight:800}
+.gd-wifi .pw{font-family:ui-monospace,Menlo,monospace;font-size:20px;letter-spacing:.04em;word-break:break-all}
+.gd-taxi{background:#173E2C;color:#fff;border-radius:16px;padding:16px;text-align:center}
+.gd-taxi small{display:block;color:#ffffffaa;font-size:12px;margin-bottom:4px}
+.gd-taxi b{font-size:20px;line-height:1.25;display:block}
+.gd-map{width:100%;height:220px;border:0;border-radius:14px;margin-top:8px}
+.gd-list{margin:0;padding-left:18px;line-height:1.5;font-size:15px}
+.gd-tip{display:grid;gap:2px;padding:8px 0;border-top:1px solid #173e2c14}.gd-tip:first-child{border-top:0}
+.gd-tip b{font-size:15px}.gd-tip span{font-size:14px;color:#3f4e46}.gd-tip small{color:#8A948C}
+.gd-tip a{color:#B84A08;font-weight:700;text-decoration:none}
+.gd-help{display:grid;gap:8px}
+.gd-foot{text-align:center;color:#8A948C;font-size:12px;margin-top:8px}
+.gd-chk{display:flex;gap:8px;align-items:flex-start;font-size:14px;font-weight:600}
+.gd-chk input{width:18px;height:18px;accent-color:#F46D16;margin-top:2px}
+.gd-stars{display:flex;gap:6px}.gd-stars button{font-size:28px;background:none;border:0;cursor:pointer;color:#c9cfc8}.gd-stars button.on{color:#F46D16}
+.gd-choice{display:grid;gap:10px}
+.gd-form textarea{padding:12px;border:1px solid #173e2c33;border-radius:12px;font:inherit;font-size:16px;min-height:100px;width:100%}
+@media (min-width:700px){.gd-top h1{font-size:26px}}
+.gd-langsel{display:inline-flex;align-items:center;gap:6px;border:1px solid #ffffff66;border-radius:999px;padding:4px 10px;color:#fff;background:#ffffff14}
+.gd-langsel select{background:transparent;border:0;color:#fff;font:inherit;font-weight:700;font-size:14px;outline:none}
+.gd-langsel select option{color:#1F2A24}
+.gd-card.survey{border:2px solid #173E2C;background:#DDF1E6}
+.gd-q{display:grid;gap:6px;padding:10px 0;border-top:1px solid #173e2c14}.gd-q:first-child{border-top:0}
+.gd-q b{font-size:15px}
+.gd-opts{display:flex;flex-wrap:wrap;gap:6px}
+.gd-opts button{border:1px solid #173e2c33;background:#fff;color:#173E2C;border-radius:999px;padding:8px 12px;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+.gd-opts button.on{background:#173E2C;color:#fff;border-color:#173E2C}
+.gd-gift{background:#173E2C;color:#fff;border-radius:16px;padding:16px;display:grid;gap:8px}
+.gd-gift code{font-family:ui-monospace,Menlo,monospace;font-size:22px;letter-spacing:.06em;background:#ffffff1f;padding:6px 10px;border-radius:10px;display:inline-block}

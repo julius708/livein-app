@@ -19,3 +19,6 @@ app/dev-tim/
 app/dev-eko/
 app/dev-plan/
 lib/mock-supabase.js
+
+# Sprievodca: exporty z Prílohy A obsahujú heslá, nikdy do repozitára
+tools/guide/*.json
