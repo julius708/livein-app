@@ -49,5 +49,8 @@ Skúšobný hárok (`/sprievodca/harok`) má variant A (biele QR na zelenej) a v
 ## Príloha A
 `node tools/guide/priloha-a.mjs priloha.docx > karty.json` a vložiť do importu na `/sprievodca` (najprv „len skúška“). Párovanie podľa adresy: jedna adresa s jednou jednotkou a jednou kartou = spárované; viac jednotiek alebo kariet na adrese = na kontrolu (štítok sa nevydá, doplní sa ručne). Na registri (141 jednotiek, 156 kariet zo 107 adries): 63 spárovaných, 38 na kontrolu, 4 adresy mimo registra, 3 jednotky bez karty. Poznámka: dve karty majú heslo v podkladoch nahradené „[tel]“, tie sa neimportujú.
 
+## Známe správanie
+Neznámy kód zobrazí stránku „Táto stránka neexistuje“, ale HTTP stav je 200: appka má koreňový `loading.js`, takže Next odpoveď streamuje skôr, než sa stránka vyhodnotí (rovnako ako ostatné detailné stránky appky). Vyhľadávače stránky neindexujú (`robots: noindex`).
+
 ## Návrat
 Vercel: vrátiť predchádzajúci deployment. Dáta ostávajú. Odstránenie schémy (po zálohe): `drop table guide_label_issues, guide_feedback, guide_guest_emails, guide_wifi_log, guide_wifi_attempts, guide_events, guide_tips, guide_rules, guide_wifi, guide_cards, guide_units, guide_settings cascade; drop function guide_units_lock_code(); drop function guide_team();`
