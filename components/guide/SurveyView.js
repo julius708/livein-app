@@ -8,10 +8,10 @@ import { surveyAction } from '@/app/g/actions'
 export default function SurveyView({ code, name, gift }) {
   const [lang, setLang] = useLang()
   const s = surveyText(lang)
-  const [a, setA] = useState({}); const [email, setEmail] = useState(''); const [consent, setConsent] = useState(false); const [busy, setBusy] = useState(false); const [done, setDone] = useState(null); const [err, setErr] = useState('')
+  const [a, setA] = useState({}); const [guestName, setGuestName] = useState(''); const [email, setEmail] = useState(''); const [consent, setConsent] = useState(false); const [busy, setBusy] = useState(false); const [done, setDone] = useState(null); const [err, setErr] = useState('')
   const set = (id, v) => setA({ ...a, [id]: v })
   const toggle = (id, v) => { const cur = a[id] || []; set(id, cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v]) }
-  async function submit(e) { e.preventDefault(); setBusy(true); setErr(''); const r = await surveyAction(code, { lang, answers: a, email, consent }); setBusy(false); if (r && r.ok) setDone(r); else setErr(s.ui.error) }
+  async function submit(e) { e.preventDefault(); setBusy(true); setErr(''); const r = await surveyAction(code, { lang, answers: a, email, consent, guestName }); setBusy(false); if (r && r.ok) setDone(r); else setErr(s.ui.error) }
   const answered = Object.keys(a).length
   return (
     <div className="gd" data-code={code}>
@@ -25,6 +25,7 @@ export default function SurveyView({ code, name, gift }) {
         ) : (
           <form className="gd-card" onSubmit={submit}>
             <p>{s.ui.intro}</p>
+            <div className="gd-q"><b>{s.ui.name} <small style={{ color: '#8A948C', fontWeight: 400 }}>({s.ui.optional})</small></b><input type="text" maxLength={120} value={guestName} onChange={(e) => setGuestName(e.target.value)} autoComplete="name" style={{ padding: 10, border: '1px solid #173e2c33', borderRadius: 12, font: 'inherit' }} /></div>
             {QUESTIONS.map((q) => (
               <div className="gd-q" key={q.id}>
                 <b>{s.q[q.id]} <small style={{ color: '#8A948C', fontWeight: 400 }}>({s.ui.optional})</small></b>

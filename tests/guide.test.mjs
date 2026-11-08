@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { randomCode, isCode, CODE_ALPHABET, guideUrl, reviewUrl, wifiDecision, rateLimited, anonLog, issuePlan, visibleEvents, effectiveRules, addressKey, matchCards } from '../lib/guide/core.js'
+import { randomCode, isCode, CODE_ALPHABET, guideUrl, reviewUrl, wifiDecision, pickReservation, rateLimited, anonLog, issuePlan, visibleEvents, effectiveRules, addressKey, matchCards } from '../lib/guide/core.js'
 
 test('verejný kód: 8 znakov, bez 0/O/1/l/I, náhodný a unikátny', () => {
   const set = new Set()
@@ -10,16 +10,21 @@ test('verejný kód: 8 znakov, bez 0/O/1/l/I, náhodný a unikátny', () => {
   assert.equal(guideUrl('https://app.live-in.international/', 'ABCDEFGH'), 'https://app.live-in.international/g/ABCDEFGH')
   assert.equal(reviewUrl('https://app.live-in.international', 'ABCDEFGH'), 'https://app.live-in.international/g/ABCDEFGH/recenzia')
 })
-test('Wi-Fi: správna rezervácia prejde, cudzia, neaktívna a iný e-mail nie', () => {
+test('Wi-Fi: správny hosť prejde (meno alebo e-mail), cudzia jednotka, neaktívny pobyt a iné meno nie', () => {
   const unit = { listing_id: 'L1' }
-  const res = { id: 'r1', listingId: 'L1', status: 'confirmed', checkIn: '2026-11-07', checkOut: '2026-11-10', guestEmail: 'Guest@Example.com' }
-  assert.equal(wifiDecision({ unit, reservation: res, email: 'guest@example.com', today: '2026-11-08' }).ok, true)
-  assert.equal(wifiDecision({ unit: { listing_id: 'L2' }, reservation: res, email: 'guest@example.com', today: '2026-11-08' }).why, 'other_unit')
-  assert.equal(wifiDecision({ unit, reservation: res, email: 'guest@example.com', today: '2026-11-10' }).why, 'inactive')
-  assert.equal(wifiDecision({ unit, reservation: res, email: 'guest@example.com', today: '2026-11-06' }).why, 'inactive')
-  assert.equal(wifiDecision({ unit, reservation: { ...res, status: 'canceled' }, email: 'guest@example.com', today: '2026-11-08' }).why, 'status')
-  assert.equal(wifiDecision({ unit, reservation: res, email: 'other@example.com', today: '2026-11-08' }).why, 'email')
-  assert.equal(wifiDecision({ unit, reservation: null, email: 'x@y.z' }).ok, false)
+  const res = { id: 'r1', listingId: 'L1', status: 'confirmed', checkIn: '2026-11-07', checkOut: '2026-11-10', guestName: 'Ján Novák', guestEmail: 'xyz@guest.booking.com' }
+  assert.equal(wifiDecision({ unit, reservation: res, name: 'jan novak', email: '', today: '2026-11-08' }).how, 'name')
+  assert.equal(wifiDecision({ unit, reservation: res, name: 'Novák Ján', email: 'iny@example.com', today: '2026-11-08' }).how, 'name')
+  assert.equal(wifiDecision({ unit, reservation: res, name: '', email: 'XYZ@guest.booking.com', today: '2026-11-08' }).how, 'email')
+  assert.equal(wifiDecision({ unit, reservation: res, name: 'Novák', email: '', today: '2026-11-08' }).why, 'identity')
+  assert.equal(wifiDecision({ unit, reservation: res, name: 'Peter Novák', email: '', today: '2026-11-08' }).why, 'identity')
+  assert.equal(wifiDecision({ unit: { listing_id: 'L2' }, reservation: res, name: 'Ján Novák', today: '2026-11-08' }).why, 'other_unit')
+  assert.equal(wifiDecision({ unit, reservation: res, name: 'Ján Novák', today: '2026-11-10' }).why, 'inactive')
+  assert.equal(wifiDecision({ unit, reservation: { ...res, status: 'canceled' }, name: 'Ján Novák', today: '2026-11-08' }).why, 'status')
+  assert.equal(wifiDecision({ unit, reservation: null, name: 'x y' }).ok, false)
+  const other = { ...res, id: 'r2', guestName: 'Anna Horváthová' }
+  assert.equal(pickReservation([other, res], { unit, name: 'Jan Novak', today: '2026-11-08' }).reservationId, 'r1')
+  assert.equal(pickReservation([other], { unit, name: 'Jan Novak', today: '2026-11-08' }).ok, false)
 })
 test('limit pokusov podľa IP, rezervácie aj bytu; log bez PII', () => {
   assert.equal(rateLimited({ ip: 3, reservation: 1, unit: 5 }), false)

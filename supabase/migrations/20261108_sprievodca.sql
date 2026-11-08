@@ -155,3 +155,5 @@ do $$ begin
   end if;
 end $$;
 insert into public.guide_settings (key, value) values ('survey', '{"enabled": true, "gift": {"enabled": false, "kind": "code", "code": "", "value": "", "url": "https://booking.live-in.international", "note": "Darček doplní LIVE-IN."}}') on conflict (key) do nothing;
+
+alter table public.guide_surveys add column if not exists guest_name text;

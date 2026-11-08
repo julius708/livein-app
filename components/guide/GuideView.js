@@ -8,14 +8,14 @@ import { confirmEmailAction } from '@/app/g/actions'
 const fmtDate = (iso, lang) => (iso ? new Date(iso).toLocaleString(lang === 'en' ? 'en-GB' : 'sk-SK', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Bratislava' }) : '')
 
 function Wifi({ code, t }) {
-  const [email, setEmail] = useState(''); const [res, setRes] = useState(''); const [busy, setBusy] = useState(false); const [err, setErr] = useState(''); const [wifi, setWifi] = useState(null); const [copied, setCopied] = useState(false); const [conf, setConf] = useState({ confirm: true, newsletter: false, done: false })
+  const [email, setEmail] = useState(''); const [name, setName] = useState(''); const [busy, setBusy] = useState(false); const [err, setErr] = useState(''); const [wifi, setWifi] = useState(null); const [copied, setCopied] = useState(false); const [conf, setConf] = useState({ confirm: true, newsletter: false, done: false })
   async function submit(e) {
     e.preventDefault(); setBusy(true); setErr('')
     try {
       // POST, odpoveď s hlavičkou no-store; heslo ostáva len v pamäti stránky (nie v URL, histórii ani úložisku)
-      const r = await fetch('/api/g/wifi', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code, email, reservation: res }), cache: 'no-store' })
+      const r = await fetch('/api/g/wifi', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code, email, name }), cache: 'no-store' })
       const j = await r.json().catch(() => ({}))
-      if (j.ok) { setWifi(j); setRes(''); } else setErr(t.fail)
+      if (j.ok) setWifi(j); else setErr(t.fail)
     } catch { setErr(t.fail) } finally { setBusy(false) }
   }
   async function copy() { try { await navigator.clipboard.writeText(wifi.password); setCopied(true); setTimeout(() => setCopied(false), 2000) } catch {} }
@@ -26,8 +26,8 @@ function Wifi({ code, t }) {
       {!wifi ? (
         <form className="gd-form" onSubmit={submit} autoComplete="off">
           <p>{t.wifiIntro}</p>
-          <label>{t.email}<input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" inputMode="email" /></label>
-          <label>{t.res}<input type="text" required value={res} onChange={(e) => setRes(e.target.value)} autoComplete="off" autoCapitalize="characters" placeholder="HMXYZ…" /></label>
+          <label>{t.name}<input type="text" required value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" /></label>
+          <label>{t.email}<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" inputMode="email" /></label>
           {err && <p className="gd-err">{err}</p>}
           <button className="gd-btn o w" disabled={busy}>{busy ? t.checking : t.show}</button>
         </form>
@@ -36,11 +36,11 @@ function Wifi({ code, t }) {
           <div><small>{t.network}</small><div className="ssid">{wifi.ssid}</div></div>
           <div><small>{t.password}</small><div className="pw">{wifi.password}</div></div>
           <button type="button" className="gd-btn o" onClick={copy}>{copied ? t.copied : t.copy}</button>
-          {!conf.done ? <div className="gd-form" style={{ marginTop: 6 }}>
+          {wifi.confirm && !conf.done ? <div className="gd-form" style={{ marginTop: 6 }}>
             <label className="gd-chk"><input type="checkbox" checked={conf.confirm} onChange={(e) => setConf({ ...conf, confirm: e.target.checked })} /> {t.confirmEmail}</label>
             <label className="gd-chk"><input type="checkbox" checked={conf.newsletter} onChange={(e) => setConf({ ...conf, newsletter: e.target.checked })} /> {t.newsletter}</label>
             {(conf.confirm || conf.newsletter) && <button type="button" className="gd-btn line" onClick={saveConf}>{t.save}</button>}
-          </div> : <p>{t.saved}</p>}
+          </div> : conf.done ? <p>{t.saved}</p> : null}
         </div>
       )}
     </section>
