@@ -1,0 +1,22 @@
+/* Sprievodca bytom – interná správa (tím). */
+.sp{display:flex;flex-direction:column;gap:14px;color:#233E31}
+.sp-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.sp-head h1{font-size:clamp(24px,3vw,34px);line-height:1.1;margin:0}
+.sp .card{margin-top:0}
+.sp label{display:grid;gap:4px;font-size:13px;font-weight:700;color:#58665D}
+.sp input[type=text],.sp input[type=url],.sp input[type=email],.sp input[type=password],.sp input[type=datetime-local],.sp select,.sp textarea{padding:10px 12px;border:1px solid #173e2c2e;border-radius:12px;background:#fff;font:inherit;font-size:14px;color:#173E2C;width:100%}
+.sp textarea{min-height:70px;resize:vertical}
+.sp .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.sp .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sp .btn{padding:10px 16px;font-size:14px;text-decoration:none}
+.sp .btn.line{background:#fff;color:#173E2C;border:1px solid #173e2c33;box-shadow:none}
+.sp .err{color:#C23B3B;font-weight:700;font-size:13.5px}.sp .okmsg{color:#1E6B45;font-weight:700;font-size:13.5px}.sp .hint{color:#66716A;font-size:13px}
+.sp table{width:100%;border-collapse:collapse;font-size:13.5px}.sp th,.sp td{text-align:left;padding:7px 8px;border-bottom:1px solid #173e2c14;vertical-align:top}.sp th{font-size:12px;color:#58665D;text-transform:uppercase}
+.sp-pill{display:inline-block;font-size:11.5px;font-weight:800;padding:3px 9px;border-radius:999px;background:#173e2c12;color:#173E2C;white-space:nowrap}
+.sp-pill.active{background:#173E2C;color:#fff}.sp-pill.review{background:#FBE4E2;color:#C23B3B}.sp-pill.ready{background:#DDF1E6;color:#1E6B45}.sp-pill.draft{background:#EEF0EA;color:#58665D}
+.sp code{font-family:ui-monospace,Menlo,monospace;font-size:13px;background:#F4F6F1;padding:2px 6px;border-radius:6px}
+.sp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;align-items:start}
+.sp .form{display:grid;gap:8px}
+.sp h3{margin:10px 0 4px;font-size:15px}
+.sp-filters{display:flex;gap:6px;flex-wrap:wrap}.sp-filters button{font-size:12.5px;font-weight:700;border:1px solid #173e2c26;background:#fff;color:#173E2C;padding:5px 10px;border-radius:999px;cursor:pointer}.sp-filters button.on{background:#173E2C;color:#fff}
+@media (max-width:640px){.sp .two{grid-template-columns:1fr}}
