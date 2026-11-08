@@ -5,7 +5,7 @@ import LeadTasks from './LeadTasks'
 import { useEffect, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { countdown, stageOf, SOURCES, CITY_GROUPS, originLabel, isFreshOrigin } from '@/lib/crm'
+import { countdown, stageOf, SOURCES, CITY_GROUPS, OTHER_CITIES, originLabel, isFreshOrigin } from '@/lib/crm'
 import { Ring, Pill, ContactButtons, StageBar, stateOf, fmtDT, firstName } from './ui'
 import { setStage, logContact, addNote, assignLead, setCity, setKind, updateLead } from '@/app/crm/actions'
 
@@ -20,6 +20,28 @@ function describe(e, people) {
   if (e.type === 'system') return p.via === 'zapier' ? 'Lead prišiel zo Zapieru' : p.via === 'manual' ? 'Lead pridaný ručne' : p.assigned_to ? 'Priradený: ' + firstName(p.assigned_to, people) : 'Systém'
   if (e.type === 'note') return p.note || ''
   return p.note ? p.note : ''
+}
+
+/** Mesto leadu: naše mestá, ďalšie mestá zo zoznamu a „Iné mesto (napísať)“ s políčkom, aby bolo vždy jasné, odkiaľ lead je. */
+function CityField({ lead, setLead, setErr, start }) {
+  const group = lead.city_group || 'Iné'
+  const listed = group === 'Iné' && OTHER_CITIES.includes(lead.city)
+  const [ask, setAsk] = useState(group === 'Iné' && !lead.city)
+  const [other, setOther] = useState(group === 'Iné' && !listed ? lead.city || '' : '')
+  const save = (g, txt = '') => start(async () => { const r = await setCity(lead.id, g, txt); if (r.ok) { setLead({ ...lead, ...r.patch }); setAsk(false) } else setErr(r.error) })
+  const value = group !== 'Iné' ? group : listed ? 'Iné:' + lead.city : 'Iné'
+  return <dd className="crm-city">
+    <select value={value} onChange={(e) => { const v = e.target.value; if (v === 'Iné') { setAsk(true); setOther(''); return } if (v.startsWith('Iné:')) return save('Iné', v.slice(4)); save(v) }}>
+      {CITY_GROUPS.filter((c) => c !== 'Iné').map((c) => <option key={c} value={c}>{c}</option>)}
+      <optgroup label="Ďalšie mestá (mimo našich služieb)">{OTHER_CITIES.map((c) => <option key={c} value={'Iné:' + c}>{c}</option>)}</optgroup>
+      <option value="Iné">Iné mesto (napísať)…</option>
+    </select>
+    {ask
+      ? <form className="crm-city-other" onSubmit={(e) => { e.preventDefault(); if (other.trim()) save('Iné', other) }}><input value={other} onChange={(e) => setOther(e.target.value)} placeholder="Ktoré mesto? napr. Nitra" maxLength={120} autoFocus /><button type="submit" className="btn line">Uložiť</button></form>
+      : group === 'Iné' && lead.city && !listed ? <small className="muted"> {lead.city} <button type="button" className="eko-link" onClick={() => { setOther(lead.city); setAsk(true) }}>upraviť</button></small> : null}
+    {group !== 'Iné' && lead.city && lead.city !== group ? <small className="muted"> {lead.city}</small> : null}
+    {group === 'Iné' && <small className="crm-low"> · mimo našich miest, nepočíta sa do úspešnosti</small>}
+  </dd>
 }
 
 export default function LeadDetail({ lead: initial, events: initialEvents, tasks = [], people, me, serverNow }) {
@@ -80,7 +102,7 @@ export default function LeadDetail({ lead: initial, events: initialEvents, tasks
           <dl className="crm-dl">
             <dt>Telefón</dt><dd>{lead.phone || '—'}</dd>
             <dt>E-mail</dt><dd>{lead.email || '—'}{lead.email_optout ? ' (odhlásený z e-mailov)' : ''}</dd>
-            <dt>Mesto</dt><dd><select value={lead.city_group || 'Iné'} onChange={(e) => start(async () => { const g = e.target.value; const r = await setCity(lead.id, g); if (r.ok) setLead({ ...lead, ...r.patch }); else setErr(r.error) })}>{CITY_GROUPS.map((c) => <option key={c} value={c}>{c}</option>)}</select>{lead.city && lead.city !== lead.city_group ? <small className="muted"> {lead.city}</small> : null}{(lead.city_group === 'Iné' || !lead.city_group) && <small className="crm-low"> · mimo našich miest, nepočíta sa do úspešnosti</small>}</dd>
+            <dt>Mesto</dt><CityField lead={lead} setLead={setLead} setErr={setErr} start={start} />
             <dt>Zdroj</dt><dd>{lead.source || '—'}</dd>
             <dt>Pôvod záznamu</dt><dd>{lead.origin ? <>{originLabel(lead.origin)}{lead.origin_detail ? <small className="muted"> · {lead.origin_detail}</small> : null}{!isFreshOrigin(lead.origin) && <small className="crm-low"> · hromadný prenos, nie čerstvý dopyt</small>}</> : '—'}{lead.hs_created_at ? <small className="muted"> · v HubSpote od {fmtDT(lead.hs_created_at)}</small> : null}</dd>
             <dt>Komu</dt><dd><select value={lead.assigned_to || ''} onChange={(e) => start(async () => { const v = e.target.value; const r = await assignLead(lead.id, v); if (r.ok) setLead({ ...lead, assigned_to: v }); else setErr(r.error) })}><option value="">nepriradený</option>{people.map((p) => <option key={p.email} value={p.email}>{p.name}</option>)}</select></dd>

@@ -168,3 +168,5 @@
 .crm-task-form textarea{line-height:1.45}
 .crm-tasklist{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:8px}.crm-tasklist li{font-size:14px}.crm-tasklist li.done{opacity:.65}.crm-tasklist .crm-check{white-space:normal;align-items:flex-start;font-weight:500}.crm-tasklist small{color:#66716A}.crm-tasklist pre{white-space:pre-wrap;font:inherit;font-size:13px;background:#fff;border-radius:10px;padding:10px;margin:6px 0 0}
 .msg.ok{color:#1E6B45;font-weight:700}
+
+.crm-city-other{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}.crm-city-other input{flex:1;min-width:160px;padding:6px 8px;border:1px solid #173e2c2e;border-radius:10px;font-size:13.5px}.crm-city-other .btn{padding:6px 12px;font-size:13px}

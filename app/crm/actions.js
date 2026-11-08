@@ -113,16 +113,22 @@ export async function updateLead(leadId, form = {}) {
   revalidatePath('/crm'); revalidatePath(`/crm/lead/${leadId}`)
   return { ok: true, patch }
 }
-export async function setCity(leadId, group) {
+/** Mesto leadu: skupina (Bratislava / Košice / Trnava / Iné) a pri „Iné“ aj konkrétne mesto napísané rukou alebo vybrané zo zoznamu. Ak napísané mesto patrí do našej skupiny (napr. „Petržalka“), skupina sa opraví sama. */
+export async function setCity(leadId, group, cityText = '') {
   const v = await crmViewer(); if (v.error) return { ok: false, error: v.error }
   if (!isUuid(leadId)) return { ok: false, error: 'Neplatný lead.' }
-  const g = CITY_GROUPS.includes(group) ? group : null
+  const txt = String(cityText || '').trim().slice(0, 120)
+  let g = CITY_GROUPS.includes(group) ? group : null
   if (!g) return { ok: false, error: 'Neznáme mesto.' }
-  const { data: cur } = await v.s.from('leads').select('city').eq('id', leadId).maybeSingle()
-  const patch = { city_group: g, ...(g !== 'Iné' && (!cur || !cur.city || cityGroup(cur.city) !== g) ? { city: g } : {}) }
+  if (g === 'Iné' && txt) g = cityGroup(txt)
+  const { data: cur } = await v.s.from('leads').select('city,hubspot_contact_id').eq('id', leadId).maybeSingle()
+  const patch = g !== 'Iné'
+    ? { city_group: g, ...(txt ? { city: txt } : (!cur || !cur.city || cityGroup(cur.city) !== g) ? { city: g } : {}) }
+    : { city_group: g, ...(txt ? { city: txt } : {}) }
   const { error } = await v.s.from('leads').update(patch).eq('id', leadId)
   if (error) return { ok: false, error: error.message }
-  await v.s.from('lead_events').insert({ lead_id: leadId, type: 'system', payload: { city_group: g, by: who(v).name }, user_email: who(v).email, user_name: who(v).name })
+  await v.s.from('lead_events').insert({ lead_id: leadId, type: 'system', payload: { city_group: g, city: patch.city, by: who(v).name }, user_email: who(v).email, user_name: who(v).name })
+  if (patch.city && cur && cur.hubspot_contact_id && patch.city !== cur.city) await v.s.from('crm_sync_queue').insert({ lead_id: leadId, target: 'hubspot', action: 'update', payload: { props: { city: patch.city }, note: `Mesto upravené v appke (${who(v).name}): ${patch.city}` } }).then(() => flushQueue(v.s, 2)).catch(() => {})
   revalidatePath('/crm'); revalidatePath(`/crm/lead/${leadId}`)
   return { ok: true, patch }
 }
