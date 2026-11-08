@@ -136,3 +136,22 @@ do $$ declare t text; begin
   end loop;
 end $$;
 -- Verejné stránky číta server cez servisný účet (rola bot); anonymný prístup k tabuľkám neexistuje.
+
+-- Nepovinný dotazník hosťa (profil zákazníka) s darčekom. Bez údajov o IP; e-mail len ak ho hosť sám zadá pre darček.
+create table if not exists public.guide_surveys (
+  id uuid primary key default gen_random_uuid(),
+  listing_id text not null, public_code text not null, city text,
+  lang text not null default 'en',
+  answers jsonb not null default '{}'::jsonb,
+  email text, email_consent boolean not null default false,
+  gift_code text,
+  created_at timestamptz not null default now()
+);
+create index if not exists guide_surveys_created_idx on public.guide_surveys(created_at);
+alter table public.guide_surveys enable row level security;
+do $$ begin
+  if not exists (select 1 from pg_policies where schemaname='public' and tablename='guide_surveys' and policyname='guide_surveys_team_all') then
+    create policy guide_surveys_team_all on public.guide_surveys for all to authenticated using (public.guide_team()) with check (public.guide_team());
+  end if;
+end $$;
+insert into public.guide_settings (key, value) values ('survey', '{"enabled": true, "gift": {"enabled": false, "kind": "code", "code": "", "value": "", "url": "https://booking.live-in.international", "note": "Darček doplní LIVE-IN."}}') on conflict (key) do nothing;

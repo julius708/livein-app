@@ -40,3 +40,14 @@
 .gd-choice{display:grid;gap:10px}
 .gd-form textarea{padding:12px;border:1px solid #173e2c33;border-radius:12px;font:inherit;font-size:16px;min-height:100px;width:100%}
 @media (min-width:700px){.gd-top h1{font-size:26px}}
+.gd-langsel{display:inline-flex;align-items:center;gap:6px;border:1px solid #ffffff66;border-radius:999px;padding:4px 10px;color:#fff;background:#ffffff14}
+.gd-langsel select{background:transparent;border:0;color:#fff;font:inherit;font-weight:700;font-size:14px;outline:none}
+.gd-langsel select option{color:#1F2A24}
+.gd-card.survey{border:2px solid #173E2C;background:#DDF1E6}
+.gd-q{display:grid;gap:6px;padding:10px 0;border-top:1px solid #173e2c14}.gd-q:first-child{border-top:0}
+.gd-q b{font-size:15px}
+.gd-opts{display:flex;flex-wrap:wrap;gap:6px}
+.gd-opts button{border:1px solid #173e2c33;background:#fff;color:#173E2C;border-radius:999px;padding:8px 12px;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+.gd-opts button.on{background:#173E2C;color:#fff;border-color:#173E2C}
+.gd-gift{background:#173E2C;color:#fff;border-radius:16px;padding:16px;display:grid;gap:8px}
+.gd-gift code{font-family:ui-monospace,Menlo,monospace;font-size:22px;letter-spacing:.06em;background:#ffffff1f;padding:6px 10px;border-radius:10px;display:inline-block}

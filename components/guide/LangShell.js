@@ -1,18 +1,18 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { T } from './i18n'
+import { T, LANGS, LANG_NAMES } from './i18n'
 
-/** Jedna mobilná šablóna v SK/EN. Jazyk sa pamätá len ako pohodlie (localStorage), nikdy nič citlivé. */
+/** Jedna mobilná šablóna, 11 jazykov. Jazyk sa pamätá len ako pohodlie (localStorage), nikdy nič citlivé. */
 export function useLang() {
-  const [lang, setLang] = useState('sk')
-  useEffect(() => { try { const l = localStorage.getItem('gd-lang'); if (l === 'en' || l === 'sk') setLang(l); else if (/^en/i.test(navigator.language || '')) setLang('en') } catch {} }, [])
-  const set = (l) => { setLang(l); try { localStorage.setItem('gd-lang', l) } catch {} }
-  return [lang, set, T[lang]]
+  const [lang, setLang] = useState('en')
+  useEffect(() => { try { const l = localStorage.getItem('gd-lang'); if (LANGS.includes(l)) return setLang(l); const nav = String(navigator.language || 'en').slice(0, 2).toLowerCase(); setLang(LANGS.includes(nav) ? nav : 'en') } catch {} }, [])
+  const set = (l) => { if (!LANGS.includes(l)) return; setLang(l); try { localStorage.setItem('gd-lang', l) } catch {} }
+  return [lang, set, T[lang] || T.en]
 }
 export function Top({ lang, setLang, title, sub }) {
   return (
     <header className="gd-top">
-      <div className="gd-top-row"><img src="/logo.png" alt="LIVE-IN" /><div className="gd-lang"><button type="button" className={lang === 'sk' ? 'on' : ''} onClick={() => setLang('sk')}>SK</button><button type="button" className={lang === 'en' ? 'on' : ''} onClick={() => setLang('en')}>EN</button></div></div>
+      <div className="gd-top-row"><img src="/logo.png" alt="LIVE-IN" /><label className="gd-langsel"><span aria-hidden="true">🌐</span><select value={lang} onChange={(e) => setLang(e.target.value)} aria-label={(T[lang] || T.en).language}>{LANGS.map((l) => <option key={l} value={l}>{LANG_NAMES[l]}</option>)}</select></label></div>
       <h1>{title}</h1>{sub && <p>{sub}</p>}
     </header>
   )

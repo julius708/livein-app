@@ -24,7 +24,7 @@ export default async function GuideAdminPage() {
   return (
     <Shell me={me} user={user} isAdmin={isAdmin} active="sprievodca" hideFooter>
       <div className="sp">
-        <div className="sp-head"><div><h1>📱 Sprievodca bytom a QR nálepky</h1><p className="hint">Trvalý kód bytu → sprievodca (Wi-Fi po overení, adresa, pravidlá, tipy) a spätná väzba. Štítok 150 × 105 mm sa vydáva automaticky, keď sú všetky podmienky splnené.</p></div><nav className="row"><a className="btn line" href="/sprievodca/obsah">Pravidlá, tipy, podujatia</a></nav></div>
+        <div className="sp-head"><div><h1>📱 Sprievodca bytom a QR nálepky</h1><p className="hint">Trvalý kód bytu → sprievodca (Wi-Fi po overení, adresa, pravidlá, tipy) a spätná väzba. Štítok 150 × 105 mm sa vydáva automaticky, keď sú všetky podmienky splnené.</p></div><nav className="row"><a className="btn line" href="/sprievodca/obsah">Pravidlá, tipy, podujatia</a><a className="btn line" href="/sprievodca/dotaznik">Dotazník hostí</a></nav></div>
         <UnitsList units={(units || []).map((u) => ({ ...u, issue: byL[u.listing_id] || null }))} listings={listings || []} settings={st} isAdmin={isAdmin} baseUrl={base} />
       </div>
     </Shell>

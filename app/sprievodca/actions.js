@@ -106,3 +106,14 @@ export async function importCardsAction(prev, fd) {
   revalidatePath('/sprievodca')
   return { ok: true, dry, cards: cards.length, matched: matched.length, review: res.filter((r) => r.status === 'review').length, unmatched: res.filter((r) => r.status === 'unmatched').length, imported, reviewList: res.filter((r) => r.status !== 'matched').slice(0, 60).map((r) => `${(r.card || r.cards[0]).address_full}: ${r.reason}`) }
 }
+/** Dotazník: zapnutie a darček (admin). */
+export async function saveSurveySettingsAction(prev, fd) {
+  const v = await viewer(); if (v.error) return { ok: false, error: v.error }
+  if (!v.isAdmin) return { ok: false, error: 'Nastavenia mení len admin.' }
+  const value = { enabled: fd.get('enabled') === 'on', gift: { enabled: fd.get('gift_enabled') === 'on', kind: fd.get('gift_kind') === 'link' ? 'link' : 'code', code: str(fd, 'gift_code', 40).toUpperCase(), value: str(fd, 'gift_value', 40), url: /^https:\/\//.test(str(fd, 'gift_url', 300)) ? str(fd, 'gift_url', 300) : '', note: str(fd, 'gift_note', 300) } }
+  if (value.gift.enabled && value.gift.kind === 'code' && (!value.gift.code || !value.gift.value)) return { ok: false, error: 'Pri zľavovom kóde doplň kód aj hodnotu (napr. 10 %).' }
+  if (value.gift.enabled && value.gift.kind === 'link' && !value.gift.url) return { ok: false, error: 'Pri digitálnom darčeku doplň odkaz (https).' }
+  const { error } = await v.s.from('guide_settings').upsert({ key: 'survey', value, updated_by: who(v), updated_at: new Date().toISOString() })
+  if (error) return { ok: false, error: error.message }
+  revalidatePath('/sprievodca/dotaznik'); return { ok: true, n: Date.now() }
+}

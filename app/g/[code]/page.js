@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import { cache } from 'react'
-import { guideByCode } from '@/lib/guide/server'
+import { guideByCode, surveySettings } from '@/lib/guide/server'
 import { isCode } from '@/lib/guide/core'
 import GuideView from '@/components/guide/GuideView'
 import '../guide.css'
@@ -14,5 +14,6 @@ export default async function GuidePage({ params }) {
   const { code } = await params
   const data = await load(code)
   if (!data) notFound()
-  return <GuideView code={code} data={data} />
+  const sv = await surveySettings()
+  return <GuideView code={code} data={data} survey={sv.enabled !== false} />
 }

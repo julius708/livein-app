@@ -72,3 +72,13 @@ test('štítok: logo priamo na zelenej bez bielej plochy, oba QR nesú len trval
   // v PDF nie je žiadne heslo ani kód bytu okrem verejného kódu v URL
   const txt = Buffer.from(r.bytes).toString('latin1'); assert.ok(!/password|heslo/i.test(txt))
 })
+
+test('dotazník: 11 jazykov úplných, odpovede sa čistia na známe možnosti, darček v jazyku hosťa', async () => {
+  const { LANGS, SURVEY, QUESTIONS, cleanAnswers, giftText } = await import('../lib/guide/survey.js')
+  assert.ok(LANGS.length >= 10)
+  for (const l of LANGS) { const s = SURVEY[l]; for (const q of QUESTIONS) { assert.ok(s.q[q.id], `${l} ${q.id}`); for (const o of q.options || []) assert.ok(s.o[o], `${l} ${o}`) } for (const k of Object.keys(SURVEY.en.ui)) assert.ok(s.ui[k], `${l} ui ${k}`) }
+  const a = cleanAnswers({ country: '  Poland ', party: 'couple', purpose: 'hack', nights: 'n3_5', matters: ['wifi', 'x', 'wifi'], recommend: '5', age: 'a55', comment: 'x'.repeat(900), bogus: 1 })
+  assert.deepEqual(a, { country: 'Poland', party: 'couple', nights: 'n3_5', matters: ['wifi'], age: 'a55', recommend: 5, comment: 'x'.repeat(500) })
+  assert.deepEqual(cleanAnswers({ recommend: 9 }), {})
+  assert.equal(giftText('de', { value: '10 %', url: 'https://booking.live-in.international', code: 'LIVEIN10' }), 'Code für 10 % Rabatt bei Direktbuchung auf booking.live-in.international: LIVEIN10')
+})

@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { useLang, Top } from './LangShell'
 import { pick } from './i18n'
+import { surveyText } from '@/lib/guide/survey'
 import { confirmEmailAction } from '@/app/g/actions'
 
 const fmtDate = (iso, lang) => (iso ? new Date(iso).toLocaleString(lang === 'en' ? 'en-GB' : 'sk-SK', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Bratislava' }) : '')
@@ -46,8 +47,9 @@ function Wifi({ code, t }) {
   )
 }
 
-export default function GuideView({ code, data }) {
+export default function GuideView({ code, data, survey = true }) {
   const [lang, setLang, t] = useLang()
+  const su = surveyText(lang).ui
   const { unit, card, rules, tips, events, support_phone } = data
   const address = card.address || unit.address || ''
   const mapQ = card.lat && card.lng ? `${card.lat},${card.lng}` : address
@@ -71,6 +73,7 @@ export default function GuideView({ code, data }) {
         <section className="gd-card"><h2>🧳 {t.checkout}</h2>{card.checkout_time && <p><b>{t.checkoutAt} {card.checkout_time}</b></p>}<p>{pick(card.checkout, lang) || t.nothing}</p></section>
         <section className="gd-card"><h2>✨ {t.tips}</h2>{tips.length ? tips.map((x, i) => <div key={i} className="gd-tip"><b>{pick(x.title, lang)}</b><span>{pick(x.body, lang)}</span>{x.url && <a href={x.url} target="_blank" rel="noreferrer">→</a>}</div>) : <p>{t.nothing}</p>}</section>
         <section className="gd-card"><h2>🎉 {t.events}</h2>{events.length ? events.map((x, i) => <div key={i} className="gd-tip"><b>{pick(x.title, lang)}</b><small>{fmtDate(x.starts_at, lang)}{x.place ? ` · ${x.place}` : ''}</small><span>{pick(x.body, lang)}</span>{x.url && <a href={x.url} target="_blank" rel="noreferrer">→</a>}</div>) : <p>{t.nothing}</p>}</section>
+        {survey && <section className="gd-card survey"><h2>🎁 {su.surveyCard}</h2><p>{su.surveyCardSub}</p><a className="gd-btn w" href={`/g/${code}/dotaznik`}>{su.fill}</a></section>}
         <section className="gd-card"><h2>🆘 {t.help}</h2><div className="gd-help">{pick(card.help, lang) && <p>{pick(card.help, lang)}</p>}{tel ? <a className="gd-btn w" href={`tel:${tel}`}>📞 {t.call} {support_phone}</a> : <p className="gd-err">—</p>}<a className="gd-btn line w" href={`/g/${code}/recenzia`}>⭐ {t.review}</a></div></section>
         <p className="gd-foot">LIVE-IN International</p>
       </main>
