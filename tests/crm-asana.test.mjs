@@ -5,6 +5,7 @@ import { contactKeys, leadKeys, duplicateGroups, looksLikeLead, leadNotes, leadT
 test('kľúče kontaktu z textu úlohy: telefón (posledných 9 číslic) a e-mail, dátumy nie', () => {
   assert.deepEqual(contactKeys('Facebook Lead ID: 1156101827365832 | Name: Jan | Phone: +421 948 888 187 | Email: Jan.P@Proton.me | 2026-11-04'), ['p:948888187', 'e:jan.p@proton.me'])
   assert.deepEqual(leadKeys({ phone: '+421905192128', email: 'SL.Heimova@gmail.com' }), ['p:905192128', 'e:sl.heimova@gmail.com'])
+  assert.deepEqual(contactKeys('Komu: zuzana@live-in.international · V appke: https://app.live-in.international/crm/lead/x · Telefón: +421 905 192 128'), ['p:905192128'])
   assert.equal(looksLikeLead({ name: 'Nový kontakt: X' }), true); assert.equal(looksLikeLead({ name: 'Florian Residence - obhliadka 16:00', notes: '' }), false)
 })
 test('duplikáty: rovnaký telefón alebo e-mail = jedna skupina, ponechá sa najstaršia; bežné úlohy sa nemažú', () => {
