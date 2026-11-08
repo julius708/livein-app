@@ -28,7 +28,7 @@ Každý byt má **trvalý verejný kód** (8 znakov z abecedy bez 0/O/1/l/I, ná
 | `tests/guide.test.mjs` | testy (`node --test tests/guide.test.mjs`) |
 
 ## Vydávanie štítkov
-Podmienky (všetky): overené Guesty ID (aktívny listing), adresa, verejný kód, overené číslo podpory (`guide_settings.general.support_phone_verified`), funkčné oba produkčné odkazy pre ten istý byt (server ich reálne otvorí a hľadá `data-code`), schválený odkaz Google Business Profile. Inak stav **na kontrolu** s dôvodmi a bez oznámenia.
+Podmienky (všetky): overené Guesty ID (aktívny listing), adresa, verejný kód, overené číslo podpory (`guide_settings.general.support_phone_verified`), funkčné oba produkčné odkazy pre ten istý byt (server ich reálne otvorí a hľadá `data-code`). Odkaz Google Business Profile **nie je** podmienkou (pilot, rozhodnutie Július 8. 11. 2026): QR vedie na sprievodcu a stránka spätnej väzby ukáže Google tlačidlo až po doplnení odkazu. Inak stav **na kontrolu** s dôvodmi a bez oznámenia.
 Kľúč vydania = Guesty listing ID + verzia šablóny (`guide_label_issues` unique). Opakovanie nevydá ten istý štítok ani druhé oznámenie. PDF je v DB, odkaz na tlač `/sprievodca/stitok/<id>` ide ako in-app notifikácia adminom a prevádzke (voliteľne webhook `GUIDE_NOTIFY_WEBHOOK`, napr. Slack). Zmena obsahu, hesla ani pravidiel nemení QR odkaz ani kód; nová verzia štítku len pri zmene šablóny (`template_version`) alebo adresy.
 
 ## Varianty QR a test čítania
@@ -40,9 +40,9 @@ Skúšobný hárok (`/sprievodca/harok`) má variant A (biele QR na zelenej) a v
 | `CRM_BOT_EMAIL`, `CRM_BOT_PASSWORD` | servisný účet pre verejné stránky a cron | ✅ |
 | `GUIDE_SECRET` | hash pseudonymných kľúčov limitov a podpis potvrdenia e-mailu (inak `CRON_SECRET`) | ⏳ odporúčané nastaviť |
 | Guesty token (`guesty_state` / `guesty_tokens`, obnovuje Ring) | overenie rezervácie | ✅ overené v náhľade (neexistujúca aj cudzia rezervácia sú zamietnuté); token sa drží aj v pamäti procesu, nový sa žiada len keď chýba |
-| `guide_settings.general.support_phone` + `support_phone_verified` | overené číslo podpory na štítok a stránku | ⏳ doplní LIVE-IN |
-| `guide_units.gbp_url` | schválený odkaz Google Business Profile na recenziu, pre každý byt | ⏳ doplní LIVE-IN (v podkladoch nie sú) |
-| `guide_settings.pilot.units` | tri pilotné jednotky (Guesty listing ID) | ⏳ doplní Július |
+| `guide_settings.general.support_phone` + `support_phone_verified` | overené číslo podpory na štítok a stránku | ✅ +421 2 3233 9005 (ústredňa z webu), 8. 11. 2026 |
+| `guide_units.gbp_url` | schválený odkaz Google Business Profile na recenziu, pre každý byt (nepovinné pre štítok) | ⏳ doplní LIVE-IN; dovtedy je na stránke spätnej väzby len súkromná správa tímu |
+| `guide_settings.pilot.units` | tri pilotné jednotky (Guesty listing ID) | ✅ Klariská (Historical), Nám. 1. mája (Flagship), KE: Alžbetina (Quiet), 8. 11. 2026 |
 | `GUIDE_NOTIFY_WEBHOOK` | interný kanál oznámení (Slack) | voliteľné; zatiaľ in-app notifikácie |
 | `CRON_SECRET` | cron `/api/cron/guide-sync` (denne 5:20) | ✅ |
 

@@ -42,7 +42,7 @@ test('vydanie štítku: všetky podmienky, inak na kontrolu; opakovanie nevydá 
   const again = issuePlan({ unit, card: {}, support_phone: '+421 900 000 000', links: { guide_ok: true, review_ok: true }, existing: [{ listing_id: 'L1', template_version: 1, notified_at: 'x' }] })
   assert.equal(again.issue, false); assert.equal(again.status, 'issued'); assert.equal(again.notify, false)
   const bad = issuePlan({ unit: { ...unit, gbp_url: '' }, card: {}, support_phone: '', links: { guide_ok: true, review_ok: false }, existing: [] })
-  assert.equal(bad.status, 'review'); assert.equal(bad.reasons.length, 3)
+  assert.equal(bad.status, 'review'); assert.equal(bad.reasons.length, 2); assert.ok(!bad.reasons.some((r) => /Google/.test(r)))
 })
 test('podujatia: skončené sa skryjú; pravidlá: výnimka bytu nahradí spoločné', () => {
   const ev = visibleEvents([{ title: 'a', starts_at: '2026-11-01', ends_at: '2026-11-02' }, { title: 'b', starts_at: '2026-12-01', ends_at: '2026-12-02' }], Date.parse('2026-11-08'))
