@@ -39,7 +39,7 @@ test('vydanie štítku: všetky podmienky, inak na kontrolu; opakovanie nevydá 
   const unit = { listing_id: 'L1', listing_verified: true, address: 'Ulica 1', public_code: 'ABCDEFGH', gbp_url: 'https://g.page/r/x/review' }
   const ok = issuePlan({ unit, card: {}, support_phone: '+421 900 000 000', links: { guide_ok: true, review_ok: true }, existing: [] })
   assert.equal(ok.issue, true); assert.equal(ok.key, 'L1:' + TEMPLATE_VERSION)
-  const again = issuePlan({ unit, card: {}, support_phone: '+421 900 000 000', links: { guide_ok: true, review_ok: true }, existing: [{ listing_id: 'L1', template_version: 1, notified_at: 'x' }] })
+  const again = issuePlan({ unit, card: {}, support_phone: '+421 900 000 000', links: { guide_ok: true, review_ok: true }, existing: [{ listing_id: 'L1', template_version: TEMPLATE_VERSION, notified_at: 'x' }] })
   assert.equal(again.issue, false); assert.equal(again.status, 'issued'); assert.equal(again.notify, false)
   const bad = issuePlan({ unit: { ...unit, gbp_url: '' }, card: {}, support_phone: '', links: { guide_ok: true, review_ok: false }, existing: [] })
   assert.equal(bad.status, 'review'); assert.equal(bad.reasons.length, 2); assert.ok(!bad.reasons.some((r) => /Google/.test(r)))
