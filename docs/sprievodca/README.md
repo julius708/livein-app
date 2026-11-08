@@ -54,3 +54,6 @@ Neznámy kód zobrazí stránku „Táto stránka neexistuje“, ale HTTP stav j
 
 ## Návrat
 Vercel: vrátiť predchádzajúci deployment. Dáta ostávajú. Odstránenie schémy (po zálohe): `drop table guide_label_issues, guide_feedback, guide_guest_emails, guide_wifi_log, guide_wifi_attempts, guide_events, guide_tips, guide_rules, guide_wifi, guide_cards, guide_units, guide_settings cascade; drop function guide_units_lock_code(); drop function guide_team();`
+
+## Dotazník hostí (profil zákazníka)
+`/g/<KÓD>/dotaznik`, karta „Pomôžte nám vás spoznať a získajte darček“ v sprievodcovi. Desať nepovinných otázok: odkiaľ, s kým, dôvod cesty, dĺžka pobytu, ako nás našli, návrat, čo je pri ubytovaní dôležité, vek, odporúčanie 1–5, odkaz. Jedenásť jazykov (SK, EN, DE, CS, PL, HU, IT, ES, FR, UK, NL), rovnaký prepínač jazykov má celý sprievodca; obsah karty bytu ostáva SK/EN (ostatné jazyky zobrazia anglický obsah). Odpovede sú anonymné (`guide_surveys`, bez IP), e-mail len ak ho hosť zadá kvôli darčeku, newsletter je samostatný súhlas. Darček nastaví admin v `/sprievodca/dotaznik`: zľavový kód na priamu rezerváciu alebo digitálny odkaz; zobrazí sa až po odoslaní, v jazyku hosťa. Prehľad odpovedí po otázkach a CSV export pre marketing tamtiež.
