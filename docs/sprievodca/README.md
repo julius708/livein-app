@@ -39,7 +39,7 @@ Skúšobný hárok (`/sprievodca/harok`) má variant A (biele QR na zelenej) a v
 |---|---|---|
 | `CRM_BOT_EMAIL`, `CRM_BOT_PASSWORD` | servisný účet pre verejné stránky a cron | ✅ |
 | `GUIDE_SECRET` | hash pseudonymných kľúčov limitov a podpis potvrdenia e-mailu (inak `CRON_SECRET`) | ⏳ odporúčané nastaviť |
-| `guesty_state` (čítanie botom) | zdieľaný Guesty token z Ringu | ⏳ **chýba RLS politika pre rolu bot** (zmena RLS len so súhlasom) alebo `GUESTY_CLIENT_ID`/`GUESTY_CLIENT_SECRET` v hlavnej appke |
+| Guesty token (`guesty_state` / `guesty_tokens`, obnovuje Ring) | overenie rezervácie | ✅ overené v náhľade (neexistujúca aj cudzia rezervácia sú zamietnuté); token sa drží aj v pamäti procesu, nový sa žiada len keď chýba |
 | `guide_settings.general.support_phone` + `support_phone_verified` | overené číslo podpory na štítok a stránku | ⏳ doplní LIVE-IN |
 | `guide_units.gbp_url` | schválený odkaz Google Business Profile na recenziu, pre každý byt | ⏳ doplní LIVE-IN (v podkladoch nie sú) |
 | `guide_settings.pilot.units` | tri pilotné jednotky (Guesty listing ID) | ⏳ doplní Július |
