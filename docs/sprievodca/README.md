@@ -32,7 +32,7 @@ Podmienky (všetky): overené Guesty ID (aktívny listing), adresa, verejný kó
 Kľúč vydania = Guesty listing ID + verzia šablóny (`guide_label_issues` unique). Opakovanie nevydá ten istý štítok ani druhé oznámenie. PDF je v DB, odkaz na tlač `/sprievodca/stitok/<id>` ide ako in-app notifikácia adminom a prevádzke (voliteľne webhook `GUIDE_NOTIFY_WEBHOOK`, napr. Slack). Zmena obsahu, hesla ani pravidiel nemení QR odkaz ani kód; nová verzia štítku len pri zmene šablóny (`template_version`) alebo adresy.
 
 ## Varianty QR a test čítania
-Skúšobný hárok (`/sprievodca/harok`) má variant A (biele QR na zelenej) a variant B (tmavé QR v bielej ploche iba pod kódom; logo ostáva priamo na zelenej). Automatický test dekódovania (jsQR nad renderom 200 dpi): variant B prečítal oba kódy, variant A jeden z dvoch kódov neprečítal. Predvolený je preto **variant B**. Fyzický test na iPhone a Androide, z bežnej vzdialenosti a pri slabšom svetle: **čaká na ručné overenie** (hárok je pripravený na tlač).
+Skúšobný hárok (`/sprievodca/harok`) má variant A (biele QR na zelenej) a variant B (tmavé QR v bielej ploche iba pod kódom; logo ostáva priamo na zelenej). Automatický test dekódovania (jsQR nad renderom 200 dpi): variant B prečítal oba kódy, variant A jeden z dvoch kódov neprečítal. Predvolený je preto **variant B**. Verzia 2 (8. 11. 2026): brandový dizajn podľa webu (zelený panel s gradientom, krémová plocha, oranžový akcent, ilustrácia Bratislavy z Higgsfield v `lib/guide/art/label-art.png`, dve karty s QR); oba QR overené dekódovaním z renderu 200 dpi. Fyzický test na iPhone a Androide, z bežnej vzdialenosti a pri slabšom svetle: **čaká na ručné overenie** (hárok je pripravený na tlač).
 
 ## Konfigurácia (bez tajomstiev)
 | Premenná / nastavenie | Načo | Stav |
