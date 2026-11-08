@@ -8,7 +8,7 @@ import { confirmEmailAction } from '@/app/g/actions'
 const fmtDate = (iso, lang) => (iso ? new Date(iso).toLocaleString(lang === 'en' ? 'en-GB' : 'sk-SK', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Bratislava' }) : '')
 
 function Wifi({ code, t }) {
-  const [email, setEmail] = useState(''); const [name, setName] = useState(''); const [busy, setBusy] = useState(false); const [err, setErr] = useState(''); const [wifi, setWifi] = useState(null); const [copied, setCopied] = useState(false); const [conf, setConf] = useState({ confirm: true, newsletter: false, done: false })
+  const [email, setEmail] = useState(''); const [name, setName] = useState(''); const [busy, setBusy] = useState(false); const [err, setErr] = useState(''); const [wifi, setWifi] = useState(null); const [copied, setCopied] = useState(false); const [conf, setConf] = useState({ done: false })
   async function submit(e) {
     e.preventDefault(); setBusy(true); setErr('')
     try {
@@ -19,7 +19,7 @@ function Wifi({ code, t }) {
     } catch { setErr(t.fail) } finally { setBusy(false) }
   }
   async function copy() { try { await navigator.clipboard.writeText(wifi.password); setCopied(true); setTimeout(() => setCopied(false), 2000) } catch {} }
-  async function saveConf() { const r = await confirmEmailAction(wifi.confirm, { newsletter: conf.newsletter }); setConf({ ...conf, done: !!(r && r.ok) }) }
+  async function saveConf() { const r = await confirmEmailAction(wifi.confirm, { newsletter: true }); setConf({ done: !!(r && r.ok) }) }
   return (
     <section className="gd-card wifi">
       <h2>📶 {t.wifi}</h2>
@@ -37,9 +37,8 @@ function Wifi({ code, t }) {
           <div><small>{t.password}</small><div className="pw">{wifi.password}</div></div>
           <button type="button" className="gd-btn o" onClick={copy}>{copied ? t.copied : t.copy}</button>
           {wifi.confirm && !conf.done ? <div className="gd-form" style={{ marginTop: 6 }}>
-            <label className="gd-chk"><input type="checkbox" checked={conf.confirm} onChange={(e) => setConf({ ...conf, confirm: e.target.checked })} /> {t.confirmEmail}</label>
-            <label className="gd-chk"><input type="checkbox" checked={conf.newsletter} onChange={(e) => setConf({ ...conf, newsletter: e.target.checked })} /> {t.newsletter}</label>
-            {(conf.confirm || conf.newsletter) && <button type="button" className="gd-btn line" onClick={saveConf}>{t.save}</button>}
+            <small style={{ color: '#58665D', fontSize: 12.5 }}>{t.terms}</small>
+            <button type="button" className="gd-btn line" onClick={saveConf}>{t.confirm}</button>
           </div> : conf.done ? <p>{t.saved}</p> : null}
         </div>
       )}

@@ -8,10 +8,10 @@ import { surveyAction } from '@/app/g/actions'
 export default function SurveyView({ code, name, gift }) {
   const [lang, setLang] = useLang()
   const s = surveyText(lang)
-  const [a, setA] = useState({}); const [guestName, setGuestName] = useState(''); const [email, setEmail] = useState(''); const [consent, setConsent] = useState(false); const [busy, setBusy] = useState(false); const [done, setDone] = useState(null); const [err, setErr] = useState('')
+  const [a, setA] = useState({}); const [guestName, setGuestName] = useState(''); const [email, setEmail] = useState(''); const [busy, setBusy] = useState(false); const [done, setDone] = useState(null); const [err, setErr] = useState('')
   const set = (id, v) => setA({ ...a, [id]: v })
   const toggle = (id, v) => { const cur = a[id] || []; set(id, cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v]) }
-  async function submit(e) { e.preventDefault(); setBusy(true); setErr(''); const r = await surveyAction(code, { lang, answers: a, email, consent, guestName }); setBusy(false); if (r && r.ok) setDone(r); else setErr(s.ui.error) }
+  async function submit(e) { e.preventDefault(); setBusy(true); setErr(''); const r = await surveyAction(code, { lang, answers: a, email, consent: !!email.trim(), guestName }); setBusy(false); if (r && r.ok) setDone(r); else setErr(s.ui.error) }
   const answered = Object.keys(a).length
   return (
     <div className="gd" data-code={code}>
@@ -35,7 +35,7 @@ export default function SurveyView({ code, name, gift }) {
                 {q.type === 'scale' && <div className="gd-opts">{Array.from({ length: q.max - q.min + 1 }, (_, i) => q.min + i).map((n) => <button type="button" key={n} className={a[q.id] === n ? 'on' : ''} onClick={() => set(q.id, n)}>{n}</button>)}</div>}
               </div>
             ))}
-            {gift && gift.enabled && <div className="gd-q"><b>🎁 {s.ui.gift}</b><input type="email" placeholder={s.ui.email} value={email} onChange={(e) => setEmail(e.target.value)} style={{ padding: 10, border: '1px solid #173e2c33', borderRadius: 12, font: 'inherit' }} /><label className="gd-chk"><input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} /> {s.ui.consent}</label></div>}
+            {gift && gift.enabled && <div className="gd-q"><b>🎁 {s.ui.gift}</b><input type="email" placeholder={s.ui.email} value={email} onChange={(e) => setEmail(e.target.value)} style={{ padding: 10, border: '1px solid #173e2c33', borderRadius: 12, font: 'inherit' }} /><small className="hint" style={{ color: '#58665D', fontSize: 12.5 }}>{s.ui.terms}</small></div>}
             {err && <p className="gd-err">{err}</p>}
             <button className="gd-btn o w" disabled={busy || !answered} style={{ marginTop: 10 }}>{s.ui.send}</button>
             <p className="gd-foot"><a href={`/g/${code}`} style={{ color: '#173E2C', fontWeight: 700 }}>← {s.ui.back}</a></p>
