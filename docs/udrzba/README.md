@@ -36,7 +36,7 @@ Pilot v hlavnej appke (`/udrzba`): hlásenie → triáž → dopyty dodávateľo
 | `MAINT_TELEPHONY_PROVIDER` | prebije `maint_settings.telephony.provider` (`test`/`3cx`/`twilio`) | voliteľné |
 | `THREECX_API_URL`, `THREECX_API_KEY`, `THREECX_TEST_EXT`, `THREECX_WEBHOOK_SECRET` | 3CX Call Control + OpenAI Realtime most | ⏳ čaká na potvrdenie dodávateľa 3CX (odchádzajúci hovor s obojsmerným zvukom a stavovými udalosťami na testovacej klapke) |
 | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM`, `MAINT_VOICE_URL`, `MAINT_PUBLIC_WEBHOOK_URL` | záložný overený poskytovateľ | ⏳ čaká na údaje |
-| `ASANA_TOKEN`, `ASANA_MAINT_PROJECT` | úloha na prípad (bez projektu padá do Damages Reporting) | ✅ token je; projekt doplniť |
+| `ASANA_TOKEN`, `ASANA_MAINT_PROJECT` | úloha na prípad v projekte „Údržba – pilot (test)“ (po overení zlúčiť s Damages Reporting) | ✅ nastavené |
 | `CRON_SECRET` | cron `/api/cron/maint-jobs` (každých 5 min) a `/api/maint/health?k=` | ✅ |
 | `NEXT_PUBLIC_SITE_URL` | základ verejných odkazov | ✅ |
 
