@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { randomCode, isCode, CODE_ALPHABET, guideUrl, reviewUrl, wifiDecision, pickReservation, rateLimited, anonLog, issuePlan, visibleEvents, effectiveRules, addressKey, matchCards } from '../lib/guide/core.js'
+import { randomCode, isCode, CODE_ALPHABET, guideUrl, reviewUrl, wifiDecision, pickReservation, rateLimited, anonLog, issuePlan, visibleEvents, effectiveRules, addressKey, matchCards, TEMPLATE_VERSION } from '../lib/guide/core.js'
 
 test('verejný kód: 8 znakov, bez 0/O/1/l/I, náhodný a unikátny', () => {
   const set = new Set()
@@ -38,7 +38,7 @@ test('limit pokusov podľa IP, rezervácie aj bytu; log bez PII', () => {
 test('vydanie štítku: všetky podmienky, inak na kontrolu; opakovanie nevydá duplikát', () => {
   const unit = { listing_id: 'L1', listing_verified: true, address: 'Ulica 1', public_code: 'ABCDEFGH', gbp_url: 'https://g.page/r/x/review' }
   const ok = issuePlan({ unit, card: {}, support_phone: '+421 900 000 000', links: { guide_ok: true, review_ok: true }, existing: [] })
-  assert.equal(ok.issue, true); assert.equal(ok.key, 'L1:1')
+  assert.equal(ok.issue, true); assert.equal(ok.key, 'L1:' + TEMPLATE_VERSION)
   const again = issuePlan({ unit, card: {}, support_phone: '+421 900 000 000', links: { guide_ok: true, review_ok: true }, existing: [{ listing_id: 'L1', template_version: 1, notified_at: 'x' }] })
   assert.equal(again.issue, false); assert.equal(again.status, 'issued'); assert.equal(again.notify, false)
   const bad = issuePlan({ unit: { ...unit, gbp_url: '' }, card: {}, support_phone: '', links: { guide_ok: true, review_ok: false }, existing: [] })
