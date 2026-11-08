@@ -7,6 +7,10 @@
     {
       "path": "/api/cron/crm-sync",
       "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/cron/maint-jobs",
+      "schedule": "*/5 * * * *"
     }
   ],
   "regions": [
