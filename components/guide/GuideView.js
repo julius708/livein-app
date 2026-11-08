@@ -27,7 +27,7 @@ function Wifi({ code, t }) {
         <form className="gd-form" onSubmit={submit} autoComplete="off">
           <p>{t.wifiIntro}</p>
           <label>{t.name}<input type="text" required value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" /></label>
-          <label>{t.email}<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" inputMode="email" /></label>
+          <label>{t.email}<input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" inputMode="email" /></label>
           {err && <p className="gd-err">{err}</p>}
           <button className="gd-btn o w" disabled={busy}>{busy ? t.checking : t.show}</button>
         </form>

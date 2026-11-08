@@ -35,9 +35,9 @@ export default function SurveyView({ code, name, gift }) {
                 {q.type === 'scale' && <div className="gd-opts">{Array.from({ length: q.max - q.min + 1 }, (_, i) => q.min + i).map((n) => <button type="button" key={n} className={a[q.id] === n ? 'on' : ''} onClick={() => set(q.id, n)}>{n}</button>)}</div>}
               </div>
             ))}
-            {gift && gift.enabled && <div className="gd-q"><b>🎁 {s.ui.gift}</b><input type="email" placeholder={s.ui.email} value={email} onChange={(e) => setEmail(e.target.value)} style={{ padding: 10, border: '1px solid #173e2c33', borderRadius: 12, font: 'inherit' }} /><small className="hint" style={{ color: '#58665D', fontSize: 12.5 }}>{s.ui.terms}</small></div>}
+            <div className="gd-q"><b>{gift && gift.enabled ? `🎁 ${s.ui.gift}` : s.ui.email}</b><input type="email" required placeholder={s.ui.email} value={email} onChange={(e) => setEmail(e.target.value)} style={{ padding: 10, border: '1px solid #173e2c33', borderRadius: 12, font: 'inherit' }} /><small className="hint" style={{ color: '#58665D', fontSize: 12.5 }}>{s.ui.terms}</small></div>
             {err && <p className="gd-err">{err}</p>}
-            <button className="gd-btn o w" disabled={busy || !answered} style={{ marginTop: 10 }}>{s.ui.send}</button>
+            <button className="gd-btn o w" disabled={busy || !answered || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)} style={{ marginTop: 10 }}>{s.ui.send}</button>
             <p className="gd-foot"><a href={`/g/${code}`} style={{ color: '#173E2C', fontWeight: 700 }}>← {s.ui.back}</a></p>
           </form>
         )}
