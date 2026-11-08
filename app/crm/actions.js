@@ -3,6 +3,10 @@ import { revalidatePath } from 'next/cache'
 import { getViewer } from '@/lib/auth'
 import { changeStage, flushQueue } from '@/lib/crm-server'
 import { cityGroup, route, normalizePhone, normalizeSource, splitName, STAGE_IDS, LOST_REASONS, CITY_GROUPS } from '@/lib/crm'
+import { draftIntroEmail, sendCrmMail, viewingEmail, mapsLink, fmtWhen, SERVICES, TASK_KINDS } from '@/lib/crm-tasks'
+import { createSubtask, completeSubtask, ensureLeadTask, commentTask, asanaReady } from '@/lib/crm-asana'
+import { notify } from '@/lib/crm-server'
+import { pushPending } from '@/lib/crm-push'
 
 async function crmViewer() {
   const v = await getViewer()
@@ -157,4 +161,114 @@ export async function markNotificationsRead(ids) {
   if (!list.length) return { ok: true }
   await v.s.from('notifications').update({ read_at: new Date().toISOString() }).in('id', list).is('read_at', null)
   return { ok: true }
+}
+
+// ——— Úlohy k leadu ———
+const meOf = (v) => ({ email: v.user.email.toLowerCase(), name: v.me.name || v.user.email, phone: v.me.phone || '' })
+async function leadNotes(s, leadId) { const { data: ev } = await s.from('lead_events').select('at,payload,user_name').eq('lead_id', leadId).in('type', ['note', 'call', 'whatsapp', 'email', 'sms']).order('at', { ascending: false }).limit(20); return (ev || []).filter((e) => e.payload && e.payload.note).map((e) => ({ at: e.at, by: e.user_name, text: e.payload.note })).reverse() }
+/** Úloha v Asane ako podúloha úlohy leadu (ak lead úlohu nemá, najprv ju založí). Chyba Asany úlohu v appke nezastaví. */
+async function asanaSubtask(s, lead, { name, notes, dueAt, assigneeEmail }) {
+  if (!asanaReady()) return null
+  try {
+    let gid = lead.asana_task_gid
+    if (!gid) { const r = await ensureLeadTask(lead, { notes: await leadNotes(s, lead.id) }); gid = r.gid; await s.from('leads').update({ asana_task_gid: gid }).eq('id', lead.id) }
+    return await createSubtask(gid, { name, notes, dueAt, assigneeEmail })
+  } catch (e) { console.error('[crm] asana subtask', e && e.message); return null }
+}
+export async function setService(leadId, service) {
+  const v = await crmViewer(); if (v.error) return { ok: false, error: v.error }
+  if (!isUuid(leadId) || !(service in SERVICES)) return { ok: false, error: 'Neznáma služba.' }
+  const { error } = await v.s.from('leads').update({ service }).eq('id', leadId)
+  if (error) return { ok: false, error: error.message }
+  await v.s.from('lead_events').insert({ lead_id: leadId, type: 'system', payload: { service, by: who(v).name }, user_email: who(v).email, user_name: who(v).name })
+  await v.s.from('crm_sync_queue').insert({ lead_id: leadId, target: 'asana', action: 'update', payload: { comment: `Služba: ${SERVICES[service]} (${who(v).name})` } })
+  await flushQueue(v.s, 2).catch(() => {})
+  revalidatePath(`/crm/lead/${leadId}`); return { ok: true }
+}
+/** Náhľad úvodného e-mailu: šablóna podľa služby, osobný odsek z poznámok (AI). Nič neposiela. */
+export async function draftIntroEmailAction(leadId, service) {
+  const v = await crmViewer(); if (v.error) return { ok: false, error: v.error }
+  if (!isUuid(leadId)) return { ok: false, error: 'Neplatný lead.' }
+  const { data: lead } = await v.s.from('leads').select('*').eq('id', leadId).maybeSingle()
+  if (!lead) return { ok: false, error: 'Lead neexistuje.' }
+  if (!lead.email) return { ok: false, error: 'Lead nemá e-mail. Doplň ho v údajoch.' }
+  const svc = service in SERVICES ? service : lead.service || 'other'
+  const d = await draftIntroEmail({ lead, me: meOf(v), notes: await leadNotes(v.s, leadId), service: svc })
+  return { ok: true, ...d, to: lead.email }
+}
+/** Odoslanie úvodného e-mailu (po úprave náhľadu): Resend, história, HubSpot poznámka, Asana podúloha hotová. */
+export async function sendIntroEmailAction(leadId, { subject, body, service }) {
+  const v = await crmViewer(); if (v.error) return { ok: false, error: v.error }
+  if (!isUuid(leadId)) return { ok: false, error: 'Neplatný lead.' }
+  const { data: lead } = await v.s.from('leads').select('*').eq('id', leadId).maybeSingle()
+  if (!lead || !lead.email) return { ok: false, error: 'Lead nemá e-mail.' }
+  const subj = String(subject || '').trim().slice(0, 200), text = String(body || '').trim().slice(0, 8000)
+  if (!subj || text.length < 20) return { ok: false, error: 'Doplň predmet a text e-mailu.' }
+  const me = meOf(v)
+  const r = await sendCrmMail({ to: lead.email, subject: subj, text, me })
+  if (!r.ok) return r
+  const svc = service in SERVICES ? service : lead.service || null
+  if (svc && svc !== lead.service) await v.s.from('leads').update({ service: svc }).eq('id', leadId)
+  const gid = await asanaSubtask(v.s, lead, { name: `Úvodný e-mail: ${lead.name}`, notes: `Odoslané ${new Date().toLocaleString('sk-SK', { timeZone: 'Europe/Bratislava' })} na ${lead.email}\nPredmet: ${subj}\n\n${text}`, dueAt: null, assigneeEmail: me.email })
+  if (gid) await completeSubtask(gid).catch(() => {})
+  await v.s.from('lead_tasks').insert({ lead_id: leadId, kind: 'intro_email', title: `Úvodný e-mail (${SERVICES[svc] || 'všeobecný'})`, status: 'done', asana_gid: gid, payload: { subject: subj, body: text, to: lead.email, resend_id: r.id, service: svc }, created_by: me.email, created_by_name: me.name, done_at: new Date().toISOString(), done_by: me.email })
+  await v.s.from('lead_events').insert({ lead_id: leadId, type: 'email', payload: { note: `Úvodný e-mail odoslaný: „${subj}“` }, user_email: me.email, user_name: me.name })
+  if (lead.hubspot_contact_id) await v.s.from('crm_sync_queue').insert({ lead_id: leadId, target: 'hubspot', action: 'update', payload: { props: {}, note: `Úvodný e-mail odoslaný (${me.name}): ${subj}` } })
+  if (lead.stage === 'new') await changeStage(v.s, leadId, 'contacted', who(v), { note: 'úvodný e-mail' }).catch(() => {})
+  await flushQueue(v.s, 3).catch(() => {})
+  revalidatePath(`/crm/lead/${leadId}`); revalidatePath('/crm')
+  return { ok: true }
+}
+/** Obhliadka: termín (dátum a čas), adresa, kto ide; podúloha v Asane s presným časom, notifikácia priradenému, e-mail klientovi. */
+export async function createViewingAction(leadId, form = {}) {
+  const v = await crmViewer(); if (v.error) return { ok: false, error: v.error }
+  if (!isUuid(leadId)) return { ok: false, error: 'Neplatný lead.' }
+  const { data: lead } = await v.s.from('leads').select('*').eq('id', leadId).maybeSingle()
+  if (!lead) return { ok: false, error: 'Lead neexistuje.' }
+  const at = Date.parse(form.at); if (!Number.isFinite(at)) return { ok: false, error: 'Zadaj dátum a čas obhliadky.' }
+  if (at < Date.now() - 3600e3) return { ok: false, error: 'Termín je v minulosti.' }
+  const address = String(form.address || lead.property_address || '').trim().slice(0, 300)
+  const withEmail = form.with ? await crmPerson(v.s, form.with) : lead.assigned_to || who(v).email
+  const { data: withRow } = await v.s.from('app_users').select('name').ilike('email', withEmail || who(v).email).maybeSingle()
+  const withName = (withRow && withRow.name) || who(v).name
+  const note = String(form.note || '').trim().slice(0, 500)
+  const me = meOf(v); const iso = new Date(at).toISOString()
+  if (address && address !== lead.property_address) await v.s.from('leads').update({ property_address: address }).eq('id', leadId)
+  const gid = await asanaSubtask(v.s, lead, { name: `Obhliadka: ${lead.name}${address ? ' – ' + address : ''}`, notes: `Kedy: ${fmtWhen(iso)}\nKde: ${address || 'podľa dohody'}\nKto: ${withName}\nTelefón: ${lead.phone || '—'}\nNavigácia: ${mapsLink(address)}${note ? '\n\n' + note : ''}`, dueAt: iso, assigneeEmail: withEmail })
+  const { data: task, error } = await v.s.from('lead_tasks').insert({ lead_id: leadId, kind: 'viewing', title: `Obhliadka ${fmtWhen(iso)}`, due_at: iso, asana_gid: gid, payload: { address, with: withEmail, with_name: withName, note, maps: mapsLink(address) }, created_by: me.email, created_by_name: me.name }).select('id').single()
+  if (error) return { ok: false, error: error.message }
+  await v.s.from('lead_events').insert({ lead_id: leadId, type: 'note', payload: { note: `Obhliadka dohodnutá: ${fmtWhen(iso)}${address ? ', ' + address : ''} (${withName})` }, user_email: me.email, user_name: me.name })
+  await notify(v.s, [withEmail, lead.assigned_to], { lead_id: leadId, kind: 'viewing', title: `Obhliadka: ${lead.name}`, body: `${fmtWhen(iso)}${address ? ' · ' + address : ''}`, url: `/crm/lead/${leadId}` })
+  await pushPending(v.s).catch(() => {})
+  let mailed = false
+  if (form.email_client !== false && lead.email) { const m = viewingEmail({ lead, at: iso, address, withName, me, note: form.client_note ? String(form.client_note).slice(0, 500) : '' }); const r = await sendCrmMail({ to: lead.email, subject: m.subject, text: m.text, me }); mailed = r.ok; if (r.ok) await v.s.from('lead_events').insert({ lead_id: leadId, type: 'email', payload: { note: `Klientovi poslané potvrdenie obhliadky (${fmtWhen(iso)})` }, user_email: me.email, user_name: me.name }) }
+  if (lead.hubspot_contact_id) await v.s.from('crm_sync_queue').insert({ lead_id: leadId, target: 'hubspot', action: 'update', payload: { props: { hs_lead_status: 'IN_PROGRESS' }, note: `Obhliadka ${fmtWhen(iso)}${address ? ', ' + address : ''} (${withName})` } })
+  if (['new', 'contacted'].includes(lead.stage)) await changeStage(v.s, leadId, 'viewing', who(v), { note: `obhliadka ${fmtWhen(iso)}` }).catch(() => {})
+  await flushQueue(v.s, 3).catch(() => {})
+  revalidatePath(`/crm/lead/${leadId}`); revalidatePath('/crm')
+  return { ok: true, id: task.id, mailed, asana: !!gid }
+}
+export async function createCustomTaskAction(leadId, form = {}) {
+  const v = await crmViewer(); if (v.error) return { ok: false, error: v.error }
+  if (!isUuid(leadId)) return { ok: false, error: 'Neplatný lead.' }
+  const title = String(form.title || '').trim().slice(0, 200); if (title.length < 2) return { ok: false, error: 'Napíš, čo treba urobiť.' }
+  const due = form.due_at && Number.isFinite(Date.parse(form.due_at)) ? new Date(form.due_at).toISOString() : null
+  const { data: lead } = await v.s.from('leads').select('*').eq('id', leadId).maybeSingle()
+  if (!lead) return { ok: false, error: 'Lead neexistuje.' }
+  const me = meOf(v)
+  const gid = await asanaSubtask(v.s, lead, { name: title, notes: `Z appky LIVE-IN (${me.name})`, dueAt: due, assigneeEmail: lead.assigned_to || me.email })
+  const { error } = await v.s.from('lead_tasks').insert({ lead_id: leadId, kind: 'custom', title, due_at: due, asana_gid: gid, created_by: me.email, created_by_name: me.name })
+  if (error) return { ok: false, error: error.message }
+  revalidatePath(`/crm/lead/${leadId}`); return { ok: true }
+}
+export async function toggleTaskAction(taskId, done) {
+  const v = await crmViewer(); if (v.error) return { ok: false, error: v.error }
+  if (!isUuid(taskId)) return { ok: false, error: 'Neplatná úloha.' }
+  const { data: t } = await v.s.from('lead_tasks').select('id,lead_id,asana_gid,title').eq('id', taskId).maybeSingle()
+  if (!t) return { ok: false, error: 'Úloha neexistuje.' }
+  const { error } = await v.s.from('lead_tasks').update(done ? { status: 'done', done_at: new Date().toISOString(), done_by: who(v).email } : { status: 'open', done_at: null, done_by: null }).eq('id', taskId)
+  if (error) return { ok: false, error: error.message }
+  if (t.asana_gid) await completeSubtask(t.asana_gid, !!done).catch(() => {})
+  if (done) await v.s.from('lead_events').insert({ lead_id: t.lead_id, type: 'note', payload: { note: `Hotovo: ${t.title}` }, user_email: who(v).email, user_name: who(v).name })
+  revalidatePath(`/crm/lead/${t.lead_id}`); return { ok: true }
 }

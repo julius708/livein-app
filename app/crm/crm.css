@@ -161,3 +161,10 @@
 .crm-callnotes textarea{width:100%;min-height:220px;padding:12px;border:1px solid #173e2c2e;border-radius:14px;font:inherit;font-size:15px;line-height:1.45;resize:vertical;background:#fff}
 .crm-callnotes-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 @media(max-width:1100px){.crm-detail-grid{grid-template-columns:1fr}.crm-detail-side{position:static}}
+.crm-tasks{margin-top:14px}.crm-svc{display:inline-flex;gap:6px;align-items:center;font-size:13px;font-weight:700;color:#58665D}.crm-svc select{padding:6px 10px;border:1px solid #173e2c2e;border-radius:10px;font-size:13px}
+.crm-task-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+.crm-task-form{display:grid;gap:8px;background:#F4F6F1;border-radius:14px;padding:12px;margin:8px 0}
+.crm-task-form label{display:grid;gap:4px;font-size:13px;font-weight:700;color:#58665D}.crm-task-form input,.crm-task-form textarea,.crm-task-form select{padding:9px 11px;border:1px solid #173e2c2e;border-radius:10px;font:inherit;font-size:14px;background:#fff}
+.crm-task-form textarea{line-height:1.45}
+.crm-tasklist{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:8px}.crm-tasklist li{font-size:14px}.crm-tasklist li.done{opacity:.65}.crm-tasklist .crm-check{white-space:normal;align-items:flex-start;font-weight:500}.crm-tasklist small{color:#66716A}.crm-tasklist pre{white-space:pre-wrap;font:inherit;font-size:13px;background:#fff;border-radius:10px;padding:10px;margin:6px 0 0}
+.msg.ok{color:#1E6B45;font-weight:700}

@@ -19,3 +19,15 @@ test('popis a názov úlohy leadu bez PII v názve navyše', () => {
   assert.ok(n.includes('Stav: Kontaktovaný') && n.includes('• 2026-11-02 Zuzana: 2-izbový byt') && n.includes('/crm/lead/u1'))
   assert.equal(leadTaskName({ name: 'Ján N.', city_group: 'Košice' }), 'Lead: Ján N. · Košice')
 })
+
+test('úvodný e-mail: šablóna podľa služby, oslovenie, podpis; obhliadka: navigácia a e-mail klientovi', async () => {
+  const { fillTemplate, TEMPLATES, greeting, mapsLink, viewingEmail } = await import('../lib/crm-tasks.js')
+  const lead = { name: 'Ján Novák', email: 'jan@example.com' }, me = { name: 'Zuzana Pavlíková', email: 'zuzana@live-in.international' }
+  const m = fillTemplate(TEMPLATES.management, { lead, me, personal: 'Spomínali ste dvojizbový byt v Ružinove voľný od januára.' })
+  assert.ok(m.body.startsWith('Dobrý deň, Ján,') && m.body.includes('dvojizbový byt v Ružinove') && m.body.includes('Zuzana Pavlíková') && m.body.includes('provízia'))
+  assert.ok(!fillTemplate(TEMPLATES.rent_to_rent, { lead, me }).body.includes('{{'))
+  assert.equal(greeting({ name: 'jan@example.com' }), 'Dobrý deň')
+  assert.equal(mapsLink('Dunajská 3, Bratislava'), 'https://www.google.com/maps/dir/?api=1&destination=Dunajsk%C3%A1%203%2C%20Bratislava')
+  const v = viewingEmail({ lead, at: '2026-11-12T09:00:00Z', address: 'Dunajská 3, Bratislava', withName: 'Zuzana', me })
+  assert.ok(v.subject.startsWith('Potvrdenie obhliadky') && v.text.includes('Dunajská 3') && v.text.includes('Kto príde: Zuzana'))
+})

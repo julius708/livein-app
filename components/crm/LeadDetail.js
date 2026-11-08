@@ -1,6 +1,7 @@
 'use client'
 import CallScript from './CallScript'
 import CallNotes from './CallNotes'
+import LeadTasks from './LeadTasks'
 import { useEffect, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -21,7 +22,7 @@ function describe(e, people) {
   return p.note ? p.note : ''
 }
 
-export default function LeadDetail({ lead: initial, events: initialEvents, people, me, serverNow }) {
+export default function LeadDetail({ lead: initial, events: initialEvents, tasks = [], people, me, serverNow }) {
   const router = useRouter()
   const [lead, setLead] = useState(initial)
   const [events, setEvents] = useState(initialEvents)
@@ -55,7 +56,7 @@ export default function LeadDetail({ lead: initial, events: initialEvents, peopl
       </section>
       <CallScript compact />
       </div>
-      <aside className="crm-detail-side"><CallNotes value={note} onChange={setNote} onSave={saveNote} busy={busy} /></aside>
+      <aside className="crm-detail-side"><CallNotes value={note} onChange={setNote} onSave={saveNote} busy={busy} /><LeadTasks lead={lead} tasks={tasks} people={people} onChanged={refresh} /></aside>
       </div>
       <div className="eko-two">
         <section className="card">
