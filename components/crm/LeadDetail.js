@@ -1,5 +1,6 @@
 'use client'
 import CallScript from './CallScript'
+import CallNotes from './CallNotes'
 import { useEffect, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -39,6 +40,8 @@ export default function LeadDetail({ lead: initial, events: initialEvents, peopl
   const s = stageOf(lead.stage)
   return (
     <div className="crm crm-detail">
+      <div className="crm-detail-grid">
+      <div className="crm-detail-main">
       <section className={'card crm-dhead ' + st}>
         <Ring lead={lead} now={now} size={72} />
         <div className="crm-dhead-main">
@@ -51,10 +54,12 @@ export default function LeadDetail({ lead: initial, events: initialEvents, peopl
         </div>
       </section>
       <CallScript compact />
+      </div>
+      <aside className="crm-detail-side"><CallNotes value={note} onChange={setNote} onSave={saveNote} busy={busy} /></aside>
+      </div>
       <div className="eko-two">
         <section className="card">
           <h2>História</h2>
-          <form className="crm-noteform" onSubmit={(e) => { e.preventDefault(); saveNote() }}><textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} placeholder="Poznámka z hovoru, čo dohodnuté, kedy zavolať znova…" /><button type="submit" className="btn" disabled={busy || !note.trim()}>Uložiť poznámku</button></form>
           <ul className="crm-hist">{events.map((e) => <li key={e.id}><span className={'crm-ev t-' + e.type}>{TYPES[e.type] || e.type}</span><div><b>{describe(e, people)}</b><small>{fmtDT(e.at)} · {e.user_name || 'automaticky'}</small></div></li>)}{!events.length && <li className="eko-fine">Zatiaľ bez udalostí.</li>}</ul>
         </section>
         <section className="card">
@@ -80,12 +85,12 @@ export default function LeadDetail({ lead: initial, events: initialEvents, peopl
             <dt>Komu</dt><dd><select value={lead.assigned_to || ''} onChange={(e) => start(async () => { const v = e.target.value; const r = await assignLead(lead.id, v); if (r.ok) setLead({ ...lead, assigned_to: v }); else setErr(r.error) })}><option value="">nepriradený</option>{people.map((p) => <option key={p.email} value={p.email}>{p.name}</option>)}</select></dd>
             <dt>Priorita</dt><dd>{lead.priority === 'high' ? 'vysoká' : lead.priority === 'normal' ? 'bežná' : 'nižšia (mimo BA, KE, TT)'}</dd>
             <dt>HubSpot</dt><dd>{lead.hubspot_contact_id ? <a href={HUB + lead.hubspot_contact_id} target="_blank" rel="noopener noreferrer">otvoriť kontakt ↗</a> : 'čaká na prepojenie'}</dd>
-            <dt>Asana</dt><dd>{lead.asana_task_gid ? <a href={`https://app.asana.com/0/1203570903024669/${lead.asana_task_gid}`} target="_blank" rel="noopener noreferrer">otvoriť úlohu ↗</a> : '—'}</dd>
+            <dt>Asana</dt><dd>{lead.asana_task_gid ? <a href={`https://app.asana.com/0/1203570903024669/${lead.asana_task_gid}`} target="_blank" rel="noopener noreferrer">otvoriť úlohu ↗</a> : 'prepojí sa pri najbližšej zmene (do minúty)'}</dd>
             <dt>Stav v HubSpote</dt><dd>{lead.hubspot_lifecycle || '—'}{lead.hubspot_lead_status ? ` · ${lead.hubspot_lead_status}` : ''}</dd>
           </dl>
           )}
           {lead.notes && <><h3 className="eko-h3">Posledná poznámka</h3><p className="crm-note">{lead.notes}</p></>}
-          <p className="eko-fine">Zmeny štádia sa zapisujú do HubSpotu aj Asany na pozadí (do minúty). {s.id === 'client' ? 'Klient: v HubSpote má lifecycle Customer.' : ''}</p>
+          <p className="eko-fine">Štádium, poznámky, údaje aj priradenie sa zapisujú do HubSpotu a do úlohy v Asane na pozadí (do minúty); v Asane sa nevytvára duplikát, keď kontakt už úlohu má. {s.id === 'client' ? 'Klient: v HubSpote má lifecycle Customer.' : ''}</p>
           {lead.kind === 'lead' ? <button type="button" className="crm-notlead" onClick={() => { const reason = window.prompt('Prečo to nie je lead? (spam, mimo našich miest, nemá byt, duplicita)', 'Nerelevantný dopyt'); if (reason === null) return; start(async () => { setErr(''); const r = await setKind(lead.id, 'not_lead', reason); if (r.ok) { setLead({ ...lead, kind: 'not_lead', lost_reason: reason || 'Nie je lead' }); refresh() } else setErr(r.error) }) }}>✕ Nie je lead</button> : lead.kind === 'not_lead' ? <button type="button" className="eko-link" onClick={() => start(async () => { const r = await setKind(lead.id, 'lead'); if (r.ok) { setLead({ ...lead, kind: 'lead' }); refresh() } else setErr(r.error) })}>Predsa je to lead</button> : null}
           <Link className="eko-link" href="/crm">← Späť na leady</Link>
         </section>

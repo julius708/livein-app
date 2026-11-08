@@ -37,6 +37,9 @@ export async function logContact(leadId, type, note = '') {
   if (!['call', 'whatsapp', 'email', 'sms'].includes(type)) return { ok: false, error: 'Neznáma akcia.' }
   const { error } = await v.s.from('lead_events').insert({ lead_id: leadId, type, payload: note ? { note: String(note).slice(0, 1000) } : {}, user_email: who(v).email, user_name: who(v).name })
   if (error) return { ok: false, error: error.message }
+  const label = { call: 'Volal/a', whatsapp: 'WhatsApp', email: 'E-mail', sms: 'SMS' }[type]
+  await v.s.from('crm_sync_queue').insert({ lead_id: leadId, target: 'asana', action: 'note', payload: { comment: `${label} – ${who(v).name}${note ? ': ' + String(note).slice(0, 1000) : ''}` } })
+  await flushQueue(v.s, 2).catch(() => {})
   return { ok: true }
 }
 export async function addNote(leadId, text) {
@@ -47,6 +50,8 @@ export async function addNote(leadId, text) {
   const { error } = await v.s.from('lead_events').insert({ lead_id: leadId, type: 'note', payload: { note: t }, user_email: who(v).email, user_name: who(v).name })
   if (error) return { ok: false, error: error.message }
   await v.s.from('leads').update({ notes: t }).eq('id', leadId)
+  await v.s.from('crm_sync_queue').insert({ lead_id: leadId, target: 'asana', action: 'note', payload: { comment: `${who(v).name}: ${t}` } })
+  await flushQueue(v.s, 2).catch(() => {})
   revalidatePath(`/crm/lead/${leadId}`)
   return { ok: true }
 }
@@ -61,7 +66,7 @@ export async function createManualLead(form) {
   const { data, error } = await v.s.from('leads').insert({ name: name || phone || email, phone, email, city, city_group: group, source, kind: 'lead', stage: 'new', priority: r.priority, received_at: now, due_at: new Date(Date.now() + r.alarm_hours * 3600e3).toISOString(), alarm_hours: r.alarm_hours, assigned_to: assignee, notes: String(form.note || '').slice(0, 2000) || null, origin: 'manual' }).select('id').single()
   if (error) return { ok: false, error: error.message }
   await v.s.from('lead_events').insert({ lead_id: data.id, type: 'system', payload: { via: 'manual', by: who(v).name }, user_email: who(v).email, user_name: who(v).name })
-  await v.s.from('crm_sync_queue').insert({ lead_id: data.id, target: 'hubspot', action: 'create', payload: {} })
+  await v.s.from('crm_sync_queue').insert([{ lead_id: data.id, target: 'hubspot', action: 'create', payload: {} }, { lead_id: data.id, target: 'asana', action: 'ensure', payload: { fields: { Zdroj: source, 'Lead prijatý': now.slice(0, 10) } } }])
   if (assignee !== who(v).email) await v.s.from('notifications').insert({ user_email: assignee, lead_id: data.id, kind: 'new_lead', title: `Nový lead: ${name || phone || email}`, body: [group !== 'Iné' ? group : city || '', source].filter(Boolean).join(' · '), url: `/crm/lead/${data.id}` })
   await flushQueue(v.s, 3).catch(() => {})
   revalidatePath('/crm')
@@ -97,8 +102,10 @@ export async function updateLead(leadId, form = {}) {
     if (changed.includes('email') && patch.email) props.email = patch.email
     if (changed.includes('city')) props.city = patch.city || ''
     if (changed.includes('property_address')) props.address = patch.property_address || ''
-    if (Object.keys(props).length) { await v.s.from('crm_sync_queue').insert({ lead_id: leadId, target: 'hubspot', action: 'update', payload: { props, note: `Údaje upravené v appke (${who(v).name}): ${changed.join(', ')}` } }); await flushQueue(v.s, 3).catch(() => {}) }
+    if (Object.keys(props).length) await v.s.from('crm_sync_queue').insert({ lead_id: leadId, target: 'hubspot', action: 'update', payload: { props, note: `Údaje upravené v appke (${who(v).name}): ${changed.join(', ')}` } })
   }
+  await v.s.from('crm_sync_queue').insert({ lead_id: leadId, target: 'asana', action: 'update', payload: { comment: `Údaje upravené (${who(v).name}): ${changed.join(', ')}` } })
+  await flushQueue(v.s, 3).catch(() => {})
   revalidatePath('/crm'); revalidatePath(`/crm/lead/${leadId}`)
   return { ok: true, patch }
 }
@@ -123,6 +130,8 @@ export async function assignLead(leadId, email) {
   const { error } = await v.s.from('leads').update({ assigned_to: person }).eq('id', leadId)
   if (error) return { ok: false, error: error.message }
   await v.s.from('lead_events').insert({ lead_id: leadId, type: 'system', payload: { assigned_to: email }, user_email: who(v).email, user_name: who(v).name })
+  await v.s.from('crm_sync_queue').insert({ lead_id: leadId, target: 'asana', action: 'update', payload: { comment: `Priradené: ${person || 'nikomu'} (${who(v).name})` } })
+  await flushQueue(v.s, 2).catch(() => {})
   revalidatePath('/crm'); return { ok: true }
 }
 /** Skryť z fronty (nie lead: banky, dodávatelia…) alebo vrátiť. */

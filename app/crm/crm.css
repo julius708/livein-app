@@ -153,3 +153,11 @@
 .crm-editform label{display:grid;gap:4px;font-size:13px;color:#66716A;font-weight:600}
 .crm-editform input,.crm-editform select{padding:9px 11px;border:1px solid #173e2c2e;border-radius:10px;font:inherit;font-size:14.5px;background:#fff;color:#1F2A24}
 .crm-editform input:focus,.crm-editform select:focus{outline:2px solid #F46D16;outline-offset:1px}
+/* detail leadu: vľavo hlavička a skript, vpravo biele okienko na poznámky počas hovoru */
+.crm-detail-grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(320px,1fr);gap:16px;align-items:start}
+.crm-detail-main{min-width:0;display:flex;flex-direction:column;gap:14px}
+.crm-detail-side{position:sticky;top:76px}
+.crm-callnotes{margin-top:0;background:#fff}
+.crm-callnotes textarea{width:100%;min-height:220px;padding:12px;border:1px solid #173e2c2e;border-radius:14px;font:inherit;font-size:15px;line-height:1.45;resize:vertical;background:#fff}
+.crm-callnotes-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+@media(max-width:1100px){.crm-detail-grid{grid-template-columns:1fr}.crm-detail-side{position:static}}
