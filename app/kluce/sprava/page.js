@@ -19,7 +19,7 @@ export default async function KeysAdminPage() {
   return (
     <Shell me={me} user={user} isAdmin={isAdmin} active="kluce" hideFooter>
       <div className="kl-page">
-        <div className="kl-head"><div><h1>🗝️ Kľúče · správa</h1><p className="hint">Pozície na stene, počet sád na byt, lišty a náprava stavu. Zmeny sa prejavia hneď na tabuli aj v kiosku.</p></div><KeysNav active="admin" isAdmin={isAdmin} /></div>
+        <section className="li-page-intro kl-intro"><div><span className="li-eyebrow">Kľúče</span><h1>Správa kľúčov</h1><p>Pozície na stene, počet sád na byt, lišty a náprava stavu. Zmeny sa prejavia hneď na tabuli aj v kiosku.</p></div><KeysNav active="admin" isAdmin={isAdmin} /></section>
         <KeysAdmin units={units} rows={st.rows} overdueHours={st.overdueHours} isAdmin={isAdmin} />
       </div>
     </Shell>

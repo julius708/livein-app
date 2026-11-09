@@ -21,7 +21,7 @@ export default async function KeysPage() {
   return (
     <Shell me={me} user={user} isAdmin={isAdmin} active="kluce" hideFooter>
       <div className="kl-page">
-        <div className="kl-head"><div><h1>🗝️ Kľúče</h1><p className="hint">Stena s kľúčmi v appke: číslo pozície zľava doprava po lištách, zelená na háčiku, červená vonku. Zoznam podľa tašiek berie z Práčovne.</p></div><KeysNav active="board" isAdmin={isAdmin} /></div>
+        <section className="li-page-intro kl-intro"><div><span className="li-eyebrow">Prevádzka</span><h1>Kľúče</h1><p>Stena s kľúčmi v appke: číslo pozície zľava doprava po lištách. Zelená je na háčiku, červená vonku. Zoznam podľa tašiek berie z Práčovne.</p></div><KeysNav active="board" isAdmin={isAdmin} /></section>
         <KeysBoard units={units} rows={st.rows} persons={persons} days={days} today={today} overdue={overdue(units, st.overdueHours)} overdueHours={st.overdueHours} />
       </div>
     </Shell>

@@ -85,7 +85,7 @@ export default function KeysBoard({ units = [], rows = [], persons = [], days = 
       {!!overdue.length && !mode && <div className="kl-warn">⏰ Dlhšie než {overdueHours} h vonku: {overdue.slice(0, 5).map((o) => `${o.hook_no != null ? o.hook_no + ' · ' : ''}${o.listing_name} (${o.name}, ${o.hours} h)`).join(' · ')}{overdue.length > 5 ? ` a ďalších ${overdue.length - 5}` : ''}</div>}
 
       <div className="kl-grid">
-        <section className="kl-board" aria-label="Tabuľa kľúčov">
+        <section className="card kl-board" aria-label="Tabuľa kľúčov">
           <div className="kl-legend"><span><i className="ok" />na háčiku</span><span><i className="part" />časť vonku</span><span><i className="out" />vonku</span><span><i className="empty" />voľná pozícia</span><span><i className="picked" />vybrané</span></div>
           {filtered ? (
             <div className="kl-row"><h3>Výsledky hľadania <b>{filtered.length}</b></h3><div className="kl-hooks">{filtered.map((u) => <Tile key={u.listing_id} n={u.hook_no} u={u} picked={isPicked(u.listing_id)} />)}</div>{!filtered.length && <p className="kl-hint">Nič sa nenašlo. Skús časť názvu ulice alebo číslo pozície.</p>}</div>
@@ -99,7 +99,7 @@ export default function KeysBoard({ units = [], rows = [], persons = [], days = 
           )}
         </section>
 
-        <aside className="kl-rail">
+        <aside className="card kl-rail">
           <input id="kl-q" className="kl-search" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Hľadať byt alebo číslo pozície…" aria-label="Hľadať byt alebo pozíciu" autoComplete="off" />
 
           {!mode && (

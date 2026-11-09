@@ -24,7 +24,7 @@ export default async function KeysHistoryPage({ searchParams }) {
   return (
     <Shell me={me} user={user} isAdmin={isAdmin} active="kluce" hideFooter>
       <div className="kl-page">
-        <div className="kl-head"><div><h1>🗝️ Kľúče · história</h1><p className="hint">Každý pohyb: kto, kedy, ktorý byt a pozícia v tom čase. Posledných 400 záznamov.</p></div><KeysNav active="history" isAdmin={isAdmin} /></div>
+        <section className="li-page-intro kl-intro"><div><span className="li-eyebrow">Kľúče</span><h1>História pohybov</h1><p>Každý pohyb: kto, kedy, ktorý byt a pozícia v tom čase. Posledných 400 záznamov.</p></div><KeysNav active="history" isAdmin={isAdmin} /></section>
         <section className="card">
           <form className="row" action="/kluce/historia"><input type="search" name="q" defaultValue={q} placeholder="Byt, osoba alebo číslo pozície" aria-label="Hľadať v histórii" /><button className="btn line" type="submit">Hľadať</button>{q && <a className="btn line" href="/kluce/historia">Zrušiť filter</a>}</form>
           <div className="kl-table hist" role="table">

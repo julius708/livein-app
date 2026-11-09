@@ -19,7 +19,7 @@ export default async function KeysKioskPage() {
   const days = await keysDays(units, [today, ymdBa(1)])
   return (
     <main className="kl-kiosk">
-      <header className="kl-kiosk-head"><a href="/" aria-label="LIVE-IN domov"><img src="/logo.png" alt="LIVE-IN" /></a></header>
+      <header className="kl-kiosk-head"><a href="/" aria-label="LIVE-IN domov"><img src="/logo.png" alt="LIVE-IN" /></a><span className="kl-kiosk-title">Kľúče</span></header>
       <KeysBoard units={units} rows={st.rows} persons={persons} days={days} today={today} overdue={overdue(units, st.overdueHours)} overdueHours={st.overdueHours} kiosk />
     </main>
   )
