@@ -99,8 +99,8 @@ export default function KeysBoard({ units = [], rows = [], persons = [], days = 
           )}
         </section>
 
-        <aside className="card kl-rail">
-          <input id="kl-q" className="kl-search" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Hľadať byt alebo číslo pozície…" aria-label="Hľadať byt alebo pozíciu" autoComplete="off" />
+        <div className="card kl-rail" role="complementary">
+          <input id="kl-q" className="kl-search" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Hľadať byt alebo pozíciu" aria-label="Hľadať byt alebo pozíciu" autoComplete="off" />
 
           {!mode && (
             <>
@@ -144,7 +144,7 @@ export default function KeysBoard({ units = [], rows = [], persons = [], days = 
               <button type="button" className="kl-ghost" onClick={reset}>Zrušiť</button>
             </div>
           )}
-        </aside>
+        </div>
       </div>
     </div>
   )
