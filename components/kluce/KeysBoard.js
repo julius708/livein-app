@@ -42,15 +42,17 @@ export default function KeysBoard({ units = [], rows = [], persons = [], days = 
   const list = days[day] || { date: today, items: [] }
   const filtered = useMemo(() => (q ? units.filter((u) => u.active !== false && matches(u, q)) : null), [units, q])
   const outNow = units.filter((u) => (u.out_sets || 0) > 0)
+  const todayList = days[0] || { date: today, items: [] }
+  const todayIds = useMemo(() => new Set(todayList.items.filter((i) => i.unit && tileState(i.unit) === 'ok').map((i) => i.listing_id)), [todayList])
+  const todayLeft = todayList.items.filter((i) => i.unit && tileState(i.unit) !== 'out' && tileState(i.unit) !== 'none')
 
   const isPicked = (id) => picked.some((p) => p.listing_id === id)
   const toggle = (u, extra = {}) => {
     if (!mode) setMode('take')
     setPicked((p) => (p.some((x) => x.listing_id === u.listing_id) ? p.filter((x) => x.listing_id !== u.listing_id) : [...p, { listing_id: u.listing_id, sets: 1, ...extra }]))
   }
-  const pickAllDay = () => {
-    const can = list.items.filter((i) => i.unit && tileState(i.unit) !== 'out' && tileState(i.unit) !== 'none')
-    setMode('take'); setPicked(can.map((i) => ({ listing_id: i.listing_id, sets: 1, package_id: i.package_id, package_date: i.date })))
+  const pickToday = () => {
+    setMode('take'); setPicked(todayLeft.map((i) => ({ listing_id: i.listing_id, sets: 1, package_id: i.package_id, package_date: i.date })))
   }
   const reset = () => { setMode(null); setPicked([]); setPerson(null); setQ('') }
   const confirm = () => {
@@ -70,8 +72,9 @@ export default function KeysBoard({ units = [], rows = [], persons = [], days = 
   const Tile = ({ n, u, picked: pk }) => {
     if (!u) return <div className="kl-hook empty" aria-label={`Pozícia ${n}, voľná`}><span className="n">{n}</span><span className="a">voľné</span></div>
     const st = tileState(u)
+    const td = todayIds.has(u.listing_id)
     return (
-      <button type="button" className={`kl-hook s-${st}${pk ? ' picked' : ''}`} onClick={() => toggle(u)} aria-pressed={pk} aria-label={`${n != null ? 'Pozícia ' + n + ', ' : ''}${u.listing_name}, ${STATE_LABEL[st]}`} title={u.holders && u.holders.length ? u.holders.map((h) => `${h.name} (${h.sets}) ${fmtT(h.at)}`).join('\n') : STATE_LABEL[st]}>
+      <button type="button" className={`kl-hook s-${st}${td ? ' s-today' : ''}${pk ? ' picked' : ''}`} onClick={() => toggle(u)} aria-pressed={pk} aria-label={`${n != null ? 'Pozícia ' + n + ', ' : ''}${u.listing_name}, ${td ? 'dnes zobrať' : STATE_LABEL[st]}`} title={u.holders && u.holders.length ? u.holders.map((h) => `${h.name} (${h.sets}) ${fmtT(h.at)}`).join('\n') : STATE_LABEL[st]}>
         {u.sets > 1 && <span className="c">{u.sets - (u.out_sets || 0)}/{u.sets}</span>}
         <span className="n">{n != null ? n : '–'}</span><span className="a">{u.listing_name}</span>
         {st !== 'ok' && u.holders && u.holders[0] && <span className="h">{u.holders.map((h) => h.name.split(' ')[0]).join(', ')}</span>}
@@ -86,7 +89,7 @@ export default function KeysBoard({ units = [], rows = [], persons = [], days = 
 
       <div className="kl-grid">
         <section className="card kl-board" aria-label="Tabuľa kľúčov">
-          <div className="kl-legend"><span><i className="s-ok" />na háčiku</span><span><i className="s-part" />časť vonku</span><span><i className="s-out" />vonku</span><span><i className="s-empty" />voľná pozícia</span><span><i className="s-picked" />vybrané</span></div>
+          <div className="kl-legend"><span><i className="s-today" />dnes zobrať</span><span><i className="s-ok" />na háčiku</span><span><i className="s-part" />časť vonku</span><span><i className="s-out" />vonku</span><span><i className="s-empty" />voľná pozícia</span><span><i className="s-picked" />vybrané</span></div>
           {filtered ? (
             <div className="kl-row"><h3>Výsledky hľadania <b>{filtered.length}</b></h3><div className="kl-hooks">{filtered.map((u) => <Tile key={u.listing_id} n={u.hook_no} u={u} picked={isPicked(u.listing_id)} />)}</div>{!filtered.length && <p className="kl-hint">Nič sa nenašlo. Skús časť názvu ulice alebo číslo pozície.</p>}</div>
           ) : (
@@ -106,14 +109,15 @@ export default function KeysBoard({ units = [], rows = [], persons = [], days = 
             <>
               <button type="button" className="kl-big take" onClick={() => setMode('take')}>Zobrať kľúče <small>osoba → byty → potvrdiť</small></button>
               <button type="button" className="kl-big back" onClick={() => setMode('return')}>Vrátiť kľúče <small>{outNow.length ? `vonku je ${outNow.length} ${outNow.length === 1 ? 'byt' : outNow.length < 5 ? 'byty' : 'bytov'}` : 'všetko je na háčikoch'}</small></button>
-              <div className="kl-today">
+              <button type="button" className="kl-big today" onClick={pickToday} disabled={!todayLeft.length}>Zobrať kľúče na dnes <small>{todayLeft.length ? `${todayLeft.length} ${todayLeft.length === 1 ? 'byt' : todayLeft.length < 5 ? 'byty' : 'bytov'} z tašiek Práčovne` : todayList.items.length ? 'všetky dnešné sú už vonku' : 'dnes nič z Práčovne'}</small></button>
+              <details className="kl-today">
+                <summary>Byty podľa tašiek <b>{days.map((d) => d.items.length).join(' · ')}</b><span className="kl-chev" aria-hidden="true" /></summary>
                 <div className="kl-days">{days.map((d, i) => <button key={d.date} type="button" className={i === day ? 'on' : ''} onClick={() => setDay(i)}>{dayName(d.date, today)} <b>{d.items.length}</b></button>)}</div>
-                <p className="kl-hint">Kľúče podľa tašiek z Práčovne. Zoznam sa mení, keď Práčovňa prepočíta balenie.</p>
                 {list.items.length ? (
                   <ul className="kl-list">{list.items.map((i) => <li key={i.package_id} className={`s-${i.key}`}><button type="button" onClick={() => i.unit && toggle(i.unit, { package_id: i.package_id, package_date: i.date })} disabled={!i.unit}><span className="pos">{i.hook_no != null ? i.hook_no : '–'}</span><span className="nm">{i.listing_name}{i.same_day ? <em> · v ten istý deň</em> : null}</span><span className={`st s-${i.key}`}>{STATE_LABEL[i.key]}</span></button></li>)}</ul>
                 ) : <p className="kl-hint">Na tento deň Práčovňa nemá žiadne tašky.</p>}
-                {!!list.items.length && <button type="button" className="kl-ghost" onClick={pickAllDay}>Prebrať všetky z tohto dňa naraz</button>}
-              </div>
+                <p className="kl-hint">Ťuknutím na byt ho pridáš do výberu, keď chceš zobrať len niektoré.</p>
+              </details>
               {!kiosk && !!outNow.length && <div className="kl-out"><h4>Práve vonku</h4><ul>{outNow.slice(0, 12).map((u) => <li key={u.listing_id}><span className="pos">{u.hook_no != null ? u.hook_no : '–'}</span><span className="nm">{u.listing_name}</span><span className="who">{(u.holders || []).map((h) => `${h.name.split(' ')[0]} ${fmtT(h.at)}`).join(', ')}</span></li>)}</ul>{outNow.length > 12 && <p className="kl-hint">a ďalších {outNow.length - 12}</p>}</div>}
             </>
           )}
