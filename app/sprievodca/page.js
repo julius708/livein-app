@@ -4,6 +4,7 @@ import Shell from '@/components/Shell'
 import NoAccess from '@/components/NoAccess'
 import UnitsList from '@/components/guide/admin/UnitsList'
 import { canGuide } from '@/lib/guide/core'
+import { completeness } from '@/lib/guide/content'
 import { settings, baseUrl } from '@/lib/guide/server'
 import './sprievodca.css'
 export const dynamic = 'force-dynamic'
@@ -14,18 +15,22 @@ export default async function GuideAdminPage() {
   if (!user) redirect('/login')
   if (blocked) return <NoAccess email={user.email} />
   if (!canGuide(me)) return <Shell me={me} user={user} isAdmin={isAdmin} active="sprievodca" hideFooter><section className="card"><h2>Sprievodca bytom je pre prevádzku a zákaznícky servis</h2></section></Shell>
-  const [{ data: units }, { data: listings }, { data: issues }, st, base] = await Promise.all([
-    s.from('guide_units').select('listing_id,public_code,name,address,city,status,review_reason').order('name'),
+  const [{ data: units }, { data: listings }, { data: issues }, { data: cards }, { data: wifi }, st, base] = await Promise.all([
+    s.from('guide_units').select('listing_id,public_code,name,address,city,status,review_reason,gbp_url').order('name'),
     s.from('listings').select('guesty_id,name,title,city').eq('active', true).order('name').limit(2000),
     s.from('guide_label_issues').select('id,listing_id,template_version,issued_at').order('issued_at', { ascending: false }),
+    s.from('guide_cards').select('listing_id,completeness,approved,guesty_imported_at,address,arrival,checkout,parking,help,sections'),
+    s.from('guide_wifi').select('listing_id'),
     settings(s), baseUrl(s),
   ])
   const byL = {}; for (const i of issues || []) if (!byL[i.listing_id]) byL[i.listing_id] = i
+  const byC = {}; for (const c of cards || []) byC[c.listing_id] = c
+  const w = new Set((wifi || []).map((x) => x.listing_id))
   return (
     <Shell me={me} user={user} isAdmin={isAdmin} active="sprievodca" hideFooter>
       <div className="sp">
         <div className="sp-head"><div><h1>📱 Sprievodca bytom a QR nálepky</h1><p className="hint">Trvalý kód bytu → sprievodca (Wi-Fi po overení, adresa, pravidlá, tipy) a spätná väzba. Štítok 150 × 105 mm sa vydáva automaticky, keď sú všetky podmienky splnené.</p></div><nav className="row"><a className="btn line" href="/sprievodca/obsah">Pravidlá, tipy, podujatia</a><a className="btn line" href="/sprievodca/dotaznik">Dotazník hostí</a></nav></div>
-        <UnitsList units={(units || []).map((u) => ({ ...u, issue: byL[u.listing_id] || null }))} listings={listings || []} settings={st} isAdmin={isAdmin} baseUrl={base} />
+        <UnitsList units={(units || []).map((u) => { const c = byC[u.listing_id] || {}; const cp = completeness({ unit: u, card: c, wifi: w.has(u.listing_id) }); return { ...u, issue: byL[u.listing_id] || null, score: cp.score, missing: cp.missing, approved: !!c.approved, imported: !!c.guesty_imported_at } })} listings={listings || []} settings={st} isAdmin={isAdmin} baseUrl={base} />
       </div>
     </Shell>
   )

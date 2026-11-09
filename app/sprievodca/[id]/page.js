@@ -4,6 +4,7 @@ import Shell from '@/components/Shell'
 import NoAccess from '@/components/NoAccess'
 import UnitEdit from '@/components/guide/admin/UnitEdit'
 import { canGuide } from '@/lib/guide/core'
+import { completeness } from '@/lib/guide/content'
 import { settings, baseUrl } from '@/lib/guide/server'
 import '../sprievodca.css'
 export const dynamic = 'force-dynamic'
@@ -27,10 +28,16 @@ export default async function UnitPage({ params }) {
   ])
   if (!unit) notFound()
   const { data: log } = await s.from('guide_wifi_log').select('outcome').eq('public_code', unit.public_code).gte('at', since)
+  // ďalší byt na doplnenie (podľa názvu), aby tím prechádzal zoznam bez vracania sa
+  const { data: others } = await s.from('guide_cards').select('listing_id,completeness,approved').lt('completeness', 100).neq('listing_id', id).order('listing_id').limit(400)
+  const { data: names } = await s.from('guide_units').select('listing_id,name').order('name')
+  const incompl = new Set((others || []).filter((c) => !c.approved).map((c) => c.listing_id))
+  const sorted = (names || []).filter((n) => incompl.has(n.listing_id)); const idx = sorted.findIndex((n) => n.name > (unit.name || '')); const next = sorted[idx >= 0 ? idx : 0] || null
+  const cp = completeness({ unit, card: card || {}, wifi: !!wifi })
   const stats = {}; for (const l of log || []) stats[l.outcome] = (stats[l.outcome] || 0) + 1
   return (
     <Shell me={me} user={user} isAdmin={isAdmin} active="sprievodca" hideFooter>
-      <UnitEdit unit={unit} card={card || {}} wifi={wifi} issues={issues || []} feedback={feedback || []} stats={stats} baseUrl={base} settings={st} />
+      <UnitEdit unit={unit} card={card || {}} wifi={wifi} issues={issues || []} feedback={feedback || []} stats={stats} baseUrl={base} settings={st} score={cp.score} missing={cp.missing} next={next} />
     </Shell>
   )
 }

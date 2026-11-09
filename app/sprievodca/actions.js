@@ -3,6 +3,8 @@ import { revalidatePath } from 'next/cache'
 import { getViewer } from '@/lib/auth'
 import { canGuide, matchCards, isCode } from '@/lib/guide/core'
 import { ensureUnit, issueLabel, syncUnits } from '@/lib/guide/server'
+import { importListing, importBatch, recomputeCompleteness } from '@/lib/guide/guesty-import'
+import { sanitizeSections, completeness } from '@/lib/guide/content'
 
 async function viewer() {
   const v = await getViewer()
@@ -31,12 +33,21 @@ export async function saveCardAction(prev, fd) {
   if (unit.status === undefined) delete unit.status
   const { error: e1 } = await v.s.from('guide_units').update(unit).eq('listing_id', id)
   if (e1) return { ok: false, error: e1.message }
-  const card = { listing_id: id, address: unit.address, address_note: j2(fd, 'address_note', 300), map_url: str(fd, 'map_url', 400) || null, lat: fd.get('lat') ? Number(fd.get('lat')) : null, lng: fd.get('lng') ? Number(fd.get('lng')) : null, parking: j2(fd, 'parking'), rules_override: j2(fd, 'rules_override'), checkout_time: str(fd, 'checkout_time', 20) || null, checkout: j2(fd, 'checkout'), arrival: j2(fd, 'arrival'), help: j2(fd, 'help', 500), approved: fd.get('approved') === 'on', approved_by: fd.get('approved') === 'on' ? who(v) : null, approved_at: fd.get('approved') === 'on' ? new Date().toISOString() : null, updated_by: who(v), updated_at: new Date().toISOString() }
+  const card = { listing_id: id, address: unit.address, checkin_time: str(fd, 'checkin_time', 10) || null, address_note: j2(fd, 'address_note', 300), map_url: str(fd, 'map_url', 400) || null, lat: fd.get('lat') ? Number(fd.get('lat')) : null, lng: fd.get('lng') ? Number(fd.get('lng')) : null, parking: j2(fd, 'parking'), rules_override: j2(fd, 'rules_override'), checkout_time: str(fd, 'checkout_time', 20) || null, checkout: j2(fd, 'checkout'), arrival: j2(fd, 'arrival'), help: j2(fd, 'help', 500), approved: fd.get('approved') === 'on', approved_by: fd.get('approved') === 'on' ? who(v) : null, approved_at: fd.get('approved') === 'on' ? new Date().toISOString() : null, updated_by: who(v), updated_at: new Date().toISOString() }
   const forbidden = /\b(k[oó]d|code|pin|heslo|password)\b\s*[:=]?\s*[A-Za-z0-9#*]{3,}/i
   for (const k of ['arrival', 'address_note', 'parking', 'checkout', 'help']) for (const l of ['sk', 'en']) if (forbidden.test(card[k][l])) return { ok: false, error: `Pole „${k}“ (${l}) vyzerá, že obsahuje kód alebo heslo. Vstupné kódy do sprievodcu nepatria.` }
+  // rozklikávacie sekcie: položky z formulára sec_<i>_key / sec_<i>_<j>_title_sk … (max 12 × 20)
+  const sections = []
+  for (let i = 0; i < 12; i++) { const key = str(fd, `sec_${i}_key`, 30); if (!key) continue; const items = []; for (let j = 0; j < 20; j++) { if (!fd.has(`sec_${i}_${j}_title_sk`) && !fd.has(`sec_${i}_${j}_title_en`)) continue; items.push({ title: j2(fd, `sec_${i}_${j}_title`, 120), body: j2(fd, `sec_${i}_${j}_body`, 2000) }) } sections.push({ key, icon: str(fd, `sec_${i}_icon`, 4), title: j2(fd, `sec_${i}_title`, 80), items }) }
+  card.sections = sanitizeSections(sections)
+  if (JSON.stringify(card.sections).match(/\b(k[oó]d|code|pin|heslo|password)\b\s*[:=]?\s*[A-Za-z0-9#*]{3,}/i)) return { ok: false, error: 'Niektorá sekcia vyzerá, že obsahuje kód alebo heslo. Vstupné kódy do sprievodcu nepatria.' }
+  const { data: w } = await v.s.from('guide_wifi').select('listing_id').eq('listing_id', id).maybeSingle()
+  const { data: u2 } = await v.s.from('guide_units').select('address,gbp_url').eq('listing_id', id).maybeSingle()
+  card.completeness = completeness({ unit: u2 || {}, card, wifi: !!w }).score
+  card.updated_by = who(v); card.updated_at = new Date().toISOString()
   const { error } = await v.s.from('guide_cards').upsert(card)
   if (error) return { ok: false, error: error.message }
-  revalidatePath(`/sprievodca/${id}`); return { ok: true, n: Date.now() }
+  revalidatePath(`/sprievodca/${id}`); revalidatePath('/sprievodca'); return { ok: true, n: Date.now(), completeness: card.completeness }
 }
 /** Wi-Fi do chránenej karty (zadáva sa raz, pri routeri bez integrácie). Nezobrazuje sa späť. */
 export async function saveWifiAction(prev, fd) {
@@ -77,7 +88,8 @@ export async function saveSettingsAction(prev, fd) {
   if (!v.isAdmin) return { ok: false, error: 'Nastavenia mení len admin.' }
   const general = { support_phone: str(fd, 'support_phone', 40), support_phone_verified: fd.get('support_phone_verified') === 'on', template_version: Number(fd.get('template_version')) || 1, label_variant: fd.get('label_variant') === 'inverted' ? 'inverted' : 'standard', notify_channel: 'app', base_url: str(fd, 'base_url', 120) || 'https://app.live-in.international' }
   const units = str(fd, 'pilot_units', 2000).split(/[\s,;]+/).filter(isListing)
-  const { error } = await v.s.from('guide_settings').upsert([{ key: 'general', value: general, updated_by: who(v), updated_at: new Date().toISOString() }, { key: 'pilot', value: { units, note: 'Pilotné jednotky (Guesty listing ID).' }, updated_by: who(v), updated_at: new Date().toISOString() }])
+  const all = fd.get('pilot_all') === 'on'
+  const { error } = await v.s.from('guide_settings').upsert([{ key: 'general', value: general, updated_by: who(v), updated_at: new Date().toISOString() }, { key: 'pilot', value: { units, all, note: all ? 'Všetky byty (rozhodnutie Július 9. 11. 2026).' : 'Pilotné jednotky (Guesty listing ID).' }, updated_by: who(v), updated_at: new Date().toISOString() }])
   if (error) return { ok: false, error: error.message }
   revalidatePath('/sprievodca'); return { ok: true, n: Date.now() }
 }
@@ -116,4 +128,27 @@ export async function saveSurveySettingsAction(prev, fd) {
   const { error } = await v.s.from('guide_settings').upsert({ key: 'survey', value, updated_by: who(v), updated_at: new Date().toISOString() })
   if (error) return { ok: false, error: error.message }
   revalidatePath('/sprievodca/dotaznik'); return { ok: true, n: Date.now() }
+}
+
+/** Import návrhu karty z Guesty pre jeden byt (force = prepíše neschválený obsah). Výsledok je návrh na kontrolu. */
+export async function importGuestyAction(listingId, force = false) {
+  const v = await viewer(); if (v.error) return { ok: false, error: v.error }
+  if (!isListing(listingId)) return { ok: false, error: 'Neplatná jednotka.' }
+  try { const r = await importListing(v.s, listingId, { force: !!force, who: who(v) }); revalidatePath(`/sprievodca/${listingId}`); revalidatePath('/sprievodca'); return r } catch (e) { return { ok: false, error: String(e && e.message).slice(0, 200) } }
+}
+/** Dávkový import (3 byty na volanie, opakovať kým remaining > 0). */
+export async function importGuestyBatchAction(force = false) {
+  const v = await viewer(); if (v.error) return { ok: false, error: v.error }
+  try { const r = await importBatch(v.s, { limit: 3, force: !!force }); revalidatePath('/sprievodca'); return { ok: true, ...r } } catch (e) { return { ok: false, error: String(e && e.message).slice(0, 200) } }
+}
+/** Prepočet úplnosti všetkých kariet. */
+export async function recomputeAction() {
+  const v = await viewer(); if (v.error) return { ok: false, error: v.error }
+  try { const r = await recomputeCompleteness(v.s); revalidatePath('/sprievodca'); return { ok: true, ...r } } catch (e) { return { ok: false, error: e.message } }
+}
+/** Vydanie štítkov pre všetky pripravené jednotky (schválený obsah). */
+export async function issueAllAction() {
+  const v = await viewer(); if (v.error) return { ok: false, error: v.error }
+  if (!v.isAdmin) return { ok: false, error: 'Hromadné vydanie spúšťa admin.' }
+  try { const r = await syncUnits({ issue: true, who: who(v) }); revalidatePath('/sprievodca'); return { ok: true, ...r } } catch (e) { return { ok: false, error: e.message } }
 }
