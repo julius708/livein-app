@@ -36,3 +36,9 @@ test('kontrola kódov nereaguje na bežné slová za „kód“ (zástupný text
   assert.ok(!containsCode('open with a code [you will receive the code in a message before arrival]'))
   assert.ok(containsCode('Code: 2105#')); assert.ok(containsCode('kód je 4433')); assert.ok(containsCode('PIN 1234'))
 })
+import { guideDoc } from '../lib/guru-kb.js'
+test('KB dokument zo Sprievodcu: adresa, časy, sekcie, Wi-Fi, odkaz; bez prázdnych riadkov', () => {
+  const d = guideDoc({ listing_id: 'abc', name: 'Klariská, Historical', public_code: 'ABCDEFGH', city: 'Bratislava', status: 'review' }, { address: 'Klariská 8', checkin_time: '16:00', arrival: { sk: '1. Choďte…' }, sections: [{ title: { sk: 'Pravidlá' }, items: [{ title: { sk: 'Fajčenie' }, body: { sk: 'Zákaz' } }] }], completeness: 80 }, { ssid: 'LIVEIN', password: 'x1' })
+  assert.equal(d.path, 'guide/abc'); assert.match(d.content, /Klariská 8/); assert.match(d.content, /16:00/); assert.match(d.content, /Fajčenie – Zákaz/); assert.match(d.content, /sieť LIVEIN, heslo x1/); assert.match(d.content, /\/g\/ABCDEFGH/)
+  assert.ok(!/Odchod do/.test(d.content))
+})

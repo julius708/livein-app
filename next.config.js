@@ -2,6 +2,8 @@
 module.exports = {
   // Koncové lomky nechávame na moduloch (proxované appky si ich riešia samy)
   skipTrailingSlashRedirect: true,
+  // Dokumentácia appiek ide do znalostnej bázy Guru (cron guru-kb číta docs/**.md zo súborového systému)
+  outputFileTracingIncludes: { '/api/cron/guru-kb': ['./docs/**/*.md'] },
   // Zjednotenie appiek: moduly bežia pod jednou doménou (app.live-in.international/<modul>)
   // a hlavná appka ich proxuje na ich vlastné nasadenia. Cesta /cs = Customer Service (basePath '/cs'), /ring = Vstupy hostí (basePath '/ring'), /pracovna = Práčovňa (basePath '/pracovna'), /kb = Znalostná báza (basePath '/kb'), /zaradenie = Zaradenie bytov (basePath '/zaradenie').
   async rewrites() {

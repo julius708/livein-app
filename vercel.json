@@ -1,10 +1,6 @@
 {
   "crons": [
     {
-      "path": "/api/cron/asana-kb",
-      "schedule": "35 4 * * *"
-    },
-    {
       "path": "/api/cron/crm-sync",
       "schedule": "*/10 * * * *"
     },
@@ -19,6 +15,10 @@
     {
       "path": "/api/cron/guide-import?limit=2",
       "schedule": "*/2 * * * *"
+    },
+    {
+      "path": "/api/cron/guru-kb",
+      "schedule": "25 */6 * * *"
     }
   ],
   "regions": [
