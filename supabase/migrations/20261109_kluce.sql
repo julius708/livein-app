@@ -88,3 +88,6 @@ do $$ begin
     end if;
   end if;
 end $$;
+
+-- Ručné položky na stene (kľúče bez Guesty listingu, napr. parkovacie miesto, nespárované názvy z Práčovne): sync z registra ich nevyraďuje.
+alter table public.key_units add column if not exists manual boolean not null default false;

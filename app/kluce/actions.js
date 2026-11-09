@@ -11,7 +11,7 @@ async function viewer() {
   return v
 }
 const who = (v) => v.user.email.toLowerCase()
-const isListing = (x) => /^[0-9a-f]{24}$/i.test(String(x || ''))
+const isListing = (x) => /^[0-9a-f]{24}$/i.test(String(x || '')) || /^manual-[a-z0-9-]{1,60}$/.test(String(x || ''))
 const person = (p) => { const name = String((p && p.name) || '').trim().slice(0, 80); return name ? { name, email: p.email ? String(p.email).toLowerCase().slice(0, 120) : null } : null }
 const src = (p) => (p && p.kiosk ? 'kiosk' : 'app')
 const ymd = (x) => (/^\d{4}-\d{2}-\d{2}$/.test(String(x || '')) ? x : null)

@@ -60,7 +60,7 @@ function Row({ u, save, pending, isAdmin, onReset }) {
   return (
     <div className={`kl-tr${u.active === false ? ' off' : ''}`} role="row">
       <span><input type="number" min={1} max={999} value={hook} onChange={(e) => setHook(e.target.value)} aria-label={`Pozícia ${u.listing_name}`} placeholder="–" /></span>
-      <span className="nm">{u.listing_name}{u.active === false && <em> · vyradený</em>}</span>
+      <span className="nm">{u.listing_name}{u.manual && <em> · ručná položka</em>}{u.active === false && <em> · vyradený</em>}</span>
       <span><input type="number" min={0} max={20} value={sets} onChange={(e) => setSets(e.target.value)} aria-label={`Sady ${u.listing_name}`} /></span>
       <span><i className={`kl-dot ${st}`} />{st === 'ok' ? 'na háčiku' : st === 'none' ? 'bez sád' : `${u.out_sets}/${u.sets} vonku${u.holders && u.holders.length ? ': ' + u.holders.map((h) => h.name).join(', ') : ''}`}</span>
       <span><input type="text" maxLength={300} value={note} onChange={(e) => setNote(e.target.value)} placeholder="napr. 2. sada u majiteľa" aria-label={`Poznámka ${u.listing_name}`} /></span>
