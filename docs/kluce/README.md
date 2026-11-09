@@ -8,6 +8,7 @@ Modul `/kluce` v hlavnej appke. Stena s kľúčmi v miestnosti je v appke ako ta
 - **Zobrať kľúče:** osoba (ponuka mien, bez PIN-u) → byty (ťuknutím na tabuľu, cez hľadanie alebo zo zoznamu podľa tašiek) → Potvrdiť. Dá sa vybrať viac bytov naraz.
 - **Vrátiť kľúče:** osoba → appka ukáže, čo má vonku → Potvrdiť. Keď niekto vracia kľúče, ktoré podľa evidencie nezobral, zapíše sa to s poznámkou.
 - **Podľa tašiek:** zoznam na dnes a zajtra z balenia v Práčovni (tabuľka `packages`, rovnaké poradie ako nástenka Práčovne). „Prebrať všetky z tohto dňa naraz“ vyberie všetky, ktoré sú na háčiku.
+- Na tabuli sú len **bratislavské byty** (stena je v Bratislave); Košice, Trnava a ostatné sa z registra nepridávajú. Byt mimo Bratislavy, ktorý má kľúč na stene, sa pridá ručne v Nastaveniach.
 - **Byty bez pozície** sa zobrazujú v samostatnom bloku v abecednom poradí (ako Práčovňa), kým im admin nepridelí číslo.
 - **Upozornenie:** kľúče vonku dlhšie než nastavený limit (predvolene 24 h) sa ukážu žltým pásom hore.
 - **Kiosk = `/kluce`**: bez hlavičky appky a Guru, hore len malé logo (späť na domov), vľavo dlaždice, vpravo úzka lišta. Obnova každých 45 s, obrazovka nezhasína, rozrobený výber sa po 2 minútach zruší. iPad je prihlásený raz na zdieľaný účet s prístupom ku kľúčom; `/kluce/kiosk` presmeruje na `/kluce`.
