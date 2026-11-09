@@ -43,7 +43,7 @@ export default function GuruWidget({ name = '', app = 'home', hub = '' }) {
   const [busy, setBusy] = useState(false)
   const [muted, setMutedState] = useState(true)   // hlas je predvolene vypnutý, voľba sa pamätá
   const setMuted = (m) => { setMutedState(m); store('guru-muted', m ? '1' : '0') }
-  const [mode, setModeState] = useState('mini')   // 'full' postavička · 'mini' malé koliesko · 'hidden' nič (zapne sa na stránke Guru)
+  const [mode, setModeState] = useState('full')   // 'full' postavička (predvolené) · 'mini' gulička s tvárou · 'hidden' nič (zapne sa na stránke Guru)
   const setMode = (m) => { setModeState(m); store('guru-mode', m) }
   const [hello] = useState(false)
   const [fact, setFact] = useState('')
@@ -361,14 +361,14 @@ export default function GuruWidget({ name = '', app = 'home', hub = '' }) {
   return (
     <>
       {!open && mode === 'mini' && (
-        <button type="button" className="gw-mini" style={{ right: Math.max(12, pos.r), bottom: Math.max(12, pos.b) }} onClick={openWin} title="Opýtať sa LIVE-IN Guru" aria-label="Otvoriť LIVE-IN Guru">
+        <button type="button" className="gw-mini" style={{ right: Math.max(12, pos.r), bottom: Math.max(12, pos.b) }} onClick={() => setMode('full')} title="LIVE-IN Guru – klikni a zväčši" aria-label="Zväčšiť LIVE-IN Guru">
           {imgOk ? <img src={`${API}/guru-v3.png`} alt="" draggable="false" /> : <span aria-hidden="true">🧠</span>}
         </button>
       )}
       {!open && mode === 'full' && (
         <div className="gw-host" ref={hostRef} style={{ right: pos.r, bottom: pos.b }}>
           <div className="gw-col">
-            <button type="button" className="gw-minbtn" aria-label="Zmenšiť Guru" title="Zmenšiť na malé koliesko" onClick={(e) => { e.stopPropagation(); setMode('mini') }}>–</button>
+            <button type="button" className="gw-minbtn" aria-label="Zmenšiť Guru do guličky" title="Zmenšiť do guličky" onPointerDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); setMode('mini') }}>–</button>
             <button type="button" className={'gw-hello' + (fact ? ' fact show' : hello ? ' show' : '')} onClick={() => { if (fact) { const f = fact; setFact(''); speaking.current = false; sim.current = false; openWin(); setTimeout(() => addGuru(`Ahoj${first ? ', ' + first : ''}! ${GREETING}`), 50) } else openWin() }}>{fact ? <><b>Ahoj{first ? `, ${first}` : ''} 👋</b>{HELLO}</> : HELLO}</button>
             {figure}
             <button type="button" className="gw-pill" onClick={openWin}>Opýtať sa LIVE-IN Guru</button>
@@ -382,7 +382,7 @@ export default function GuruWidget({ name = '', app = 'home', hub = '' }) {
             <div className="gw-ht"><b>LIVE-IN Guru</b><span>Interný asistent tímu{first ? ` · ${first}` : ''}</span></div>
             <div className="gw-hb">
               <button type="button" className="gw-ib" aria-label={muted ? 'Zapnúť hlas' : 'Vypnúť hlas'} onClick={() => { const m = !muted; setMuted(m); if (m) stopSpeech(true) }}>{muted ? ICON_OFF : ICON_ON}</button>
-              <button type="button" className="gw-ib" aria-label={mode === 'full' ? 'Zmenšiť na koliesko' : 'Zobraziť postavičku'} title={mode === 'full' ? 'Zmenšiť na malé koliesko' : 'Zobraziť postavičku'} onClick={() => setMode(mode === 'full' ? 'mini' : 'full')}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M5 12h14" />{mode !== 'full' && <path d="M12 5v14" />}</svg></button>
+              <button type="button" className="gw-ib" aria-label={mode === 'full' ? 'Zmenšiť do guličky' : 'Zobraziť postavičku'} title={mode === 'full' ? 'Po zavretí ostane len gulička s tvárou' : 'Po zavretí sa ukáže postavička'} onClick={() => setMode(mode === 'full' ? 'mini' : 'full')}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M5 12h14" />{mode !== 'full' && <path d="M12 5v14" />}</svg></button>
               <button type="button" className="gw-ib" aria-label="Skryť Guru zo stránok" title="Skryť zo stránok (zapneš na stránke Guru)" onClick={() => { closeWin(); setMode('hidden') }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M3 3l18 18M10.6 10.6a2 2 0 0 0 2.8 2.8M9.9 5.1A10.4 10.4 0 0 1 12 5c5 0 9 4 10 7-.4 1.2-1.2 2.5-2.3 3.6M6.3 6.3C4.2 7.7 2.7 9.6 2 12c1 3 5 7 10 7 1.5 0 2.9-.3 4.2-.9" /></svg></button>
               <button type="button" className="gw-ib" aria-label="Zbaliť" onClick={closeWin}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M6 9l6 6 6-6" /></svg></button>
             </div>
