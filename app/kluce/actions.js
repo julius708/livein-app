@@ -6,8 +6,8 @@ import { UNIT_COLS, syncKeyUnits } from '@/lib/keys-server'
 
 async function viewer() {
   const v = await getViewer()
-  if (!v.user || v.blocked) return { error: 'Najprv sa prihlás.' }
-  if (!canKeys(v.me)) return { error: 'Kľúče sú pre prevádzku, upratovanie a zákaznícky servis.' }
+  if (!v.user || v.blocked) { console.error('kluce action: no session'); return { error: 'Prihlásenie vypršalo. Obnov stránku a prihlás sa.' } }
+  if (!canKeys(v.me)) { console.error('kluce action: no role'); return { error: 'Kľúče sú pre prevádzku, upratovanie a zákaznícky servis.' } }
   return v
 }
 const who = (v) => v.user.email.toLowerCase()
@@ -44,6 +44,7 @@ export async function takeKeysAction(payload) {
   for (const i of items) results.push(await move(v, { listing_id: i.listing_id, action: 'take', sets: Math.min(20, Math.max(1, Number(i.sets) || 1)), p, package_id: /^[0-9a-f-]{36}$/i.test(String(i.package_id || '')) ? i.package_id : null, package_date: ymd(i.package_date), source: src(payload) }))
   refresh()
   const failed = results.filter((r) => !r.ok)
+  if (failed.length) console.error('kluce take failed', failed.map((r) => r.error))
   return { ok: failed.length < results.length, done: results.filter((r) => r.ok).length, failed: failed.map((r) => r.error) }
 }
 
@@ -57,6 +58,7 @@ export async function returnKeysAction(payload) {
   for (const i of items) results.push(await move(v, { listing_id: i.listing_id, action: 'return', sets: Math.min(20, Math.max(1, Number(i.sets) || 1)), p, source: src(payload) }))
   refresh()
   const failed = results.filter((r) => !r.ok)
+  if (failed.length) console.error('kluce return failed', failed.map((r) => r.error))
   return { ok: failed.length < results.length, done: results.filter((r) => r.ok).length, failed: failed.map((r) => r.error), mismatch: results.some((r) => r.ok && r.mismatch) }
 }
 
