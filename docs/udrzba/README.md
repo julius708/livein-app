@@ -29,10 +29,10 @@ Pilot v hlavnej appke (`/udrzba`): hlásenie → triáž → dopyty dodávateľo
 | Premenná | Načo | Stav |
 |---|---|---|
 | `RESEND_API_KEY` | odosielanie e-mailov | ✅ nastavené v hube |
-| `MAINT_FROM`, `MAINT_REPLY_TO` | odosielateľ (`LIVE-IN Údržba <udrzba@live-in.international>`), reply-to | voliteľné (predvolené) |
-| `RESEND_WEBHOOK_SECRET` | podpis Svix pre `/api/maint/email-inbound` (email.received, delivered, bounced) | ⏳ čaká: webhook v Resende + MX pre prijímanie |
-| `MAINT_DUTY_EMAIL` | e-mail služby pre eskalácie (inak `duty_contact` bytu, inak admini) | ⏳ doplniť |
-| `MAINT_EVENTS_SECRET` | Bearer pre `/api/maint/call-events` (hlasový proces → dashboard) | ⏳ nastaviť vo Verceli a v hlasovom procese |
+| `MAINT_FROM`, `MAINT_REPLY_TO`, `MAINT_INBOUND_EMAIL` | odosielateľ (`LIVE-IN Údržba <opravy@udrzba.live-in.international>`), reply-to pre majiteľov (management@), adresa pre odpovede dodávateľov (`opravy@udrzba.live-in.international`, prijíma Resend) | ✅ |
+| `RESEND_WEBHOOK_SECRET` | podpis Svix pre `/api/maint/email-inbound` (email.received, delivered, bounced) | ✅ 9. 11. 2026: subdoména `udrzba.live-in.international` overená v Resende (EU), MX na prijímanie, webhook zapnutý |
+| `MAINT_DUTY_EMAIL` | e-mail služby pre eskalácie (inak `duty_contact` bytu, inak admini); sem sa preposielajú aj prijaté e-maily bez značky dopytu | ✅ management@live-in.international |
+| `MAINT_EVENTS_SECRET` | Bearer pre `/api/maint/call-events` (hlasový proces → dashboard) | ✅ vo Verceli; do hlasového procesu až po 3CX |
 | `MAINT_TELEPHONY_PROVIDER` | prebije `maint_settings.telephony.provider` (`test`/`3cx`/`twilio`) | voliteľné |
 | `THREECX_API_URL`, `THREECX_API_KEY`, `THREECX_TEST_EXT`, `THREECX_WEBHOOK_SECRET` | 3CX Call Control + OpenAI Realtime most | ⏳ čaká na potvrdenie dodávateľa 3CX (odchádzajúci hovor s obojsmerným zvukom a stavovými udalosťami na testovacej klapke) |
 | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM`, `MAINT_VOICE_URL`, `MAINT_PUBLIC_WEBHOOK_URL` | záložný overený poskytovateľ | ⏳ čaká na údaje |
