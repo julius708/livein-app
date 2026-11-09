@@ -42,3 +42,20 @@ test('KB dokument zo Sprievodcu: adresa, časy, sekcie, Wi-Fi, odkaz; bez prázd
   assert.equal(d.path, 'guide/abc'); assert.match(d.content, /Klariská 8/); assert.match(d.content, /16:00/); assert.match(d.content, /Fajčenie – Zákaz/); assert.match(d.content, /sieť LIVEIN, heslo x1/); assert.match(d.content, /\/g\/ABCDEFGH/)
   assert.ok(!/Odchod do/.test(d.content))
 })
+import { splitGuideCard, guestTokenPayload, PRIVATE_SECTIONS } from '../lib/guide/core.js'
+test('verejná a súkromná časť karty: príchod, poznámka k adrese, odchod a citlivé sekcie len po prihlásení', () => {
+  const card = { address: 'A 1', address_note: { sk: '3. poschodie' }, arrival: { sk: 'kroky' }, checkout: { sk: 'kľúče do schránky' }, parking: { sk: 'ulica' }, checkin_time: '16:00', sections: [{ key: 'house_rules', items: [] }, { key: 'appliances', items: [] }, { key: 'important', items: [] }] }
+  const { pub, priv } = splitGuideCard(card)
+  assert.equal(pub.address, 'A 1'); assert.equal(pub.parking.sk, 'ulica'); assert.equal(pub.checkin_time, '16:00'); assert.ok(pub.has_private)
+  assert.ok(!('arrival' in pub) && !('address_note' in pub) && !('checkout' in pub))
+  assert.deepEqual(pub.sections.map((x) => x.key), ['house_rules']); assert.deepEqual(priv.sections.map((x) => x.key), ['appliances', 'important'])
+  assert.equal(priv.arrival.sk, 'kroky'); assert.ok(PRIVATE_SECTIONS.includes('heating'))
+  assert.equal(splitGuideCard({}).pub.has_private, false)
+})
+test('token hosťa platí do konca pobytu + 1 deň, najviac 31 dní, najmenej hodinu', () => {
+  const now = Date.parse('2026-11-09T10:00:00Z')
+  const t = guestTokenPayload({ code: 'ABCDEFGH', reservationId: 'r1', checkOut: '2026-11-12', now })
+  assert.equal(t.c, 'ABCDEFGH'); assert.equal(t.r, 'r1'); assert.ok(t.x > Date.parse('2026-11-12T23:00:00Z') && t.x < Date.parse('2026-11-14T00:00:00Z'))
+  assert.equal(guestTokenPayload({ code: 'X', reservationId: 'r', checkOut: '2026-11-01', now }).x, now + 3600e3)
+  assert.equal(guestTokenPayload({ code: 'X', reservationId: 'r', checkOut: '2027-05-01', now }).x, now + 31 * 86400e3)
+})
