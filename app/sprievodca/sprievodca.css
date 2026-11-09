@@ -20,3 +20,13 @@
 .sp h3{margin:10px 0 4px;font-size:15px}
 .sp-filters{display:flex;gap:6px;flex-wrap:wrap}.sp-filters button{font-size:12.5px;font-weight:700;border:1px solid #173e2c26;background:#fff;color:#173E2C;padding:5px 10px;border-radius:999px;cursor:pointer}.sp-filters button.on{background:#173E2C;color:#fff}
 @media (max-width:640px){.sp .two{grid-template-columns:1fr}}
+/* v2: úplnosť, sekcie */
+.sp-bar{height:8px;border-radius:999px;background:#173e2c14;overflow:hidden;margin-top:8px}.sp-bar i{display:block;height:100%;background:linear-gradient(90deg,#F46D16,#173E2C);border-radius:999px}
+.sp-bar.sm{width:90px;height:6px;margin:0 0 2px}
+.sp-complete{display:grid;gap:4px}
+.sp-secs{display:grid;gap:10px;margin-top:6px}
+.sp-sec{border:1px solid #173e2c1f;border-radius:14px;padding:10px 12px;background:#fbfcfa}
+.sp-sec>summary{cursor:pointer;display:flex;align-items:center;gap:8px;font-size:15px}.sp-sec>summary small{margin-left:auto}
+.sp-sec-x{color:#C23B3B;font-weight:800;padding:0 6px;cursor:pointer}
+.sp-item{border-top:1px dashed #173e2c22;padding:8px 0;display:grid;gap:6px}
+.sp .btn.small{font-size:12px;padding:5px 10px}

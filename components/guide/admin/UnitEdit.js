@@ -1,9 +1,11 @@
 'use client'
 import { useActionState, useState, useTransition } from 'react'
-import { saveCardAction, saveWifiAction, issueLabelAction } from '@/app/sprievodca/actions'
+import { saveCardAction, saveWifiAction, issueLabelAction, importGuestyAction } from '@/app/sprievodca/actions'
+import Sections from './Sections'
 
 const J = ({ name, label, v, rows = 2 }) => <div className="two"><label>{label} (SK)<textarea name={`${name}_sk`} rows={rows} defaultValue={(v && v.sk) || ''} /></label><label>{label} (EN)<textarea name={`${name}_en`} rows={rows} defaultValue={(v && v.en) || ''} /></label></div>
-export default function UnitEdit({ unit, card = {}, wifi, issues = [], feedback = [], stats = {}, baseUrl, settings = {} }) {
+const MISS = { address: 'adresa', wifi: 'Wi-Fi', arrival: 'príchod', checkout: 'odchod', parking: 'parkovanie', help: 'text pomoci', sections: 'aspoň 2 sekcie', approved: 'schválenie', gbp: 'Google recenzia' }
+export default function UnitEdit({ unit, card = {}, wifi, issues = [], feedback = [], stats = {}, baseUrl, settings = {}, score = 0, missing = [], next = null }) {
   const [st, act, pending] = useActionState(saveCardAction, null)
   const [ws, wact, wpending] = useActionState(saveWifiAction, null)
   const [busy, start] = useTransition(); const [msg, setMsg] = useState(null)
@@ -12,6 +14,16 @@ export default function UnitEdit({ unit, card = {}, wifi, issues = [], feedback 
     <div className="sp">
       <div className="sp-head"><div><a href="/sprievodca" className="hint">← Jednotky</a><h1>{unit.name || unit.listing_id}</h1><p className="row"><code>{unit.public_code}</code><span className={`sp-pill ${unit.status}`}>{unit.status}</span><a href={`${baseUrl}/g/${unit.public_code}`} target="_blank" rel="noreferrer">sprievodca ↗</a><a href={`${baseUrl}/g/${unit.public_code}/recenzia`} target="_blank" rel="noreferrer">recenzia ↗</a><small className="hint">Guesty {unit.listing_id}</small></p></div></div>
       {msg && <p className={msg.ok ? 'okmsg' : 'err'}>{msg.text}</p>}
+      <section className="card sp-complete">
+        <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+          <div><b>Úplnosť {score} %</b> <span className="hint">{missing.length ? 'chýba: ' + missing.map((m) => MISS[m] || m).join(', ') : 'všetko vyplnené'}</span>{card.guesty_imported_at && <span className="hint"> · návrh z Guesty {new Date(card.guesty_imported_at).toLocaleDateString('sk-SK')}{card.guesty && card.guesty.ai ? ' (upravený AI)' : ''}</span>}</div>
+          <div className="row">
+            <button type="button" className="btn line" disabled={busy} onClick={() => start(async () => { const r = await importGuestyAction(unit.listing_id, !card.approved); setMsg(r.ok ? { ok: true, text: `Návrh z Guesty načítaný (úplnosť ${r.completeness} %${r.wifi ? ', Wi-Fi doplnená' : ''}). Skontroluj a ulož.` } : { ok: false, text: r.error }); if (r.ok) location.reload() })}>{busy ? 'Načítavam…' : card.guesty_imported_at ? 'Znova z Guesty' : 'Načítať z Guesty'}</button>
+            {next && <a className="btn" href={`/sprievodca/${next.listing_id}`}>Ďalší nedoplnený → {next.name}</a>}
+          </div>
+        </div>
+        <div className="sp-bar"><i style={{ width: `${score}%` }} /></div>
+      </section>
       <div className="sp-grid">
         <section className="card">
           <h2>Karta bytu (schválený obsah pre hostí)</h2>
@@ -24,9 +36,10 @@ export default function UnitEdit({ unit, card = {}, wifi, issues = [], feedback 
             <J name="parking" label="Parkovanie" v={card.parking} />
             <J name="arrival" label="Príchod (bez kódov)" v={card.arrival} />
             <J name="rules_override" label="Výnimka z pravidiel (prázdne = spoločné pravidlá)" v={card.rules_override} />
-            <div className="two"><label>Čas odchodu<input type="text" name="checkout_time" defaultValue={card.checkout_time || ''} placeholder="10:00" /></label></div>
+            <div className="two"><label>Príchod od<input type="text" name="checkin_time" defaultValue={card.checkin_time || ''} placeholder="16:00" /></label><label>Čas odchodu<input type="text" name="checkout_time" defaultValue={card.checkout_time || ''} placeholder="10:00" /></label></div>
             <J name="checkout" label="Pokyny k odchodu" v={card.checkout} />
             <J name="help" label="Text pri kontakte na pomoc" v={card.help} rows={1} />
+            <Sections value={card.sections || []} />
             <h3>Jednotka</h3>
             <div className="two"><label>Google Business Profile (odkaz na recenziu)<input type="url" name="gbp_url" defaultValue={unit.gbp_url || ''} placeholder="https://g.page/r/…/review" /></label><label>Číslo podpory (prebije spoločné)<input type="text" name="support_phone" defaultValue={unit.support_phone || ''} placeholder={g.support_phone || '+421 …'} /></label></div>
             <label>Stav<select name="status" defaultValue={unit.status}><option value="draft">rozpracované</option><option value="review">na kontrolu</option><option value="ready">pripravené</option><option value="active">aktívne</option><option value="inactive">neaktívne (sprievodca nedostupný)</option></select></label>
