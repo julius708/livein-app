@@ -95,7 +95,7 @@
 .kl-tr.take{border-left:3px solid #d64545}.kl-tr.return{border-left:3px solid #1E8A5A}.kl-tr.adjust{border-left:3px solid #e7a33a}
 /* kiosk: celá obrazovka, sklenená hlavička s logom, väčšie prvky, úzka lišta vpravo */
 .kl-kiosk{min-height:100dvh;color:#233E31;padding:12px max(14px,env(safe-area-inset-right)) 14px max(14px,env(safe-area-inset-left));display:flex;flex-direction:column;gap:12px}
-.kl-kiosk-head{display:flex;align-items:center;gap:14px;min-height:52px;padding:8px 16px;border-radius:999px;background:linear-gradient(115deg,#ffffff33,#ffffff08 50%,#ffffff1f),rgba(18,52,36,.72);border:1px solid #ffffff80;box-shadow:inset 0 1px 0 #ffffff8c,inset 0 -1px 0 #09201580,0 18px 44px -20px #173e2c8c;-webkit-backdrop-filter:blur(38px) saturate(165%);backdrop-filter:blur(38px) saturate(165%);align-self:flex-start}
+.kl-kiosk-head{display:flex;align-items:center;gap:14px;min-height:52px;padding:8px 10px 8px 16px;border-radius:999px;width:100%;background:linear-gradient(115deg,#ffffff33,#ffffff08 50%,#ffffff1f),rgba(18,52,36,.72);border:1px solid #ffffff80;box-shadow:inset 0 1px 0 #ffffff8c,inset 0 -1px 0 #09201580,0 18px 44px -20px #173e2c8c;-webkit-backdrop-filter:blur(38px) saturate(165%);backdrop-filter:blur(38px) saturate(165%);align-self:stretch}
 .kl-kiosk-head img{height:28px;display:block}.kl-kiosk-head a{display:inline-flex;opacity:.95}
 .kl-kiosk-title{color:#F6F2EA;font-weight:800;font-size:15px;letter-spacing:.02em;border-left:1px solid #ffffff40;padding-left:14px}
 .kl.kiosk .kl-hooks{grid-template-columns:repeat(auto-fill,minmax(122px,1fr));gap:8px}
@@ -109,3 +109,13 @@
 @media (prefers-reduced-motion:reduce){.kl,.kl-admin{animation:none}.kl-hook,.kl-nav a,.kl-big,.kl-list li button{transition:none}}
 
 .kl-more{display:flex;gap:8px;justify-content:center;font-size:12px;color:#98A39B;margin-top:4px}.kl-more a{color:#66716A;text-decoration:none;font-weight:700}.kl-more a:hover{color:#173E2C}
+
+.kl-sp{flex:1}
+.kl-gear{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;color:#F6F2EA;background:#ffffff1f;border:1px solid #ffffff40;box-shadow:inset 0 1px 0 #ffffff40;transition:transform .25s var(--lg-ease),background-color .2s ease}
+.kl-gear:hover{background:#ffffff38;transform:rotate(30deg)}
+.kl-tabs{display:flex;gap:6px}
+.kl-tabs a{display:inline-flex;align-items:center;min-height:36px;padding:0 14px;border-radius:999px;font-size:13px;font-weight:700;text-decoration:none;color:#F6F2EA;background:#ffffff1f;border:1px solid #ffffff40;box-shadow:inset 0 1px 0 #ffffff40}
+.kl-tabs a.on{background:#F46D16;border-color:#ffb27a;color:#1B1B1B}
+.kl-kiosk .kl-page{animation:lg-rise .6s var(--lg-ease) both}
+.kl-new{align-items:end}.kl-new label{display:grid;gap:3px;font-size:12px;font-weight:700;color:#58665D}.kl-new input[type=text]{min-width:220px}
+@media (max-width:700px){.kl-kiosk-head{flex-wrap:wrap}.kl-tabs{width:100%;justify-content:flex-start}}

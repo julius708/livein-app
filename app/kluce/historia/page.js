@@ -1,8 +1,6 @@
 import { redirect } from 'next/navigation'
 import { getViewer } from '@/lib/auth'
-import Shell from '@/components/Shell'
 import NoAccess from '@/components/NoAccess'
-import KeysNav from '@/components/kluce/Nav'
 import { canKeys } from '@/lib/keys-core'
 import '../kluce.css'
 export const dynamic = 'force-dynamic'
@@ -13,7 +11,7 @@ const fmt = (iso) => new Date(iso).toLocaleString('sk-SK', { timeZone: 'Europe/B
 
 export default async function KeysHistoryPage({ searchParams }) {
   const { s, user, me, isAdmin, blocked } = await getViewer()
-  if (!user) redirect('/login')
+  if (!user) redirect('/login?next=/kluce/historia')
   if (blocked) return <NoAccess email={user.email} />
   if (!canKeys(me)) redirect('/kluce')
   const sp = (await searchParams) || {}
@@ -22,9 +20,9 @@ export default async function KeysHistoryPage({ searchParams }) {
   if (q) qry = /^\d+$/.test(q) ? qry.eq('hook_no', Number(q)) : qry.or(`listing_name.ilike.%${q.replace(/[%,()]/g, '')}%,person_name.ilike.%${q.replace(/[%,()]/g, '')}%`)
   const { data: moves } = await qry
   return (
-    <Shell me={me} user={user} isAdmin={isAdmin} active="kluce" hideFooter>
+    <main className="kl-kiosk">
+      <header className="kl-kiosk-head"><a href="/" aria-label="LIVE-IN domov"><img src="/logo.png" alt="LIVE-IN" /></a><span className="kl-kiosk-title">História kľúčov</span><span className="kl-sp" /><nav className="kl-tabs" aria-label="Kľúče"><a href="/kluce" className="">Kľúče</a><a href="/kluce/sprava" className="">Nastavenia</a><a href="/kluce/historia" className="on">História</a></nav></header>
       <div className="kl-page">
-        <section className="li-page-intro kl-intro"><div><span className="li-eyebrow">Kľúče</span><h1>História pohybov</h1><p>Každý pohyb: kto, kedy, ktorý byt a pozícia v tom čase. Posledných 400 záznamov.</p></div><KeysNav active="history" isAdmin={isAdmin} /></section>
         <section className="card">
           <form className="row" action="/kluce/historia"><input type="search" name="q" defaultValue={q} placeholder="Byt, osoba alebo číslo pozície" aria-label="Hľadať v histórii" /><button className="btn line" type="submit">Hľadať</button>{q && <a className="btn line" href="/kluce/historia">Zrušiť filter</a>}</form>
           <div className="kl-table hist" role="table">
@@ -34,6 +32,6 @@ export default async function KeysHistoryPage({ searchParams }) {
           </div>
         </section>
       </div>
-    </Shell>
+    </main>
   )
 }

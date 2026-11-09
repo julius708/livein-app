@@ -78,6 +78,20 @@ export async function saveUnitAction(payload) {
   refresh(); return { ok: true }
 }
 
+/** Správa: pridať kľúč, ktorý nie je v Guesty (parkovanie, pivnica, náhradná sada…). */
+export async function addManualUnitAction(payload) {
+  const v = await viewer(); if (v.error) return { ok: false, error: v.error }
+  const name = String((payload && payload.name) || '').trim().slice(0, 80); if (name.length < 2) return { ok: false, error: 'Napíš názov kľúča.' }
+  const sets = Number(payload.sets); if (!Number.isInteger(sets) || sets < 0 || sets > 20) return { ok: false, error: 'Počet sád 0 až 20.' }
+  const h = payload.hook_no === null || payload.hook_no === '' || payload.hook_no === undefined ? null : Number(payload.hook_no)
+  if (h !== null && (!Number.isInteger(h) || h < 1 || h > 999)) return { ok: false, error: 'Pozícia musí byť číslo 1 až 999.' }
+  if (h !== null) { const { data: clash } = await v.s.from('key_units').select('listing_name').eq('hook_no', h).maybeSingle(); if (clash) return { ok: false, error: `Pozícia ${h} už patrí kľúču ${clash.listing_name}.` } }
+  const id = 'manual-' + Date.now().toString(36) + '-' + name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30)
+  const { error } = await v.s.from('key_units').insert({ listing_id: id, listing_name: name, hook_no: h, sets, manual: true, note: String(payload.note || '').slice(0, 300) || null, updated_by: who(v) })
+  if (error) return { ok: false, error: error.message }
+  refresh(); return { ok: true }
+}
+
 /** Správa: ručná náprava stavu (napr. kľúče sa našli) – vynuluje vonku a držiteľov, zapíše do histórie. Len admin. */
 export async function resetUnitAction(payload) {
   const v = await viewer(); if (v.error) return { ok: false, error: v.error }
