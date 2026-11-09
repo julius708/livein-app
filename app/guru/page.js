@@ -3,6 +3,7 @@ import { getViewer } from '@/lib/auth'
 import Shell from '@/components/Shell'
 import NoAccess from '@/components/NoAccess'
 import GuruChat from '@/components/GuruChat'
+import GuruPrefs from '@/components/GuruPrefs'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'LIVE-IN Guru' }
@@ -21,6 +22,7 @@ export default async function GuruPage({ searchParams }) {
           <h1>🧠 LIVE-IN Guru</h1>
           <p>Opýtaj sa na čokoľvek: na naše byty, rezervácie, Práčovňu a nástenku, alebo úplne všeobecne – texty, preklady, rady. Učí sa z otázok celého tímu a odpovedá podľa tvojich oprávnení.</p>
         </div>
+        <GuruPrefs />
         <GuruChat initial={sp && typeof sp.q === 'string' ? sp.q.slice(0, 500) : ''} />
       </section>
     </Shell>

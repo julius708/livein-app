@@ -22,7 +22,13 @@ Tabuľky (schéma public):
 - reservations(guesty_id, listing_id -> listings.guesty_id, status ['confirmed','canceled','inquiry'], check_in_date, check_out_date, guests, adults, children, infants, confirmation_code, source ['Booking.com','airbnb2','manual','owner','owner-guest','VRBO'], multi_stay). Platné rezervácie: status='confirmed'. Noci = check_out_date - check_in_date. Dáta v systéme sú len od augusta 2026, nie od vzniku firmy.
 - packages(date, listing_name, status ['todo','packed','cancelled'], hidden, same_day, target_people, packed_by_name, packed_at, note, computed_items jsonb): tašky s prádlom z Práčovne na deň odchodu. Počítaj len hidden=false a status<>'cancelled'.
 - board_notes(text, author_name, date, created_at, removed_at): nástenka tímu; aktívne majú removed_at is null.
-- early_arrivals(listing_name, date, arrival, note, removed_at), feedback(kind, message, status, user_name), app_users(email, name, roles, active, scope_city).
+- early_arrivals(listing_name, date, arrival, note, removed_at), early_departures(listing_name, date, departure, note, removed_at), cleaning_requests(date, listing_name, text, done_at, removed_at), delivery_requests(date, listing_name, text, delivered_at, removed_at): požiadavky tímu na deň; aktívne majú removed_at is null.
+- feedback(kind, message, status, user_name), app_users(email, name, roles, active, scope_city), notifications(user_email, kind, title, body, created_at, read_at).
+- CRM majiteľov: leads(name, phone, email, city, city_group, source, kind, stage, received_at, due_at, assigned_to, first_contact_at, lost_reason, property_address, service), lead_events(lead_id, at, type, user_name), lead_tasks(lead_id, title, due_at, status).
+- Údržba (pilot): maint_cases(ref, listing_name, category, symptoms, severity, status, handling, assignee_email, due_at, created_at, closed_at), maint_quotes(case_id, vendor_id, total, currency, status, eta), maint_orders(case_id, status, scheduled_at), maint_vendors(name, professions, locality, phone, email, active).
+- Sprievodca bytom (QR pre hostí): guide_units(listing_id, public_code, name, address, city, status), guide_cards(listing_id, address, checkin_time, checkout_time, arrival, checkout, parking, sections, approved, completeness), guide_wifi(listing_id, ssid, password). Verejný odkaz sprievodcu: https://app.live-in.international/g/<public_code>.
+- calendar_min_nights(listing_id, date, min_nights, status): minimálne pobyty a stav kalendára z Guesty.
+Čo v databáze NIE JE (povedz to rovno a poraď, kde to nájsť): ceny a tržby za rezervácie (PriceLabs, Guesty, appka Ekonomika), správy hostí (Guesty Inbox), mená hostí, PriceLabs, letenky a internet. Nikdy sa nevyhováraj, že niečo nevidíš, kým si to neskúsil nástrojom; keď niečo chýba, odpovedz aspoň z vlastných znalostí a povedz, čo konkrétne chýba.
 Hostia: v databáze nie sú mená hostí, len počty.
 Kódy od dverí, kódy od keysafe a Wi-Fi heslá k bytom môžeš tímu uviesť, ak ich nájdeš v znalostnej báze alebo dátach (schválil Július 24. 10. 2026 pre celý interný tím). Iné heslá (účty, systémy) nepíš.
 Citlivé financie nerieš: marže, platy a odmeny, ziskovosť firmy, bankové údaje a osobné finančné údaje. Pri takej otázke stručne povedz, že toto rieši Július alebo Nina, a ponúkni pomoc s iným.
@@ -45,7 +51,7 @@ const TOOLS = [
 ]
 
 async function handlePOST(request) {
-  const { s, user, blocked, isAdmin } = await getViewer()
+  const { s, user, me, blocked, isAdmin } = await getViewer()
   if (!user || blocked) return NextResponse.json({ ok: false, error: 'Najprv sa prihlás.' }, { status: 403 })
   const key = process.env.ANTHROPIC_API_KEY
   if (!key) return NextResponse.json({ ok: false, error: 'Guru ešte nie je zapnutý: chýba ANTHROPIC_API_KEY v nastaveniach Vercelu. Július ho tam musí vložiť.' })
@@ -56,7 +62,7 @@ async function handlePOST(request) {
   const question = typeof body.question === 'string' ? body.question.trim() : ''
   // widget (postavička na stránke): kratšie odpovede a menej krokov, aby odpoveď prišla rýchlo
   const widget = body.mode === 'widget'
-  const appCtx = Object.hasOwn(APP_CTX, String(body.app || '')) ? '\n' + APP_CTX[String(body.app || '')] : ''
+  const appCtx = (Object.hasOwn(APP_CTX, String(body.app || '')) ? '\n' + APP_CTX[String(body.app || '')] : '') + `\nS kým hovoríš: ${(me && me.name) || user.email}${me && me.roles && me.roles.length ? ' (roly: ' + me.roles.join(', ') + ')' : ''}${me && me.scope_city ? ', mesto: ' + me.scope_city : ''}. Oslovuj ho menom, keď sa to hodí; „moja pozornosť“ vzťahuj na jeho roly.`
   const turnId=body.turnId
   if(!question || question.length>4000 || !validTurnId(turnId))return NextResponse.json({ok:false,error:'Napíš otázku do 4 000 znakov.'},{status:400})
   const {data:previous,error:previousError}=await s.from('guru_turns').select('id,question,answer,status,updated_at').eq('id',turnId).maybeSingle()
@@ -86,17 +92,24 @@ async function handlePOST(request) {
   const today = new Date().toLocaleDateString('sk-SK', { timeZone: 'Europe/Bratislava', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
   const deadline = Date.now()+50000
   try {
-    for (let step = 0; step < (widget ? 4 : 7); step++) {
+    for (let step = 0; step < (widget ? 6 : 8); step++) {
       const remaining=deadline-Date.now()
       if(remaining<1000)return fail('Spracovanie trvá dlhšie. Tvoja otázka je uložená; skús ju znova.')
-      const call = await callClaude(key, { max_tokens: widget ? 700 : 2500, system: SYSTEM(today) + appCtx + (widget ? '\nTeraz odpovedáš v malom okne na stránke: odpovedz stručne, 2 až 4 vety, bez úvodu a zhrnutia. Ak treba viac, povedz to a ponúkni pokračovanie.' : ''), tools, messages: convo }, { timeoutMs: Math.min(45000, remaining) })
+      const call = await callClaude(key, { max_tokens: widget ? 2000 : 4000, system: SYSTEM(today) + appCtx + (widget ? '\nTeraz odpovedáš v malom okne na stránke: odpovedz stručne (zvyčajne 2 až 6 viet alebo krátky zoznam riadkov), bez úvodu a zhrnutia. Ak používateľ žiada zoznam (napr. všetky byty), vypíš ho celý.' : ''), tools, messages: convo }, { timeoutMs: Math.min(45000, remaining) })
       if (!call.ok) {
         return fail('AI služba je dočasne nedostupná. Tvoja otázka zostala uložená.')
       }
       const j = call.json
       const content = j.content || []
       if (j.stop_reason !== 'tool_use') {
-        const text = content.filter((b) => b.type === 'text').map((b) => b.text).join('\n').trim()
+        let text = content.filter((b) => b.type === 'text').map((b) => b.text).join('\n').trim()
+        // usekla sa odpoveď alebo prišla prázdna: posledný pokus bez nástrojov z toho, čo už máme
+        if ((!text || j.stop_reason === 'max_tokens') && deadline - Date.now() > 8000) {
+          if (content.length) convo.push({ role: 'assistant', content: text ? [{ type: 'text', text }] : [{ type: 'text', text: '(neúplná odpoveď)' }] })
+          convo.push({ role: 'user', content: 'Odpovedz teraz celú odpoveď naraz z toho, čo už vieš, bez ďalších nástrojov. Ak sa odpoveď usekla, pokračuj a dokonči ju.' })
+          const fin = await callClaude(key, { max_tokens: widget ? 2000 : 4000, system: SYSTEM(today) + appCtx, messages: convo }, { timeoutMs: Math.max(5000, Math.min(40000, deadline - Date.now() - 1500)) })
+          if (fin.ok) { const t2 = (fin.json.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('\n').trim(); if (t2) text = text && j.stop_reason === 'max_tokens' ? text + '\n' + t2 : t2 }
+        }
         const answer=text || 'Nemám odpoveď.'
         const saved=await s.from('guru_turns').update({answer,status:'complete',updated_at:new Date().toISOString()}).eq('id',turnId).select('id')
         if(saved.error||!saved.data?.length)return fail('Odpoveď sa nepodarilo uložiť do pamäte. Skús otázku zopakovať.')
@@ -142,7 +155,14 @@ async function handlePOST(request) {
       }
       convo.push({ role: 'user', content: results })
     }
-    return fail('Otázka potrebuje viac krokov. Skús ju rozdeliť na menšie časti.',422)
+    // vyčerpané kroky: odpovedz z toho, čo sa zistilo, bez ďalších nástrojov
+    convo.push({ role: 'user', content: 'Už nemôžeš použiť ďalšie nástroje. Odpovedz teraz z toho, čo si zistil; ak niečo chýba, povedz čo presne.' })
+    const fin = await callClaude(key, { max_tokens: widget ? 2000 : 4000, system: SYSTEM(today) + appCtx, messages: convo }, { timeoutMs: Math.max(5000, Math.min(40000, deadline - Date.now() - 1500)) })
+    const t3 = fin.ok ? (fin.json.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('\n').trim() : ''
+    if (!t3) return fail('Otázka potrebuje viac krokov. Skús ju rozdeliť na menšie časti.',422)
+    const saved3=await s.from('guru_turns').update({answer:t3,status:'complete',updated_at:new Date().toISOString()}).eq('id',turnId).select('id')
+    if(saved3.error||!saved3.data?.length)return fail('Odpoveď sa nepodarilo uložiť do pamäte. Skús otázku zopakovať.')
+    return NextResponse.json({ ok: true, text:t3,turnId })
   } catch (e) {
     return fail('Guru je dočasne nedostupný. Otázka zostala uložená; skús o chvíľu.')
   }

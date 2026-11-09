@@ -33,3 +33,10 @@
 .guru-embed .gchat{margin:0;height:calc(100vh - 16px);box-sizing:border-box}
 .guru-embed .gmsgs{flex:1;max-height:none;min-height:0}
 .guru-embed .g-memory small{max-width:none}
+/* nastavenia asistenta na stránkach */
+.g-prefs{background:#fff;border:1px solid #173e2c1f;border-radius:14px;padding:12px 14px;margin:0 0 12px;display:grid;gap:8px}
+.g-prefs-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.g-prefs-row button{border:1px solid #cfd8cb;background:#f6f8f3;color:#173E2C;font:inherit;font-size:14px;font-weight:700;padding:7px 12px;border-radius:99px;cursor:pointer}
+.g-prefs-row button.on{background:#173E2C;color:#fff;border-color:#173E2C}
+.g-prefs-row label{font-size:14px;display:flex;align-items:center;gap:6px;margin-left:auto}
+.g-prefs small{color:#58665D}
