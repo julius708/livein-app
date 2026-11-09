@@ -71,7 +71,7 @@ export default function KeysBoard({ units = [], rows = [], persons = [], days = 
     if (!u) return <div className="kl-hook empty" aria-label={`Pozícia ${n}, voľná`}><span className="n">{n}</span><span className="a">voľné</span></div>
     const st = tileState(u)
     return (
-      <button type="button" className={`kl-hook ${st}${pk ? ' picked' : ''}`} onClick={() => toggle(u)} aria-pressed={pk} aria-label={`${n != null ? 'Pozícia ' + n + ', ' : ''}${u.listing_name}, ${STATE_LABEL[st]}`} title={u.holders && u.holders.length ? u.holders.map((h) => `${h.name} (${h.sets}) ${fmtT(h.at)}`).join('\n') : STATE_LABEL[st]}>
+      <button type="button" className={`kl-hook s-${st}${pk ? ' picked' : ''}`} onClick={() => toggle(u)} aria-pressed={pk} aria-label={`${n != null ? 'Pozícia ' + n + ', ' : ''}${u.listing_name}, ${STATE_LABEL[st]}`} title={u.holders && u.holders.length ? u.holders.map((h) => `${h.name} (${h.sets}) ${fmtT(h.at)}`).join('\n') : STATE_LABEL[st]}>
         {u.sets > 1 && <span className="c">{u.sets - (u.out_sets || 0)}/{u.sets}</span>}
         <span className="n">{n != null ? n : '–'}</span><span className="a">{u.listing_name}</span>
         {st !== 'ok' && u.holders && u.holders[0] && <span className="h">{u.holders.map((h) => h.name.split(' ')[0]).join(', ')}</span>}
@@ -86,7 +86,7 @@ export default function KeysBoard({ units = [], rows = [], persons = [], days = 
 
       <div className="kl-grid">
         <section className="card kl-board" aria-label="Tabuľa kľúčov">
-          <div className="kl-legend"><span><i className="ok" />na háčiku</span><span><i className="part" />časť vonku</span><span><i className="out" />vonku</span><span><i className="empty" />voľná pozícia</span><span><i className="picked" />vybrané</span></div>
+          <div className="kl-legend"><span><i className="s-ok" />na háčiku</span><span><i className="s-part" />časť vonku</span><span><i className="s-out" />vonku</span><span><i className="s-empty" />voľná pozícia</span><span><i className="s-picked" />vybrané</span></div>
           {filtered ? (
             <div className="kl-row"><h3>Výsledky hľadania <b>{filtered.length}</b></h3><div className="kl-hooks">{filtered.map((u) => <Tile key={u.listing_id} n={u.hook_no} u={u} picked={isPicked(u.listing_id)} />)}</div>{!filtered.length && <p className="kl-hint">Nič sa nenašlo. Skús časť názvu ulice alebo číslo pozície.</p>}</div>
           ) : (
@@ -110,7 +110,7 @@ export default function KeysBoard({ units = [], rows = [], persons = [], days = 
                 <div className="kl-days">{days.map((d, i) => <button key={d.date} type="button" className={i === day ? 'on' : ''} onClick={() => setDay(i)}>{dayName(d.date, today)} <b>{d.items.length}</b></button>)}</div>
                 <p className="kl-hint">Kľúče podľa tašiek z Práčovne. Zoznam sa mení, keď Práčovňa prepočíta balenie.</p>
                 {list.items.length ? (
-                  <ul className="kl-list">{list.items.map((i) => <li key={i.package_id} className={i.key}><button type="button" onClick={() => i.unit && toggle(i.unit, { package_id: i.package_id, package_date: i.date })} disabled={!i.unit}><span className="pos">{i.hook_no != null ? i.hook_no : '–'}</span><span className="nm">{i.listing_name}{i.same_day ? <em> · v ten istý deň</em> : null}</span><span className={`st ${i.key}`}>{STATE_LABEL[i.key]}</span></button></li>)}</ul>
+                  <ul className="kl-list">{list.items.map((i) => <li key={i.package_id} className={`s-${i.key}`}><button type="button" onClick={() => i.unit && toggle(i.unit, { package_id: i.package_id, package_date: i.date })} disabled={!i.unit}><span className="pos">{i.hook_no != null ? i.hook_no : '–'}</span><span className="nm">{i.listing_name}{i.same_day ? <em> · v ten istý deň</em> : null}</span><span className={`st s-${i.key}`}>{STATE_LABEL[i.key]}</span></button></li>)}</ul>
                 ) : <p className="kl-hint">Na tento deň Práčovňa nemá žiadne tašky.</p>}
                 {!!list.items.length && <button type="button" className="kl-ghost" onClick={pickAllDay}>Prebrať všetky z tohto dňa naraz</button>}
               </div>
