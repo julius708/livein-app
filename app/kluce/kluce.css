@@ -55,6 +55,7 @@
 .kl-flow{display:flex;flex-direction:column;gap:10px}
 .kl-flow h2{margin:0;font-size:20px;color:#173E2C}
 .kl-step{margin:4px 0 0;font-size:13px;font-weight:800;color:#173E2C}.kl-step small{font-weight:600;color:#66716A}
+.kl-select{font:inherit;font-weight:700;font-size:16px;padding:12px 14px;border-radius:12px;border:1px solid #173e2c2e;background:#fff;color:#173E2C;width:100%}
 .kl-people{display:flex;gap:6px;flex-wrap:wrap}
 .kl-pill{font:inherit;font-weight:700;font-size:14px;padding:9px 13px;border-radius:999px;border:1px solid #173e2c2e;background:#fff;color:#173E2C;cursor:pointer}
 .kl-pill.on{background:#173E2C;color:#fff;border-color:#173E2C}.kl-pill.last{border-style:dashed}
@@ -82,14 +83,16 @@
 .kl-tr em{font-style:normal;color:#8A5A00;font-weight:600}
 /* kiosk */
 .kl-kiosk{min-height:100dvh;background:#F4F5F0;color:#233E31;padding:14px max(14px,env(safe-area-inset-right)) 14px max(14px,env(safe-area-inset-left));display:flex;flex-direction:column;gap:12px}
-.kl-kiosk-head{display:flex;align-items:center;gap:14px}
-.kl-kiosk-head img{height:32px}.kl-kiosk-head h1{margin:0;font-size:24px;color:#173E2C}
+.kl-kiosk-head{display:flex;align-items:center;gap:14px;min-height:36px}
+.kl-kiosk-head img{height:30px;display:block}.kl-kiosk-head a{display:inline-flex;opacity:.9}
 .kl-clock{margin-left:auto;font-size:15px;color:#66716A;text-transform:capitalize}
 .kl-exit{font-size:12px;color:#98A39B;text-decoration:none;border:1px solid #DEE3D8;border-radius:999px;padding:4px 10px}
 .kl.kiosk .kl-hooks{grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px}
 .kl.kiosk .kl-hook{min-height:64px;padding:9px 9px 8px}.kl.kiosk .kl-hook .a{font-size:13.5px}.kl.kiosk .kl-hook .n{font-size:12px}
-.kl.kiosk .kl-grid{grid-template-columns:minmax(0,1fr) 380px}
-.kl.kiosk .kl-big{font-size:20px;padding:20px 18px}.kl.kiosk .kl-pill{font-size:17px;padding:13px 18px}.kl.kiosk .kl-search{font-size:19px;padding:15px 16px}
+.kl.kiosk .kl-grid{grid-template-columns:minmax(0,1fr) 300px}
+.kl.kiosk .kl-rail{padding:12px;gap:10px}
+.kl.kiosk .kl-select{font-size:18px;padding:14px}
+.kl.kiosk .kl-big{font-size:18px;padding:16px}.kl.kiosk .kl-big small{font-size:12px}.kl.kiosk .kl-search{font-size:17px;padding:13px 14px}
 .kl.kiosk .kl-list li button,.kl.kiosk .kl-list li label{font-size:16px;padding:12px 13px}
 .kl.kiosk .kl-ghost{font-size:16px;padding:14px}
 @media (prefers-reduced-motion:reduce){.kl-hook{transition:none}}

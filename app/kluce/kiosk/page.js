@@ -6,7 +6,7 @@ import { canKeys, overdue } from '@/lib/keys-core'
 import { keysSettings, keysUnits, keysPersons, keysDays, ymdBa } from '@/lib/keys-server'
 import '../kluce.css'
 export const dynamic = 'force-dynamic'
-export const metadata = { title: 'Kľúče · kiosk' }
+export const metadata = { title: 'Kľúče', manifest: '/kluce.webmanifest', appleWebApp: { capable: true, title: 'Kľúče', statusBarStyle: 'black-translucent' } }
 
 /** Kiosk na iPade v miestnosti s kľúčmi: bez hlavičky appky, veľké prvky, obnova každých 45 s, bez zhasínania. Zariadenie je prihlásené raz. */
 export default async function KeysKioskPage() {
@@ -19,7 +19,7 @@ export default async function KeysKioskPage() {
   const days = await keysDays(units, [today, ymdBa(1)])
   return (
     <main className="kl-kiosk">
-      <header className="kl-kiosk-head"><img src="/logo.png" alt="LIVE-IN" /><h1>Kľúče</h1><span className="kl-clock">{new Date().toLocaleDateString('sk-SK', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/Bratislava' })}</span><a href="/kluce" className="kl-exit" aria-label="Späť do appky">appka</a></header>
+      <header className="kl-kiosk-head"><a href="/" aria-label="LIVE-IN domov"><img src="/logo.png" alt="LIVE-IN" /></a></header>
       <KeysBoard units={units} rows={st.rows} persons={persons} days={days} today={today} overdue={overdue(units, st.overdueHours)} overdueHours={st.overdueHours} kiosk />
     </main>
   )

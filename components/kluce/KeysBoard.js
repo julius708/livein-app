@@ -114,7 +114,7 @@ export default function KeysBoard({ units = [], rows = [], persons = [], days = 
                 ) : <p className="kl-hint">Na tento deň Práčovňa nemá žiadne tašky.</p>}
                 {!!list.items.length && <button type="button" className="kl-ghost" onClick={pickAllDay}>Prebrať všetky z tohto dňa naraz</button>}
               </div>
-              {!!outNow.length && <div className="kl-out"><h4>Práve vonku</h4><ul>{outNow.slice(0, 12).map((u) => <li key={u.listing_id}><span className="pos">{u.hook_no != null ? u.hook_no : '–'}</span><span className="nm">{u.listing_name}</span><span className="who">{(u.holders || []).map((h) => `${h.name.split(' ')[0]} ${fmtT(h.at)}`).join(', ')}</span></li>)}</ul>{outNow.length > 12 && <p className="kl-hint">a ďalších {outNow.length - 12}</p>}</div>}
+              {!kiosk && !!outNow.length && <div className="kl-out"><h4>Práve vonku</h4><ul>{outNow.slice(0, 12).map((u) => <li key={u.listing_id}><span className="pos">{u.hook_no != null ? u.hook_no : '–'}</span><span className="nm">{u.listing_name}</span><span className="who">{(u.holders || []).map((h) => `${h.name.split(' ')[0]} ${fmtT(h.at)}`).join(', ')}</span></li>)}</ul>{outNow.length > 12 && <p className="kl-hint">a ďalších {outNow.length - 12}</p>}</div>}
             </>
           )}
 
@@ -122,7 +122,10 @@ export default function KeysBoard({ units = [], rows = [], persons = [], days = 
             <div className="kl-flow" role="dialog" aria-label={mode === 'take' ? 'Zobrať kľúče' : 'Vrátiť kľúče'}>
               <h2>{mode === 'take' ? 'Zobrať kľúče' : 'Vrátiť kľúče'}</h2>
               <p className="kl-step">1 · Kto {mode === 'take' ? 'berie' : 'vracia'}</p>
-              <div className="kl-people">{persons.map((p) => <button type="button" key={p.email || p.name} className={`kl-pill${person && person.name === p.name ? ' on' : ''}${lastPerson && lastPerson.name === p.name && !person ? ' last' : ''}`} aria-pressed={!!(person && person.name === p.name)} onClick={() => setPerson(p)}>{p.name}</button>)}</div>
+              <select id="kl-person" className="kl-select" value={person ? person.name : ''} onChange={(e) => { const p = persons.find((x) => x.name === e.target.value) || null; setPerson(p); setPicked((ps) => (mode === 'return' ? [] : ps)) }} aria-label="Kto">
+                <option value="">Vyber meno…</option>
+                {persons.map((p) => <option key={p.email || p.name} value={p.name}>{p.name}{lastPerson && lastPerson.name === p.name ? ' (naposledy)' : ''}</option>)}
+              </select>
               {!persons.length && <p className="kl-hint">Žiadne osoby v ponuke. Skontroluj účty v Správe appky.</p>}
               {mode === 'take' && (
                 <>
