@@ -12,7 +12,7 @@ const dayName = (ymd, today) => ymd === today ? 'Dnes' : new Date(ymd + 'T12:00:
  * Tabuľa kľúčov: dlaždice podľa pozície na stene (rady z nastavení), nezaradené byty v poradí Práčovne, zoznam podľa tašiek,
  * tok „Zobrať“ (osoba → byty → potvrdiť) a „Vrátiť“ (osoba → čo má vonku → potvrdiť). Rovnaký komponent pre appku aj kiosk.
  */
-export default function KeysBoard({ units = [], rows = [], persons = [], days = [], today, overdue = [], overdueHours = 24, kiosk = false }) {
+export default function KeysBoard({ units = [], rows = [], persons = [], days = [], today, overdue = [], overdueHours = 24, kiosk = false, isAdmin = false }) {
   const router = useRouter()
   const [pending, start] = useTransition()
   const [q, setQ] = useState('')
@@ -144,6 +144,7 @@ export default function KeysBoard({ units = [], rows = [], persons = [], days = 
               <button type="button" className="kl-ghost" onClick={reset}>Zrušiť</button>
             </div>
           )}
+          <nav className="kl-more" aria-label="Ďalšie"><a href="/kluce/historia">História</a><span>·</span><a href="/kluce/sprava">Správa</a></nav>
         </div>
       </div>
     </div>

@@ -10,7 +10,7 @@ Modul `/kluce` v hlavnej appke. Stena s kľúčmi v miestnosti je v appke ako ta
 - **Podľa tašiek:** zoznam na dnes a zajtra z balenia v Práčovni (tabuľka `packages`, rovnaké poradie ako nástenka Práčovne). „Prebrať všetky z tohto dňa naraz“ vyberie všetky, ktoré sú na háčiku.
 - **Byty bez pozície** sa zobrazujú v samostatnom bloku v abecednom poradí (ako Práčovňa), kým im admin nepridelí číslo.
 - **Upozornenie:** kľúče vonku dlhšie než nastavený limit (predvolene 24 h) sa ukážu žltým pásom hore.
-- **Kiosk** `/kluce/kiosk`: pre iPad v miestnosti, bez hlavičky appky, veľké prvky, obnova každých 45 s, obrazovka nezhasína, rozrobený výber sa po 2 minútach zruší. iPad je prihlásený raz na zdieľaný účet s prístupom ku kľúčom.
+- **Kiosk = `/kluce`**: bez hlavičky appky a Guru, hore len malé logo (späť na domov), vľavo dlaždice, vpravo úzka lišta. Obnova každých 45 s, obrazovka nezhasína, rozrobený výber sa po 2 minútach zruší. iPad je prihlásený raz na zdieľaný účet s prístupom ku kľúčom; `/kluce/kiosk` presmeruje na `/kluce`.
 - **História** `/kluce/historia`: každý pohyb (kto, kedy, byt, pozícia v tom čase, zdroj appka/kiosk/zámok).
 - **Správa** `/kluce/sprava`: načítať byty z registra (Guesty), pozícia a počet sád pre každý byt, poznámka, vyradenie; admin navyše lišty, limit upozornenia a nápravu stavu (kľúče sa našli).
 

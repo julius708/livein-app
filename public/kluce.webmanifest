@@ -2,7 +2,7 @@
   "name": "LIVE-IN Kľúče",
   "short_name": "Kľúče",
   "description": "Kiosk na kľúče v miestnosti s kľúčmi",
-  "start_url": "/kluce/kiosk",
+  "start_url": "/kluce",
   "scope": "/",
   "display": "standalone",
   "orientation": "landscape",
