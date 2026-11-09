@@ -18,7 +18,7 @@ export default async function KeysAdminPage() {
   return (
     <main className="kl-kiosk">
       <header className="kl-kiosk-head"><a href="/" aria-label="LIVE-IN domov"><img src="/logo.png" alt="LIVE-IN" /></a><span className="kl-kiosk-title">Nastavenia kľúčov</span><span className="kl-sp" /><nav className="kl-tabs" aria-label="Kľúče"><a href="/kluce" className="">Kľúče</a><a href="/kluce/sprava" className="on">Nastavenia</a><a href="/kluce/historia" className="">História</a></nav></header>
-      <KeysAdmin units={units} rows={st.rows} overdueHours={st.overdueHours} isAdmin={isAdmin} />
+      <KeysAdmin units={units} rows={st.rows} overdueHours={st.overdueHours} persons={st.persons} isAdmin={isAdmin} />
     </main>
   )
 }

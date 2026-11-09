@@ -5,7 +5,7 @@ import { saveUnitAction, resetUnitAction, saveRowsAction, syncUnitsAction, addMa
 import { sortUnits, matches, tileState } from '@/lib/keys-core'
 
 /** Správa kľúčov: načítanie bytov z registra, lišty na stene, pozícia a počet sád pre každý byt, náprava stavu. */
-export default function KeysAdmin({ units = [], rows = [], overdueHours = 24, isAdmin = false }) {
+export default function KeysAdmin({ units = [], rows = [], overdueHours = 24, persons = [], isAdmin = false }) {
   const router = useRouter()
   const [pending, start] = useTransition()
   const [msg, setMsg] = useState(null)
@@ -13,6 +13,7 @@ export default function KeysAdmin({ units = [], rows = [], overdueHours = 24, is
   const [only, setOnly] = useState('all')
   const [rw, setRw] = useState(rows.map((r) => ({ ...r })))
   const [hours, setHours] = useState(overdueHours)
+  const [names, setNames] = useState(persons.map((p) => p.name).join('\n'))
   const [nu, setNu] = useState({ name: '', hook_no: '', sets: 1, note: '' })
   const list = useMemo(() => sortUnits(units).filter((u) => matches(u, q)).filter((u) => only === 'all' ? true : only === 'unplaced' ? u.hook_no == null && u.active !== false : only === 'out' ? (u.out_sets || 0) > 0 : u.active === false), [units, q, only])
   const run = (fn, okText) => start(async () => { const r = await fn(); setMsg(r && r.ok ? { ok: okText(r) } : { err: (r && r.error) || 'Nepodarilo sa.' }); if (r && r.ok) router.refresh() })
@@ -48,7 +49,11 @@ export default function KeysAdmin({ units = [], rows = [], overdueHours = 24, is
           <div className="kl-rows">
             {rw.map((r, i) => <div className="kl-rowedit" key={i}><label>Lišta<input type="number" min={1} value={r.row} onChange={(e) => setRw((x) => x.map((y, j) => j === i ? { ...y, row: Number(e.target.value) } : y))} /></label><label>Od<input type="number" min={1} max={999} value={r.from} onChange={(e) => setRw((x) => x.map((y, j) => j === i ? { ...y, from: Number(e.target.value) } : y))} /></label><label>Do<input type="number" min={1} max={999} value={r.to} onChange={(e) => setRw((x) => x.map((y, j) => j === i ? { ...y, to: Number(e.target.value) } : y))} /></label><label>Popis<input type="text" maxLength={40} value={r.label || ''} placeholder="napr. horná" onChange={(e) => setRw((x) => x.map((y, j) => j === i ? { ...y, label: e.target.value } : y))} /></label><button type="button" className="btn line" onClick={() => setRw((x) => x.filter((_, j) => j !== i))}>Odobrať</button></div>)}
           </div>
-          <div className="row"><button type="button" className="btn line" onClick={() => setRw((x) => [...x, { row: x.length + 1, from: (x[x.length - 1]?.to || 0) + 1, to: (x[x.length - 1]?.to || 0) + 20 }])}>Pridať lištu</button><label className="inl">Upozorniť po<input type="number" min={1} max={168} value={hours} onChange={(e) => setHours(Number(e.target.value))} /> h vonku</label><button type="button" className="btn" disabled={pending} onClick={() => run(() => saveRowsAction({ rows: rw, overdueHours: hours }), () => 'Lišty uložené.')}>Uložiť lišty</button></div>
+          <div className="row"><button type="button" className="btn line" onClick={() => setRw((x) => [...x, { row: x.length + 1, from: (x[x.length - 1]?.to || 0) + 1, to: (x[x.length - 1]?.to || 0) + 20 }])}>Pridať lištu</button><label className="inl">Upozorniť po<input type="number" min={1} max={168} value={hours} onChange={(e) => setHours(Number(e.target.value))} /> h vonku</label></div>
+          <h2 style={{ marginTop: 14 }}>Mená v ponuke „Kto“</h2>
+          <p className="hint">Jedno meno na riadok, v tomto poradí sa ukážu na kiosku. Prázdne = odvodiť z účtov appky.</p>
+          <textarea className="kl-names" rows={6} value={names} onChange={(e) => setNames(e.target.value)} aria-label="Mená v ponuke" />
+          <div className="row"><button type="button" className="btn" disabled={pending} onClick={() => run(() => saveRowsAction({ rows: rw, overdueHours: hours, persons: names }), () => 'Nastavenia uložené.')}>Uložiť lišty a mená</button></div>
         </section>
       )}
 

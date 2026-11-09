@@ -2,7 +2,7 @@
 import { revalidatePath } from 'next/cache'
 import { getViewer } from '@/lib/auth'
 import { canKeys, applyTake, applyReturn, normalizeRows } from '@/lib/keys-core'
-import { UNIT_COLS, syncKeyUnits } from '@/lib/keys-server'
+import { UNIT_COLS, syncKeyUnits, normalizePersons } from '@/lib/keys-server'
 
 async function viewer() {
   const v = await getViewer()
@@ -113,7 +113,8 @@ export async function saveRowsAction(payload) {
   const rows = normalizeRows(payload && payload.rows)
   const hours = Math.min(168, Math.max(1, Number(payload && payload.overdueHours) || 24))
   const at = new Date().toISOString()
-  const { error } = await v.s.from('key_settings').upsert([{ key: 'rows', value: rows, updated_by: who(v), updated_at: at }, { key: 'overdue_hours', value: hours, updated_by: who(v), updated_at: at }])
+  const persons = normalizePersons(String((payload && payload.persons) || '').split(/[\n,;]+/))
+  const { error } = await v.s.from('key_settings').upsert([{ key: 'rows', value: rows, updated_by: who(v), updated_at: at }, { key: 'overdue_hours', value: hours, updated_by: who(v), updated_at: at }, { key: 'persons', value: persons.map((p) => p.name), updated_by: who(v), updated_at: at }])
   if (error) return { ok: false, error: error.message }
   refresh(); return { ok: true, rows }
 }
