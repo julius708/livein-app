@@ -74,3 +74,8 @@
 .gd-steps li::before{counter-increment:st;content:counter(st);position:absolute;left:0;top:1px;width:26px;height:26px;border-radius:13px;background:#173E2C;color:#fff;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center}
 .gd-checklist{display:grid;gap:6px;margin-top:10px;background:#F4F6F1;border-radius:14px;padding:12px}.gd-checklist small{color:#58665D;font-weight:700;font-size:12px}
 .gd-checklist .gd-chk span{line-height:1.4}.gd-checklist .gd-chk.on span{text-decoration:line-through;color:#8A948C}
+/* prihlásenie hosťa a zámok na citlivom obsahu */
+.gd-locked{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#F4F6F1;border-radius:12px;padding:10px 12px;font-size:14px;color:#3f4e46}
+.gd-locked a{color:#B84A08;font-weight:800;text-decoration:none;margin-left:auto}
+.gd-session{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;color:#173E2C;font-weight:700;margin:0;padding:0 4px}
+.gd-session button{background:none;border:1px solid #173e2c33;border-radius:999px;padding:4px 10px;font:inherit;font-size:12.5px;font-weight:700;color:#173E2C;cursor:pointer}

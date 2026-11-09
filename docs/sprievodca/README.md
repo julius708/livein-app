@@ -66,3 +66,6 @@ Vercel: vrátiť predchádzajúci deployment. Dáta ostávajú. Odstránenie sch
 - **Úplnosť** (`completeness`, 0–100): adresa 15, Wi-Fi 15, príchod 15, odchod 10, parkovanie 10, pomoc 5, ≥ 2 sekcie 15, schválenie 10, Google recenzia 5. Zoznam bytov má stĺpec a filter „incomplete“, detail má „Ďalší nedoplnený“.
 - **Pilot → všetky byty**: `guide_settings.pilot.all = true` – denný beh a tlačidlo „Vydať štítky pre všetky pripravené“ vydajú štítok každému bytu so schváleným obsahom a splnenými podmienkami (`issuePlan`).
 - **Zadanie pre tím**: `docs/sprievodca/DOPLNENIE-OBSAHU.md`.
+
+## Prihlásenie hosťa (9. 11. 2026)
+Citlivý obsah sa zobrazí až po prihlásení hosťa menom a e-mailom z rezervácie (rovnaké overenie ako Wi-Fi: aktívna rezervácia tej istej jednotky v Guesty, limity pokusov, žiadne prezradenie, či rezervácia existuje). `POST /api/g/unlock` vráti súkromný obsah a nastaví HttpOnly cookie `gd_<kód>` podpísanú `GUIDE_SECRET`, platnú do konca pobytu + 1 deň (max 31 dní); `GET /api/g/private?code=` ju obnoví po znovunačítaní. Verejné ostáva: názov, adresa (je aj na štítku), mapa, časy, parkovanie, pravidlá domu, byt a vybavenie, okolie, tipy, podujatia, pomoc. Po prihlásení: kroky príchodu, poznámka k adrese (poschodie, vchod), pokyny k odchodu, sekcie spotrebiče / kúrenie / odpad / dôležité, Wi-Fi (`splitGuideCard` v `lib/guide/core.js`).
