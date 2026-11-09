@@ -4,7 +4,7 @@ import { getViewer } from '@/lib/auth'
 import { canGuide, matchCards, isCode } from '@/lib/guide/core'
 import { ensureUnit, issueLabel, syncUnits } from '@/lib/guide/server'
 import { importListing, importBatch, recomputeCompleteness } from '@/lib/guide/guesty-import'
-import { sanitizeSections, completeness } from '@/lib/guide/content'
+import { sanitizeSections, completeness, containsCode } from '@/lib/guide/content'
 
 async function viewer() {
   const v = await getViewer()
@@ -34,13 +34,12 @@ export async function saveCardAction(prev, fd) {
   const { error: e1 } = await v.s.from('guide_units').update(unit).eq('listing_id', id)
   if (e1) return { ok: false, error: e1.message }
   const card = { listing_id: id, address: unit.address, checkin_time: str(fd, 'checkin_time', 10) || null, address_note: j2(fd, 'address_note', 300), map_url: str(fd, 'map_url', 400) || null, lat: fd.get('lat') ? Number(fd.get('lat')) : null, lng: fd.get('lng') ? Number(fd.get('lng')) : null, parking: j2(fd, 'parking'), rules_override: j2(fd, 'rules_override'), checkout_time: str(fd, 'checkout_time', 20) || null, checkout: j2(fd, 'checkout'), arrival: j2(fd, 'arrival'), help: j2(fd, 'help', 500), approved: fd.get('approved') === 'on', approved_by: fd.get('approved') === 'on' ? who(v) : null, approved_at: fd.get('approved') === 'on' ? new Date().toISOString() : null, updated_by: who(v), updated_at: new Date().toISOString() }
-  const forbidden = /\b(k[oó]d|code|pin|heslo|password)\b\s*[:=]?\s*[A-Za-z0-9#*]{3,}/i
-  for (const k of ['arrival', 'address_note', 'parking', 'checkout', 'help']) for (const l of ['sk', 'en']) if (forbidden.test(card[k][l])) return { ok: false, error: `Pole „${k}“ (${l}) vyzerá, že obsahuje kód alebo heslo. Vstupné kódy do sprievodcu nepatria.` }
+  for (const k of ['arrival', 'address_note', 'parking', 'checkout', 'help']) for (const l of ['sk', 'en']) if (containsCode(card[k][l])) return { ok: false, error: `Pole „${k}“ (${l}) vyzerá, že obsahuje kód alebo heslo. Vstupné kódy do sprievodcu nepatria.` }
   // rozklikávacie sekcie: položky z formulára sec_<i>_key / sec_<i>_<j>_title_sk … (max 12 × 20)
   const sections = []
   for (let i = 0; i < 12; i++) { const key = str(fd, `sec_${i}_key`, 30); if (!key) continue; const items = []; for (let j = 0; j < 20; j++) { if (!fd.has(`sec_${i}_${j}_title_sk`) && !fd.has(`sec_${i}_${j}_title_en`)) continue; items.push({ title: j2(fd, `sec_${i}_${j}_title`, 120), body: j2(fd, `sec_${i}_${j}_body`, 2000) }) } sections.push({ key, icon: str(fd, `sec_${i}_icon`, 4), title: j2(fd, `sec_${i}_title`, 80), items }) }
   card.sections = sanitizeSections(sections)
-  if (JSON.stringify(card.sections).match(/\b(k[oó]d|code|pin|heslo|password)\b\s*[:=]?\s*[A-Za-z0-9#*]{3,}/i)) return { ok: false, error: 'Niektorá sekcia vyzerá, že obsahuje kód alebo heslo. Vstupné kódy do sprievodcu nepatria.' }
+  if (containsCode(JSON.stringify(card.sections))) return { ok: false, error: 'Niektorá sekcia vyzerá, že obsahuje kód alebo heslo. Vstupné kódy do sprievodcu nepatria.' }
   const { data: w } = await v.s.from('guide_wifi').select('listing_id').eq('listing_id', id).maybeSingle()
   const { data: u2 } = await v.s.from('guide_units').select('address,gbp_url').eq('listing_id', id).maybeSingle()
   card.completeness = completeness({ unit: u2 || {}, card, wifi: !!w }).score

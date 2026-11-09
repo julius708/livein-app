@@ -31,3 +31,8 @@ test('návrh z Guesty: adresa, časy, dvojjazyčné texty bez kódov, Wi-Fi, sek
   assert.ok(d.sections.some((s) => s.key === 'apartment') && d.sections.some((s) => s.key === 'important'))
   assert.ok(!JSON.stringify(d.sections).includes('Paplón'))
 })
+test('kontrola kódov nereaguje na bežné slová za „kód“ (zástupný text, „kód pre zámok“)', () => {
+  assert.ok(!containsCode('Kód pre smart zámok [kód dostanete v správe pred príchodom]'))
+  assert.ok(!containsCode('open with a code [you will receive the code in a message before arrival]'))
+  assert.ok(containsCode('Code: 2105#')); assert.ok(containsCode('kód je 4433')); assert.ok(containsCode('PIN 1234'))
+})
