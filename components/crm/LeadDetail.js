@@ -7,7 +7,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { countdown, stageOf, SOURCES, CITY_GROUPS, OTHER_CITIES, originLabel, isFreshOrigin } from '@/lib/crm'
 import { Ring, Pill, ContactButtons, StageBar, stateOf, fmtDT, firstName } from './ui'
-import { setStage, logContact, addNote, assignLead, setCity, setKind, updateLead } from '@/app/crm/actions'
+import { setStage, logContact, addNote, assignLead, setCity, setKind, updateLead, editNote, setViewingDate } from '@/app/crm/actions'
 
 const TYPES = { stage_change: 'Zmena štádia', call: 'Hovor', whatsapp: 'WhatsApp', email: 'E-mail', sms: 'SMS', note: 'Poznámka', system: 'Systém' }
 const HUB = 'https://app.hubspot.com/contacts/48987752/record/0-1/'
@@ -15,8 +15,9 @@ const HUB = 'https://app.hubspot.com/contacts/48987752/record/0-1/'
 const FIELD_LABELS = { name: 'meno', phone: 'telefón', email: 'e-mail', city: 'mesto', city_group: 'mesto', source: 'zdroj', property_address: 'adresa bytu' }
 function describe(e, people) {
   const p = e.payload || {}
-  if (e.type === 'stage_change') return `${stageOf(p.from).label} → ${stageOf(p.to).label}${p.lost_reason ? ' (' + p.lost_reason + ')' : ''}${p.via ? ' · z ' + p.via : ''}${p.note ? ': ' + p.note : ''}`
+  if (e.type === 'stage_change') return `${stageOf(p.from).label} → ${stageOf(p.to).label}${p.viewing_at ? ' · obhliadka ' + fmtDT(p.viewing_at) : ''}${p.lost_reason ? ' (' + p.lost_reason + ')' : ''}${p.via ? ' · z ' + p.via : ''}${p.note ? ': ' + p.note : ''}`
   if (e.type === 'system' && p.edited) return 'Upravené údaje: ' + p.edited.map((k) => FIELD_LABELS[k] || k).join(', ')
+  if (e.type === 'system' && p.viewing_at) return 'Obhliadka absolvovaná ' + fmtDT(p.viewing_at)
   if (e.type === 'system') return p.via === 'zapier' ? 'Lead prišiel zo Zapieru' : p.via === 'manual' ? 'Lead pridaný ručne' : p.assigned_to ? 'Priradený: ' + firstName(p.assigned_to, people) : 'Systém'
   if (e.type === 'note') return p.note || ''
   return p.note ? p.note : ''
@@ -49,6 +50,8 @@ export default function LeadDetail({ lead: initial, events: initialEvents, tasks
   const [lead, setLead] = useState(initial)
   const [events, setEvents] = useState(initialEvents)
   const [note, setNote] = useState('')
+  const [editing, setEditing] = useState(null)      // { id, text } – poznámka, ktorú práve upravujeme
+  const [viewEdit, setViewEdit] = useState(null)    // 'YYYY-MM-DDTHH:MM' – úprava dátumu obhliadky
   const [err, setErr] = useState('')
   const [edit, setEdit] = useState(null)
   const [busy, start] = useTransition()
@@ -59,6 +62,9 @@ export default function LeadDetail({ lead: initial, events: initialEvents, tasks
   const doStage = (stage, opts) => start(async () => { setErr(''); const r = await setStage(lead.id, stage, opts || {}); if (!r.ok) { setErr(r.error); return } setLead({ ...lead, stage, kind: stage === 'client' ? 'client' : lead.kind, first_contact_at: lead.first_contact_at || (lead.stage === 'new' && stage !== 'new' ? new Date().toISOString() : null) }); refresh() })
   const doLog = (type) => { logContact(lead.id, type).then(() => refresh()).catch(() => {}) }
   const saveNote = () => start(async () => { setErr(''); const r = await addNote(lead.id, note); if (!r.ok) { setErr(r.error); return } setEvents([{ id: 'tmp' + Date.now(), at: new Date().toISOString(), type: 'note', payload: { note }, user_name: me.name }, ...events]); setNote(''); refresh() })
+  const saveNoteEdit = () => start(async () => { if (!editing) return; setErr(''); const r = await editNote(editing.id, editing.text); if (!r.ok) { setErr(r.error); return } setEvents(events.map((e) => (String(e.id) === String(editing.id) ? { ...e, payload: r.payload } : e))); setEditing(null) })
+  const saveViewing = () => start(async () => { if (!viewEdit) return; setErr(''); const ms = Date.parse(viewEdit); if (!Number.isFinite(ms)) { setErr('Zadaj dátum a čas.'); return } const r = await setViewingDate(lead.id, new Date(ms).toISOString()); if (!r.ok) { setErr(r.error); return } setLead({ ...lead, viewing_at: r.viewing_at }); setViewEdit(null); refresh() })
+  const toLocal = (iso) => { const d = iso ? new Date(iso) : new Date(); d.setSeconds(0, 0); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16) }
   const saveEdit = () => start(async () => { setErr(''); const r = await updateLead(lead.id, edit); if (!r.ok) { setErr(r.error); return } setLead({ ...lead, ...r.patch }); setEdit(null); refresh() })
   const s = stageOf(lead.stage)
   return (
@@ -71,6 +77,15 @@ export default function LeadDetail({ lead: initial, events: initialEvents, tasks
           <div className="crm-row-head"><h1>{lead.name}</h1><Pill lead={lead} />{lead.kind === 'not_lead' && <span className="crm-low">označený ako nie lead</span>}</div>
           <div className="crm-meta" suppressHydrationWarning>{lead.city_group !== 'Iné' ? lead.city_group : ''}{lead.city ? ` · ${lead.city}` : ''} · {lead.source || 'zdroj neznámy'} · prijatý {fmtDT(lead.received_at)}{lead.due_at && lead.stage === 'new' ? ` · lehota ${c.state === 'over' ? 'prekročená o ' + c.label.slice(1) : 'do ' + fmtDT(lead.due_at)}` : ''}</div>
           <div className="crm-meta">{lead.first_contact_at ? `Prvý kontakt ${fmtDT(lead.first_contact_at)} (${firstName(lead.contacted_by, people)})` : 'Zatiaľ bez kontaktu'}{lead.lost_reason ? ` · dôvod straty: ${lead.lost_reason}` : ''}{lead.property_address ? ` · nehnuteľnosť: ${lead.property_address}` : ''}</div>
+          {(lead.viewing_at || ['viewing', 'offer', 'client'].includes(lead.stage)) && (
+            <div className="crm-meta crm-viewing">
+              {viewEdit === null ? (
+                <>{lead.viewing_at ? <>Obhliadka absolvovaná <b>{fmtDT(lead.viewing_at)}</b></> : 'Dátum obhliadky nie je zapísaný'} <button type="button" className="crm-linkbtn" onClick={() => setViewEdit(toLocal(lead.viewing_at))}>{lead.viewing_at ? 'upraviť' : 'doplniť'}</button></>
+              ) : (
+                <span className="crm-row"><input type="datetime-local" value={viewEdit} onChange={(e) => setViewEdit(e.target.value)} aria-label="Dátum a čas obhliadky" /><button type="button" className="btn" disabled={busy} onClick={saveViewing}>Uložiť</button><button type="button" className="btn line" onClick={() => setViewEdit(null)}>Zrušiť</button></span>
+              )}
+            </div>
+          )}
           <ContactButtons lead={lead} onLog={doLog} big />
           <StageBar lead={lead} onStage={doStage} />
           {err && <p className="msg err">{err}</p>}
@@ -83,7 +98,9 @@ export default function LeadDetail({ lead: initial, events: initialEvents, tasks
       <div className="eko-two">
         <section className="card">
           <h2>História</h2>
-          <ul className="crm-hist">{events.map((e) => <li key={e.id}><span className={'crm-ev t-' + e.type}>{TYPES[e.type] || e.type}</span><div><b>{describe(e, people)}</b><small>{fmtDT(e.at)} · {e.user_name || 'automaticky'}</small></div></li>)}{!events.length && <li className="eko-fine">Zatiaľ bez udalostí.</li>}</ul>
+          <ul className="crm-hist">{events.map((e) => <li key={e.id}><span className={'crm-ev t-' + e.type}>{TYPES[e.type] || e.type}</span><div>{editing && String(editing.id) === String(e.id) ? (
+            <div className="crm-noteedit"><textarea value={editing.text} onChange={(ev) => setEditing({ ...editing, text: ev.target.value })} rows={3} maxLength={2000} aria-label="Upraviť poznámku" /><div className="crm-row"><button type="button" className="btn" disabled={busy || !editing.text.trim()} onClick={saveNoteEdit}>Uložiť</button><button type="button" className="btn line" onClick={() => setEditing(null)}>Zrušiť</button></div></div>
+          ) : (<><b>{describe(e, people)}</b><small>{fmtDT(e.at)} · {e.user_name || 'automaticky'}{e.payload && e.payload.edited_at ? ` · upravené ${fmtDT(e.payload.edited_at)}${e.payload.edited_by ? ' (' + e.payload.edited_by + ')' : ''}` : ''}{e.type === 'note' && /^\d+$/.test(String(e.id)) && <> · <button type="button" className="crm-linkbtn" onClick={() => setEditing({ id: e.id, text: (e.payload && e.payload.note) || '' })}>upraviť</button></>}</small></>)}</div></li>)}{!events.length && <li className="eko-fine">Zatiaľ bez udalostí.</li>}</ul>
         </section>
         <section className="card">
           <div className="crm-row-head"><h2>Údaje</h2>{!edit && <button type="button" className="eko-link" onClick={() => setEdit({ name: lead.name || '', phone: lead.phone || '', email: lead.email || '', city: lead.city || '', source: lead.source || '', property_address: lead.property_address || '' })}>✎ Upraviť</button>}</div>

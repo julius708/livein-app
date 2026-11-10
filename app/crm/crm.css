@@ -170,3 +170,10 @@
 .msg.ok{color:#1E6B45;font-weight:700}
 
 .crm-city-other{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}.crm-city-other input{flex:1;min-width:160px;padding:6px 8px;border:1px solid #173e2c2e;border-radius:10px;font-size:13.5px}.crm-city-other .btn{padding:6px 12px;font-size:13px}
+
+/* úprava poznámky a dátum obhliadky (10. 11. 2026) */
+.crm-linkbtn{border:0;background:none;padding:0;color:#C9560C;font:inherit;font-size:12px;font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.crm-noteedit{display:grid;gap:6px}.crm-noteedit textarea{width:100%;padding:8px 10px;border:1px solid #173e2c2e;border-radius:10px;font:inherit;font-size:13.5px;resize:vertical}
+.crm-viewing input[type=datetime-local]{padding:6px 10px;border:1px solid #173e2c2e;border-radius:10px;font:inherit;font-size:13px}
+.crm-viewing .crm-row{display:inline-flex;gap:6px;align-items:center;flex-wrap:wrap}.crm-viewing .btn{padding:6px 12px;font-size:12.5px}
+.crm-lost input[type=datetime-local]{font:inherit}

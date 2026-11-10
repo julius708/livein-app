@@ -30,7 +30,7 @@ export async function setStage(leadId, stage, opts = {}) {
   if (!isUuid(leadId)) return { ok: false, error: 'Neplatný lead.' }
   if (!STAGE_IDS.includes(stage)) return { ok: false, error: 'Neznáme štádium.' }
   if (stage === 'lost' && !LOST_REASONS.includes(String(opts.lost_reason || '').split(' · ')[0]) && !opts.lost_reason) return { ok: false, error: 'Vyber dôvod straty.' }
-  const r = await changeStage(v.s, leadId, stage, who(v), { lost_reason: String(opts.lost_reason || '').slice(0, 300), note: String(opts.note || '').slice(0, 2000), connected: !!opts.connected, property_address: String(opts.property_address || '').slice(0, 300) })
+  const r = await changeStage(v.s, leadId, stage, who(v), { viewing_at: stage === 'viewing' && opts.viewing_at ? String(opts.viewing_at).slice(0, 40) : '', lost_reason: String(opts.lost_reason || '').slice(0, 300), note: String(opts.note || '').slice(0, 2000), connected: !!opts.connected, property_address: String(opts.property_address || '').slice(0, 300) })
   revalidatePath('/crm'); revalidatePath(`/crm/lead/${leadId}`)
   return r
 }
@@ -58,6 +58,40 @@ export async function addNote(leadId, text) {
   await flushQueue(v.s, 2).catch(() => {})
   revalidatePath(`/crm/lead/${leadId}`)
   return { ok: true }
+}
+/** Úprava už napísanej poznámky (Július, 10. 11. 2026): prepíše text v histórii, zapamätá si, kto a kedy upravil; do Asany ide komentár s novým znením. */
+export async function editNote(eventId, text) {
+  const v = await crmViewer(); if (v.error) return { ok: false, error: v.error }
+  const id = Number(eventId); if (!Number.isInteger(id) || id <= 0) return { ok: false, error: 'Neplatná poznámka.' }
+  const t = String(text || '').trim().slice(0, 2000)
+  if (!t) return { ok: false, error: 'Poznámka nemôže byť prázdna.' }
+  const { data: ev } = await v.s.from('lead_events').select('id,lead_id,type,payload').eq('id', id).maybeSingle()
+  if (!ev || ev.type !== 'note') return { ok: false, error: 'Poznámka sa nenašla.' }
+  const old = (ev.payload && ev.payload.note) || ''
+  if (old === t) return { ok: true, payload: ev.payload }
+  const payload = { ...(ev.payload || {}), note: t, edited_at: new Date().toISOString(), edited_by: who(v).name, previous: String(old).slice(0, 2000) }
+  const { error } = await v.s.from('lead_events').update({ payload }).eq('id', id)
+  if (error) return { ok: false, error: error.message }
+  const { data: lead } = await v.s.from('leads').select('notes').eq('id', ev.lead_id).maybeSingle()
+  if (lead && lead.notes === old) await v.s.from('leads').update({ notes: t }).eq('id', ev.lead_id)
+  await v.s.from('crm_sync_queue').insert({ lead_id: ev.lead_id, target: 'asana', action: 'note', payload: { comment: `${who(v).name} (upravená poznámka): ${t}` } })
+  await flushQueue(v.s, 2).catch(() => {})
+  revalidatePath(`/crm/lead/${ev.lead_id}`)
+  return { ok: true, payload }
+}
+/** Dátum absolvovanej obhliadky (dá sa doplniť alebo opraviť aj neskôr). */
+export async function setViewingDate(leadId, at) {
+  const v = await crmViewer(); if (v.error) return { ok: false, error: v.error }
+  if (!isUuid(leadId)) return { ok: false, error: 'Neplatný lead.' }
+  const ms = Date.parse(at); if (!Number.isFinite(ms)) return { ok: false, error: 'Zadaj dátum a čas obhliadky.' }
+  const iso = new Date(ms).toISOString()
+  const { error } = await v.s.from('leads').update({ viewing_at: iso }).eq('id', leadId)
+  if (error) return { ok: false, error: error.message }
+  await v.s.from('lead_events').insert({ lead_id: leadId, type: 'system', payload: { viewing_at: iso, by: who(v).name }, user_email: who(v).email, user_name: who(v).name })
+  await v.s.from('crm_sync_queue').insert({ lead_id: leadId, target: 'asana', action: 'note', payload: { comment: `${who(v).name}: obhliadka absolvovaná ${fmtWhen(iso)}` } })
+  await flushQueue(v.s, 2).catch(() => {})
+  revalidatePath(`/crm/lead/${leadId}`); revalidatePath('/crm')
+  return { ok: true, viewing_at: iso }
 }
 /** Ručne pridaný lead (telefón, odporúčanie…). HubSpot a Asana sa doplnia cez frontu, keď sú kľúče. */
 export async function createManualLead(form) {
@@ -270,11 +304,13 @@ export async function createCustomTaskAction(leadId, form = {}) {
 export async function toggleTaskAction(taskId, done) {
   const v = await crmViewer(); if (v.error) return { ok: false, error: v.error }
   if (!isUuid(taskId)) return { ok: false, error: 'Neplatná úloha.' }
-  const { data: t } = await v.s.from('lead_tasks').select('id,lead_id,asana_gid,title').eq('id', taskId).maybeSingle()
+  const { data: t } = await v.s.from('lead_tasks').select('id,lead_id,asana_gid,title,kind,due_at').eq('id', taskId).maybeSingle()
   if (!t) return { ok: false, error: 'Úloha neexistuje.' }
   const { error } = await v.s.from('lead_tasks').update(done ? { status: 'done', done_at: new Date().toISOString(), done_by: who(v).email } : { status: 'open', done_at: null, done_by: null }).eq('id', taskId)
   if (error) return { ok: false, error: error.message }
   if (t.asana_gid) await completeSubtask(t.asana_gid, !!done).catch(() => {})
   if (done) await v.s.from('lead_events').insert({ lead_id: t.lead_id, type: 'note', payload: { note: `Hotovo: ${t.title}` }, user_email: who(v).email, user_name: who(v).name })
+  // odškrtnutá obhliadka doplní dátum absolvovania, ak ešte nie je zapísaný (termín úlohy; dá sa upraviť v hlavičke leadu)
+  if (done && t.kind === 'viewing' && t.due_at) { const { data: l } = await v.s.from('leads').select('viewing_at').eq('id', t.lead_id).maybeSingle(); if (l && !l.viewing_at) await v.s.from('leads').update({ viewing_at: t.due_at }).eq('id', t.lead_id) }
   revalidatePath(`/crm/lead/${t.lead_id}`); return { ok: true }
 }

@@ -45,9 +45,21 @@ export function StageBar({ lead, onStage, compact = false }) {
   const [lost, setLost] = useState(false)
   const [reason, setReason] = useState(LOST_REASONS[0])
   const [note, setNote] = useState('')
+  const [view, setView] = useState(false)
+  const [viewAt, setViewAt] = useState('')
+  const [viewNote, setViewNote] = useState('')
+  const localNow = () => { const d = new Date(); d.setSeconds(0, 0); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16) }
   return (
     <div className="crm-stagebar">
-      {STAGES.map((s) => <button key={s.id} type="button" className={lead.stage === s.id ? 'on' : ''} disabled={lead.stage === s.id} onClick={() => (s.id === 'lost' ? setLost(true) : onStage(s.id))}>{compact ? s.label : s.short}</button>)}
+      {STAGES.map((s) => <button key={s.id} type="button" className={lead.stage === s.id ? 'on' : ''} disabled={lead.stage === s.id} onClick={() => (s.id === 'lost' ? setLost(true) : s.id === 'viewing' ? (setViewAt(localNow()), setView(true)) : onStage(s.id))}>{compact ? s.label : s.short}</button>)}
+      {view && (
+        <div className="crm-lost" role="dialog" aria-label="Dátum obhliadky">
+          <b>Kedy bola obhliadka?</b>
+          <input type="datetime-local" value={viewAt} onChange={(e) => setViewAt(e.target.value)} aria-label="Dátum a čas obhliadky" />
+          <input value={viewNote} onChange={(e) => setViewNote(e.target.value)} placeholder="Poznámka z obhliadky (nepovinné)" />
+          <div className="crm-row"><button type="button" className="btn" disabled={!viewAt} onClick={() => { const ms = Date.parse(viewAt); onStage('viewing', { viewing_at: Number.isFinite(ms) ? new Date(ms).toISOString() : '', note: viewNote }); setView(false); setViewNote('') }}>Uložiť obhliadku</button><button type="button" className="btn line" onClick={() => setView(false)}>Zrušiť</button></div>
+        </div>
+      )}
       {lost && (
         <div className="crm-lost" role="dialog" aria-label="Dôvod straty">
           <b>Prečo sme lead stratili?</b>
