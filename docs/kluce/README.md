@@ -14,7 +14,7 @@ Modul `/kluce` v hlavnej appke. Stena s kľúčmi v miestnosti je v appke ako ta
 - **Upozornenie:** kľúče vonku dlhšie než nastavený limit (predvolene 24 h) sa ukážu žltým pásom hore.
 - **Kiosk = `/kluce`**: bez hlavičky appky a Guru, hore len malé logo (späť na domov), vľavo dlaždice, vpravo úzka lišta. Obnova každých 45 s, obrazovka nezhasína, rozrobený výber sa po 2 minútach zruší. iPad je prihlásený raz na zdieľaný účet s prístupom ku kľúčom; `/kluce/kiosk` presmeruje na `/kluce`.
 - **História** `/kluce/historia`: každý pohyb (kto, kedy, byt, pozícia v tom čase, zdroj appka/kiosk/zámok).
-- **Nastavenia** `/kluce/sprava` (ozubené koliesko v hlavičke kiosku): pridať kľúč mimo Guesty, načítať byty z registra, pozícia a počet sád pre každý kľúč, poznámka, vyradiť/zaradiť; admin navyše lišty, limit upozornenia a nápravu stavu (kľúče sa našli).
+- **Nastavenia** `/kluce/sprava` (ozubené koliesko v hlavičke kiosku): pridať kľúč mimo Guesty, načítať byty z registra, názov na tabuli (vlastný názov má prednosť pred Guesty), pozícia a počet sád pre každý kľúč, adresa, poschodie, poznámka, vyradiť/zaradiť (vyradený kľúč uvoľní pozíciu; obsadenú pozíciu možno prevziať, druhý byt ostane bez pozície); admin navyše lišty, limit upozornenia a nápravu stavu (kľúče sa našli).
 
 ## Prístup
 Roly admin, operations, cleaning, customer_service, assistant (RLS `keys_team()`).

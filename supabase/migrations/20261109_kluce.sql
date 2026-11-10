@@ -94,3 +94,6 @@ alter table public.key_units add column if not exists manual boolean not null de
 
 -- Adresa a upresnenie bytu (poschodie, číslo apartmánu, veža) – ukazuje sa po ťuknutí na dlaždicu, aby bolo jasné, ktorý byt to je.
 alter table public.key_units add column if not exists address text, add column if not exists detail text;
+
+-- Vlastný názov (label) namiesto názvu z Guesty; vyradený kľúč neblokuje pozíciu.
+alter table public.key_units add column if not exists label text;

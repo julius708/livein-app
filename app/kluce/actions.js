@@ -69,13 +69,22 @@ export async function saveUnitAction(payload) {
   const patch = { updated_by: who(v), updated_at: new Date().toISOString() }
   if ('hook_no' in payload) { const h = payload.hook_no === null || payload.hook_no === '' ? null : Number(payload.hook_no); if (h !== null && (!Number.isInteger(h) || h < 1 || h > 999)) return { ok: false, error: 'Pozícia musí byť číslo 1 až 999.' }; patch.hook_no = h }
   if ('sets' in payload) { const n = Number(payload.sets); if (!Number.isInteger(n) || n < 0 || n > 20) return { ok: false, error: 'Počet sád 0 až 20.' }; patch.sets = n }
-  if ('active' in payload) patch.active = !!payload.active
+  if ('active' in payload) { patch.active = !!payload.active; if (!patch.active) patch.hook_no = null }   // vyradený kľúč uvoľní pozíciu
+  if ('name' in payload) {
+    const name = String(payload.name || '').trim().slice(0, 80); if (name.length < 2) return { ok: false, error: 'Názov musí mať aspoň 2 znaky.' }
+    const { data: cur } = await v.s.from('key_units').select('manual,listing_name').eq('listing_id', id).maybeSingle()
+    if (cur && cur.manual) patch.listing_name = name; else if (cur) patch.label = name === cur.listing_name ? null : name
+  }
   if ('note' in payload) patch.note = String(payload.note || '').slice(0, 300) || null
   if ('address' in payload) patch.address = String(payload.address || '').slice(0, 200) || null
   if ('detail' in payload) patch.detail = String(payload.detail || '').slice(0, 200) || null
   if (patch.hook_no != null) {
-    const { data: clash } = await v.s.from('key_units').select('listing_id,listing_name').eq('hook_no', patch.hook_no).neq('listing_id', id).maybeSingle()
-    if (clash) return { ok: false, error: `Pozícia ${patch.hook_no} už patrí bytu ${clash.listing_name}. Najprv ju uvoľni.` }
+    const { data: clash } = await v.s.from('key_units').select('listing_id,listing_name,label,active').eq('hook_no', patch.hook_no).neq('listing_id', id).maybeSingle()
+    if (clash && (!clash.active || payload.take_over)) {
+      // vyradený kľúč alebo výslovné prevzatie: druhý byt pozíciu uvoľní (ostane bez pozície), tento ju dostane
+      const { error: e0 } = await v.s.from('key_units').update({ hook_no: null, note: `pozíciu ${patch.hook_no} prevzal iný byt`, updated_by: who(v), updated_at: patch.updated_at }).eq('listing_id', clash.listing_id)
+      if (e0) return { ok: false, error: e0.message }
+    } else if (clash) return { ok: false, error: `Pozícia ${patch.hook_no} už patrí bytu ${clash.label || clash.listing_name}.`, clash: { listing_id: clash.listing_id, name: clash.label || clash.listing_name, hook_no: patch.hook_no } }
   }
   const { error } = await v.s.from('key_units').update(patch).eq('listing_id', id)
   if (error) return { ok: false, error: error.message }
@@ -89,7 +98,7 @@ export async function addManualUnitAction(payload) {
   const sets = Number(payload.sets); if (!Number.isInteger(sets) || sets < 0 || sets > 20) return { ok: false, error: 'Počet sád 0 až 20.' }
   const h = payload.hook_no === null || payload.hook_no === '' || payload.hook_no === undefined ? null : Number(payload.hook_no)
   if (h !== null && (!Number.isInteger(h) || h < 1 || h > 999)) return { ok: false, error: 'Pozícia musí byť číslo 1 až 999.' }
-  if (h !== null) { const { data: clash } = await v.s.from('key_units').select('listing_name').eq('hook_no', h).maybeSingle(); if (clash) return { ok: false, error: `Pozícia ${h} už patrí kľúču ${clash.listing_name}.` } }
+  if (h !== null) { const { data: clash } = await v.s.from('key_units').select('listing_id,listing_name,label,active').eq('hook_no', h).maybeSingle(); if (clash && clash.active) return { ok: false, error: `Pozícia ${h} už patrí kľúču ${clash.label || clash.listing_name}. Vyraď ho alebo mu zmeň pozíciu.` }; if (clash) await v.s.from('key_units').update({ hook_no: null, updated_by: who(v), updated_at: new Date().toISOString() }).eq('listing_id', clash.listing_id) }
   const id = 'manual-' + Date.now().toString(36) + '-' + name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30)
   const { error } = await v.s.from('key_units').insert({ listing_id: id, listing_name: name, hook_no: h, sets, manual: true, note: String(payload.note || '').slice(0, 300) || null, address: String(payload.address || '').slice(0, 200) || null, detail: String(payload.detail || '').slice(0, 200) || null, updated_by: who(v) })
   if (error) return { ok: false, error: error.message }

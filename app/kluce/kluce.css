@@ -149,3 +149,5 @@
 .kl-info-r{line-height:1.35}.kl-info-n{color:#66716A}
 .kl-tr-txt{display:grid;gap:4px}.kl-tr-txt input{width:100%}
 .kl-tr{grid-template-columns:90px minmax(150px,1.2fr) 84px minmax(150px,1fr) minmax(220px,1.4fr) auto}
+
+.kl-tr-name{display:grid;gap:3px}.kl-tr-name input{width:100%;font-weight:700}.kl-tr-name em{font-size:11px}
