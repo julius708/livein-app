@@ -6,7 +6,8 @@ import { takeKeysAction, returnKeysAction } from '@/app/kluce/actions'
 
 const STATE_LABEL = { ok: 'na háčiku', part: 'časť vonku', out: 'vonku', none: 'bez sád', unknown: 'nie je v evidencii' }
 const fmtT = (iso) => { try { return new Date(iso).toLocaleString('sk-SK', { timeZone: 'Europe/Bratislava', day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' }) } catch { return '' } }
-const dayName = (ymd, today) => ymd === today ? 'Dnes' : new Date(ymd + 'T12:00:00Z').toLocaleDateString('sk-SK', { weekday: 'short', day: 'numeric', month: 'numeric', timeZone: 'UTC' })
+const fmtDay = (ymd) => { try { return new Date(ymd + 'T12:00:00Z').toLocaleDateString('sk-SK', { day: 'numeric', month: 'numeric', timeZone: 'UTC' }) } catch { return '' } }
+const dayName = (ymd, today) => (ymd === today ? 'Dnes ' : '') + new Date(ymd + 'T12:00:00Z').toLocaleDateString('sk-SK', { weekday: 'short', day: 'numeric', month: 'numeric', timeZone: 'UTC' })
 /** Krátky názov na dlaždicu: ulica bez prívlastku za čiarkou („29. Augusta, Grand“ → „29. Augusta“), skratky bez bodky na konci. */
 export const shortName = (s) => { const t = String(s || '').replace(/\s*\(.*?\)\s*/g, ' ').trim(); const i = t.indexOf(','); const head = (i > 0 ? t.slice(0, i) : t).trim(); return head.length >= 3 ? head : t }
 const plural = (n, a, b, c) => `${n} ${n === 1 ? a : n < 5 ? b : c}`
@@ -36,12 +37,16 @@ export default function KeysBoard({ units = [], rows = [], persons = [], days = 
   // kiosk: obnova každých 45 s, keď nie je rozrobený výber; obrazovka nezhasína
   useEffect(() => {
     if (!kiosk) return
-    const t = setInterval(() => { if (!picked.length && !busy) router.refresh() }, 45000)
+    // nový deň = celé znovunačítanie (dnešné tašky, modré dlaždice); inak tichá obnova dát každých 45 s a po návrate na obrazovku
+    const ymdNow = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Bratislava', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
+    const tick = () => { if (ymdNow() !== today) { window.location.reload(); return } if (!picked.length && !busy) router.refresh() }
+    const t = setInterval(tick, 45000)
     let lock = null
     const wake = async () => { try { if (navigator.wakeLock && document.visibilityState === 'visible') lock = await navigator.wakeLock.request('screen') } catch {} }
-    wake(); document.addEventListener('visibilitychange', wake)
-    return () => { clearInterval(t); document.removeEventListener('visibilitychange', wake); try { lock && lock.release() } catch {} }
-  }, [kiosk, picked.length, busy, router])
+    const onVis = () => { wake(); if (document.visibilityState === 'visible') tick() }
+    wake(); document.addEventListener('visibilitychange', onVis); window.addEventListener('focus', tick); window.addEventListener('online', tick)
+    return () => { clearInterval(t); document.removeEventListener('visibilitychange', onVis); window.removeEventListener('focus', tick); window.removeEventListener('online', tick); try { lock && lock.release() } catch {} }
+  }, [kiosk, picked.length, busy, router, today])
   useEffect(() => { if (!kiosk || !picked.length) return; const t = setTimeout(() => setPicked([]), 120000); return () => clearTimeout(t) }, [kiosk, picked])
   useEffect(() => { if (!msg) return; const t = setTimeout(() => setMsg(null), msg.err ? 15000 : 8000); return () => clearTimeout(t) }, [msg])
 
@@ -78,7 +83,7 @@ export default function KeysBoard({ units = [], rows = [], persons = [], days = 
       setMsg({ err: 'Zápis sa nepodaril (spojenie alebo prihlásenie). Obnov stránku a skús znova.' })
     } finally { setBusy(false) }
   }
-  const takeToday = () => run('take', todayLeft.map((i) => ({ listing_id: i.listing_id, sets: 1, package_id: i.package_id, package_date: i.date })), `Zobraté (${person ? person.name.split(' ')[0] : ''})`)
+  const takeToday = () => run('take', todayLeft.map((i) => ({ listing_id: i.listing_id, sets: 1, package_id: i.package_id, package_date: i.date })), `Zobraté ${fmtDay(today)} (${person ? person.name.split(' ')[0] : ''})`)
   const returnAll = () => run('return', owed.map((o) => ({ listing_id: o.listing_id, sets: o.sets })), `Vrátené (${person ? person.name.split(' ')[0] : ''})`)
   const takePicked = () => run('take', canTake.map((u) => ({ listing_id: u.listing_id, sets: 1, ...(todayIds.has(u.listing_id) ? { package_id: (todayList.items.find((i) => i.listing_id === u.listing_id) || {}).package_id, package_date: todayList.date } : {}) })), `Zobraté (${person ? person.name.split(' ')[0] : ''})`)
   const returnPicked = () => run('return', canReturn.map((u) => ({ listing_id: u.listing_id, sets: 1 })), `Vrátené (${person ? person.name.split(' ')[0] : ''})`)
@@ -125,7 +130,7 @@ export default function KeysBoard({ units = [], rows = [], persons = [], days = 
           {msg && <div className={`kl-msg ${msg.err ? 'err' : 'ok'}`} role="status">{msg.err || msg.ok}</div>}
 
           <div className="kl-actions">
-            <button type="button" className="kl-btn today" onClick={takeToday} disabled={busy || !todayLeft.length} title="Označí všetky dnešné kľúče z tašiek Práčovne ako zobraté">{busy ? '…' : 'Zobrať na dnes'} <b>{todayLeft.length}</b></button>
+            <button type="button" className="kl-btn today" onClick={takeToday} disabled={busy || !todayLeft.length} title="Označí všetky dnešné kľúče z tašiek Práčovne ako zobraté">{busy ? '…' : `Zobrať na dnes ${fmtDay(today)}`} <b>{todayLeft.length}</b></button>
             <button type="button" className="kl-btn back" onClick={returnAll} disabled={busy || !person || !owed.length} title={person ? `Vráti všetko, čo má ${person.name.split(' ')[0]} vonku` : 'Najprv vyber meno'}>Vrátiť všetko <b>{owed.length}</b></button>
           </div>
 

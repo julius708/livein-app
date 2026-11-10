@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getViewer } from '@/lib/auth'
 import NoAccess from '@/components/NoAccess'
+import KeysClock from '@/components/kluce/Clock'
 import { canKeys } from '@/lib/keys-core'
 import '../kluce.css'
 export const dynamic = 'force-dynamic'
@@ -21,7 +22,7 @@ export default async function KeysHistoryPage({ searchParams }) {
   const { data: moves } = await qry
   return (
     <main className="kl-kiosk">
-      <header className="kl-kiosk-head"><a href="/" aria-label="LIVE-IN domov"><img src="/logo.png" alt="LIVE-IN" /></a><span className="kl-kiosk-title">História kľúčov</span><span className="kl-sp" /><nav className="kl-tabs" aria-label="Kľúče"><a href="/kluce" className="">Kľúče</a><a href="/kluce/sprava" className="">Nastavenia</a><a href="/kluce/historia" className="on">História</a></nav></header>
+      <header className="kl-kiosk-head"><a href="/" aria-label="LIVE-IN domov"><img src="/logo.png" alt="LIVE-IN" /></a><span className="kl-kiosk-title">História kľúčov</span><KeysClock /><span className="kl-sp" /><nav className="kl-tabs" aria-label="Kľúče"><a href="/kluce" className="">Kľúče</a><a href="/kluce/sprava" className="">Nastavenia</a><a href="/kluce/historia" className="on">História</a></nav></header>
       <div className="kl-page">
         <section className="card">
           <form className="row" action="/kluce/historia"><input type="search" name="q" defaultValue={q} placeholder="Byt, osoba alebo číslo pozície" aria-label="Hľadať v histórii" /><button className="btn line" type="submit">Hľadať</button>{q && <a className="btn line" href="/kluce/historia">Zrušiť filter</a>}</form>
