@@ -19,6 +19,6 @@ export async function GET(req) {
   try {
     const j = await gget(path, params)
     const text = JSON.stringify(j)
-    return NextResponse.json({ ok: true, ms: Date.now() - t0, bytes: text.length, data: text.length > 60000 ? JSON.parse(text.slice(0, 1)) && { truncated: true, head: text.slice(0, 60000) } : j })
+    return NextResponse.json(text.length > 60000 ? { ok: true, ms: Date.now() - t0, bytes: text.length, truncated: true, head: text.slice(0, 60000) } : { ok: true, ms: Date.now() - t0, bytes: text.length, data: j })
   } catch (e) { return NextResponse.json({ ok: false, ms: Date.now() - t0, error: String(e && e.message || e) }, { status: 502 }) }
 }
