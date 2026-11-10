@@ -1,3 +1,7 @@
+## 10. 11. 2026 – Guesty Reservations V3
+- Guesty ruší staré `/v1/reservations` + staré webhooky **1. 3. 2027**. Hlavná appka (overenie hosťa), Ring (odkazy na vstup) a CS (založenie rezervácie) prepnuté na V3; Práčovňa už V3 mala. Podrobnosti `docs/guesty-migration.md`.
+- PriceLabs webhook ostáva na starých udalostiach (ich zodpovednosť) – skontrolovať v januári 2027.
+
 
 
 ## 9. 11. 2026 (večer)

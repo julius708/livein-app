@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { gget } from '@/lib/guesty'
+import { gget, activeReservations, reservationByCode } from '@/lib/guesty'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
@@ -11,6 +11,16 @@ export async function GET(req) {
   const u = new URL(req.url)
   const ok = process.env.CRON_SECRET && (req.headers.get('authorization') === `Bearer ${process.env.CRON_SECRET}` || u.searchParams.get('k') === process.env.CRON_SECRET)
   if (!ok) return NextResponse.json({ ok: false }, { status: 401 })
+  const fn = u.searchParams.get('fn')
+  if (fn) {
+    // Skutočné funkcie appky (ako ich volá Sprievodca); e-maily hostí sa maskujú.
+    const t0 = Date.now(), mask = (e) => (e ? String(e).replace(/^(.).*(@.*)$/, '$1***$2') : e)
+    try {
+      const out = fn === 'active' ? await activeReservations(u.searchParams.get('listingId'), u.searchParams.get('today') || new Date().toISOString().slice(0, 10)) : fn === 'code' ? await reservationByCode(u.searchParams.get('code')) : null
+      const rows = (Array.isArray(out) ? out : out ? [out] : []).map((r) => ({ ...r, guestEmail: mask(r.guestEmail), guestEmails: (r.guestEmails || []).map(mask), guestName: r.guestName ? r.guestName.slice(0, 1) + '***' : r.guestName }))
+      return NextResponse.json({ ok: true, ms: Date.now() - t0, fn, rows })
+    } catch (e) { return NextResponse.json({ ok: false, ms: Date.now() - t0, fn, error: String(e && e.message || e) }, { status: 502 }) }
+  }
   const path = String(u.searchParams.get('path') || '')
   if (!ALLOW.some((p) => path === p || path.startsWith(p + '/') || path.startsWith(p + '?'))) return NextResponse.json({ ok: false, error: 'path not allowed' }, { status: 400 })
   let params = {}
