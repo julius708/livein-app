@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { getViewer } from '@/lib/auth'
-import { ROLES, modulesFor } from '@/lib/modules'
+import { ROLES, GROUPS, modulesFor } from '@/lib/modules'
 import Shell from '@/components/Shell'
 import NoAccess from '@/components/NoAccess'
 import CountUp from '@/components/CountUp'
@@ -10,6 +10,7 @@ import TodayBoard from '@/components/TodayBoard'
 import MaintenanceBoard from '@/components/MaintenanceBoard'
 import NotesBoard from '@/components/NotesBoard'
 import Tile from '@/components/Tile'
+import HomeGroups from '@/components/HomeGroups'
 import Fold from '@/components/Fold'
 import { buildMaintenance, todayBA } from '@/lib/maintenance'
 import { asanaConfigured, fetchOpenDamageTasks, fetchProjectMembers } from '@/lib/asana'
@@ -141,14 +142,7 @@ export default async function Home({ searchParams }) {
           <a className="btn" href="/plan">Prečítať plán →</a>
         </section>
       )}
-      {ready.length > 0 && (
-        <section className="toolsTop" aria-label="Tvoje nástroje">
-          <div className="sec"><h2>Tvoje nástroje</h2><span>{ready.length}</span></div>
-          <div className="tiles compact">
-            {ready.map((m) => <Tile key={m.id} href={m.url} icon={m.icon} title={m.title} desc={m.desc} />)}
-          </div>
-        </section>
-      )}
+      {tiles.length > 0 && <HomeGroups groups={GROUPS.map((g) => ({ ...g, tiles: ready.filter((t) => t.group === g.id), soon: soon.filter((t) => t.group === g.id) }))} />}
 
       {(note || isAdmin) && (
         <section className={note ? 'pin' : undefined} style={note ? undefined : { marginTop: 12 }}>
