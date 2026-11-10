@@ -1,7 +1,7 @@
 'use client'
 import { useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { saveUnitAction, resetUnitAction, saveRowsAction, syncUnitsAction, addManualUnitAction } from '@/app/kluce/actions'
+import { saveUnitAction, resetUnitAction, saveRowsAction, syncUnitsAction, addManualUnitAction, removeUnitAction } from '@/app/kluce/actions'
 import { sortUnits, matches, tileState } from '@/lib/keys-core'
 
 /** Správa kľúčov: načítanie bytov z registra, lišty na stene, pozícia a počet sád pre každý byt, náprava stavu. */
@@ -15,7 +15,7 @@ export default function KeysAdmin({ units = [], rows = [], overdueHours = 24, pe
   const [hours, setHours] = useState(overdueHours)
   const [names, setNames] = useState(persons.map((p) => p.name).join('\n'))
   const [nu, setNu] = useState({ name: '', hook_no: '', sets: 1, note: '', address: '', detail: '' })
-  const list = useMemo(() => sortUnits(units).filter((u) => matches(u, q)).filter((u) => only === 'all' ? true : only === 'unplaced' ? u.hook_no == null && u.active !== false : only === 'out' ? (u.out_sets || 0) > 0 : u.active === false), [units, q, only])
+  const list = useMemo(() => sortUnits(units).filter((u) => u.active !== false).filter((u) => matches(u, q)).filter((u) => only === 'all' ? true : only === 'unplaced' ? u.hook_no == null : (u.out_sets || 0) > 0), [units, q, only])
   const run = (fn, okText) => start(async () => { const r = await fn(); setMsg(r && r.ok ? { ok: okText(r) } : { err: (r && r.error) || 'Nepodarilo sa.' }); if (r && r.ok) router.refresh() })
   const [clash, setClash] = useState(null)   // { listing_id, patch, name, hook_no } – pozícia obsadená, ponúknuť prevzatie
   const save = (listing_id, patch) => start(async () => { const r = await saveUnitAction({ listing_id, ...patch }); if (r && r.ok) { setMsg({ ok: 'Uložené.' }); setClash(null); router.refresh() } else if (r && r.clash) { setClash({ listing_id, patch, ...r.clash }); setMsg({ err: r.error }) } else setMsg({ err: (r && r.error) || 'Nepodarilo sa.' }) })
@@ -40,8 +40,8 @@ export default function KeysAdmin({ units = [], rows = [], overdueHours = 24, pe
       </section>
 
       <section className="card">
-        <h2>Byty v evidencii <small>{units.filter((u) => u.active !== false).length} aktívnych · {units.filter((u) => u.hook_no != null).length} s pozíciou</small></h2>
-        <p className="hint">Pri každom kľúči zmeň pozíciu, počet sád alebo poznámku a klikni Uložiť. „Vyradiť“ skryje kľúč z tabule (história ostáva), „Zaradiť“ ho vráti. Nové byty z Guesty pribudnú s jednou sadou a bez pozície; čísla idú zľava doprava po celých lištách.</p>
+        <h2>Kľúče v evidencii <small>{units.filter((u) => u.active !== false).length} · {units.filter((u) => u.active !== false && u.hook_no != null).length} s pozíciou</small></h2>
+        <p className="hint">Pri každom kľúči zmeň názov, pozíciu, počet sád, adresu alebo poznámku a klikni Uložiť. „Odstrániť“ kľúč z evidencie vyhodí a uvoľní pozíciu (história pohybov ostáva). Nové byty z Guesty pribudnú s jednou sadou a bez pozície; čísla idú zľava doprava po celých lištách.</p>
         <div className="row"><button type="button" className="btn" disabled={pending} onClick={() => run(syncUnitsAction, (r) => `Načítané: ${r.added} nových, ${r.renamed} premenovaných, ${r.deactivated} vyradených.`)}>Načítať byty z registra</button><span className="hint">Voľné pozície: {free.slice(0, 30).join(', ')}{free.length > 30 ? '…' : ''}{!free.length && 'žiadne'}</span></div>
       </section>
 
@@ -61,10 +61,10 @@ export default function KeysAdmin({ units = [], rows = [], overdueHours = 24, pe
       )}
 
       <section className="card">
-        <div className="row"><input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Hľadať byt alebo pozíciu…" aria-label="Hľadať" /><div className="kl-filters">{[['all', 'Všetky'], ['unplaced', 'Bez pozície'], ['out', 'Vonku'], ['inactive', 'Vyradené']].map(([k, l]) => <button type="button" key={k} className={only === k ? 'on' : ''} onClick={() => setOnly(k)}>{l}</button>)}</div></div>
+        <div className="row"><input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Hľadať byt alebo pozíciu…" aria-label="Hľadať" /><div className="kl-filters">{[['all', 'Všetky'], ['unplaced', 'Bez pozície'], ['out', 'Vonku']].map(([k, l]) => <button type="button" key={k} className={only === k ? 'on' : ''} onClick={() => setOnly(k)}>{l}</button>)}</div></div>
         <div className="kl-table" role="table">
           <div className="kl-tr head" role="row"><span>Pozícia</span><span>Názov na tabuli</span><span>Sady</span><span>Stav</span><span>Adresa · poschodie / byt · poznámka</span><span></span></div>
-          {list.map((u) => <Row key={u.listing_id} u={u} save={save} pending={pending} isAdmin={isAdmin} onReset={() => run(() => resetUnitAction({ listing_id: u.listing_id }), () => 'Stav vynulovaný, zapísané do histórie.')} />)}
+          {list.map((u) => <Row key={u.listing_id} u={u} save={save} pending={pending} isAdmin={isAdmin} onReset={() => run(() => resetUnitAction({ listing_id: u.listing_id }), () => 'Stav vynulovaný, zapísané do histórie.')} onRemove={() => run(() => removeUnitAction({ listing_id: u.listing_id }), () => `${u.listing_name} odstránený z evidencie.`)} />)}
           {!list.length && <p className="hint">Nič.</p>}
         </div>
       </section>
@@ -72,7 +72,8 @@ export default function KeysAdmin({ units = [], rows = [], overdueHours = 24, pe
   )
 }
 
-function Row({ u, save, pending, isAdmin, onReset }) {
+function Row({ u, save, pending, isAdmin, onReset, onRemove }) {
+  const [sure, setSure] = useState(false)
   const [hook, setHook] = useState(u.hook_no == null ? '' : String(u.hook_no))
   const [sets, setSets] = useState(String(u.sets))
   const [note, setNote] = useState(u.note || '')
@@ -84,11 +85,11 @@ function Row({ u, save, pending, isAdmin, onReset }) {
   return (
     <div className={`kl-tr${u.active === false ? ' off' : ''}`} role="row">
       <span><input type="number" min={1} max={999} value={hook} onChange={(e) => setHook(e.target.value)} aria-label={`Pozícia ${u.listing_name}`} placeholder="–" /></span>
-      <span className="nm kl-tr-name"><input type="text" maxLength={80} value={name} onChange={(e) => setName(e.target.value)} aria-label={`Názov ${u.listing_name}`} />{!u.manual && u.guesty_name && u.guesty_name !== name && <em title="Názov v Guesty">Guesty: {u.guesty_name}</em>}{u.manual && <em> · ručná položka</em>}{u.active === false && <em> · vyradený (bez pozície)</em>}</span>
+      <span className="nm kl-tr-name"><input type="text" maxLength={80} value={name} onChange={(e) => setName(e.target.value)} aria-label={`Názov ${u.listing_name}`} />{!u.manual && u.guesty_name && u.guesty_name !== name && <em title="Názov v Guesty">Guesty: {u.guesty_name}</em>}{u.manual && <em> · ručná položka</em>}</span>
       <span><input type="number" min={0} max={20} value={sets} onChange={(e) => setSets(e.target.value)} aria-label={`Sady ${u.listing_name}`} /></span>
       <span><i className={`kl-dot s-${st}`} />{st === 'ok' ? 'na háčiku' : st === 'none' ? 'bez sád' : `${u.out_sets}/${u.sets} vonku${u.holders && u.holders.length ? ': ' + u.holders.map((h) => h.name).join(', ') : ''}`}</span>
       <span className="kl-tr-txt"><input type="text" maxLength={200} value={address} onChange={(e) => setAddress(e.target.value)} placeholder="adresa" aria-label={`Adresa ${u.listing_name}`} /><input type="text" maxLength={200} value={detail} onChange={(e) => setDetail(e.target.value)} placeholder="poschodie / byt" aria-label={`Poschodie ${u.listing_name}`} /><input type="text" maxLength={300} value={note} onChange={(e) => setNote(e.target.value)} placeholder="poznámka" aria-label={`Poznámka ${u.listing_name}`} /></span>
-      <span className="act">{dirty && <button type="button" className="btn" disabled={pending} onClick={() => save(u.listing_id, { hook_no: hook === '' ? null : Number(hook), sets: Number(sets), note, address, detail, name })}>Uložiť</button>}{isAdmin && (u.out_sets || 0) > 0 && <button type="button" className="btn line" disabled={pending} onClick={onReset} title="Kľúče sa našli / stav nesedí: vynuluje vonku a držiteľov">Napraviť</button>}<button type="button" className="btn line" disabled={pending} onClick={() => save(u.listing_id, { active: u.active === false })} title={u.active === false ? 'Vrátiť na tabuľu (pozíciu potom doplň)' : 'Skryť z tabule a uvoľniť pozíciu (história ostáva)'}>{u.active === false ? 'Zaradiť' : 'Vyradiť'}</button></span>
+      <span className="act">{dirty && <button type="button" className="btn" disabled={pending} onClick={() => save(u.listing_id, { hook_no: hook === '' ? null : Number(hook), sets: Number(sets), note, address, detail, name })}>Uložiť</button>}{isAdmin && (u.out_sets || 0) > 0 && <button type="button" className="btn line" disabled={pending} onClick={onReset} title="Kľúče sa našli / stav nesedí: vynuluje vonku a držiteľov">Napraviť</button>}{sure ? <><button type="button" className="btn danger" disabled={pending} onClick={() => { setSure(false); onRemove() }}>Naozaj odstrániť</button><button type="button" className="btn line" onClick={() => setSure(false)}>Nie</button></> : <button type="button" className="btn line" disabled={pending} onClick={() => setSure(true)} title="Odstráni kľúč z evidencie a uvoľní pozíciu (história pohybov ostáva)">Odstrániť</button>}</span>
     </div>
   )
 }

@@ -91,6 +91,23 @@ export async function saveUnitAction(payload) {
   refresh(); return { ok: true }
 }
 
+/** Správa: odstrániť kľúč z evidencie (Július, 10. 11. 2026: vyradený záznam už nikto nevidí). Ručná položka sa zmaže,
+ * byt z Guesty ostane skrytý (inak by ho načítanie z registra pridalo späť). História pohybov ostáva. */
+export async function removeUnitAction(payload) {
+  const v = await viewer(); if (v.error) return { ok: false, error: v.error }
+  const id = payload && payload.listing_id; if (!isListing(id)) return { ok: false, error: 'Neplatný kľúč.' }
+  const { data: u } = await v.s.from('key_units').select('listing_id,listing_name,manual,out_sets').eq('listing_id', id).maybeSingle()
+  if (!u) return { ok: false, error: 'Kľúč sa nenašiel.' }
+  if ((u.out_sets || 0) > 0) return { ok: false, error: `${u.listing_name}: kľúč je vonku. Najprv ho vráť, potom odstráň.` }
+  const at = new Date().toISOString()
+  await v.s.from('key_moves').insert({ listing_id: id, listing_name: u.listing_name, hook_no: null, action: 'adjust', sets: 0, person_name: (v.me && v.me.name) || who(v), person_email: who(v), source: 'app', note: 'odstránený z evidencie', created_by: who(v) })
+  const { error } = u.manual
+    ? await v.s.from('key_units').delete().eq('listing_id', id)
+    : await v.s.from('key_units').update({ active: false, hook_no: null, holders: [], updated_by: who(v), updated_at: at }).eq('listing_id', id)
+  if (error) return { ok: false, error: error.message }
+  refresh(); return { ok: true }
+}
+
 /** Správa: pridať kľúč, ktorý nie je v Guesty (parkovanie, pivnica, náhradná sada…). */
 export async function addManualUnitAction(payload) {
   const v = await viewer(); if (v.error) return { ok: false, error: v.error }
