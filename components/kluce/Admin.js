@@ -35,7 +35,7 @@ export default function KeysAdmin({ units = [], rows = [], overdueHours = 24, pe
           <label>Adresa<input type="text" maxLength={200} value={nu.address} onChange={(e) => setNu({ ...nu, address: e.target.value })} placeholder="ulica a číslo" /></label>
           <label>Poschodie / byt<input type="text" maxLength={200} value={nu.detail} onChange={(e) => setNu({ ...nu, detail: e.target.value })} placeholder="napr. 3. poschodie · byt 12" /></label>
           <label>Poznámka<input type="text" maxLength={300} value={nu.note} onChange={(e) => setNu({ ...nu, note: e.target.value })} placeholder="voliteľné" /></label>
-          <button type="button" className="btn" disabled={pending || !nu.name.trim()} onClick={() => run(() => addManualUnitAction({ name: nu.name, hook_no: nu.hook_no === '' ? null : Number(nu.hook_no), sets: Number(nu.sets), note: nu.note, address: nu.address, detail: nu.detail }), () => { setNu({ name: '', hook_no: '', sets: 1, note: '', address: '', detail: '' }); return 'Kľúč pridaný.' })}>Pridať</button>
+          <button type="button" className="btn" disabled={pending || !nu.name.trim()} onClick={() => run(() => addManualUnitAction({ name: nu.name, hook_no: nu.hook_no === '' ? null : Number(nu.hook_no), sets: Number(nu.sets), note: nu.note, address: nu.address, detail: nu.detail }), (r) => { setNu({ name: '', hook_no: '', sets: 1, note: '', address: '', detail: '' }); return r.merged ? `Priradené k existujúcemu bytu z Guesty: ${r.merged}.` : 'Kľúč pridaný.' })}>Pridať</button>
         </div>
       </section>
 

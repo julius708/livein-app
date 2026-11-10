@@ -116,6 +116,20 @@ export async function addManualUnitAction(payload) {
   const h = payload.hook_no === null || payload.hook_no === '' || payload.hook_no === undefined ? null : Number(payload.hook_no)
   if (h !== null && (!Number.isInteger(h) || h < 1 || h > 999)) return { ok: false, error: 'Pozícia musí byť číslo 1 až 999.' }
   if (h !== null) { const { data: clash } = await v.s.from('key_units').select('listing_id,listing_name,label,active').eq('hook_no', h).maybeSingle(); if (clash && clash.active) return { ok: false, error: `Pozícia ${h} už patrí kľúču ${clash.label || clash.listing_name}. Vyraď ho alebo mu zmeň pozíciu.` }; if (clash) await v.s.from('key_units').update({ hook_no: null, updated_by: who(v), updated_at: new Date().toISOString() }).eq('listing_id', clash.listing_id) }
+  // Ak taký byt už v evidencii je (z Guesty, zatiaľ bez pozície), nevytvárať duplikát: pozícia a sady sa priradia jemu.
+  const fold = (x) => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+  const words = fold(name).split(' ').filter((w) => w.length >= 3)
+  if (words.length) {
+    const { data: all } = await v.s.from('key_units').select('listing_id,listing_name,label,address,hook_no,active,manual').eq('manual', false)
+    const cands = (all || []).filter((u) => u.hook_no == null && u.active !== false && words.every((w) => (fold(u.listing_name) + ' ' + fold(u.label) + ' ' + fold(u.address)).includes(w)))
+    if (cands.length === 1) {
+      const u = cands[0]
+      const { error: e1 } = await v.s.from('key_units').update({ hook_no: h, sets, note: String(payload.note || '').slice(0, 300) || null, address: String(payload.address || '').slice(0, 200) || u.address || null, detail: String(payload.detail || '').slice(0, 200) || null, label: fold(name) === fold(u.listing_name) ? null : name, updated_by: who(v), updated_at: new Date().toISOString() }).eq('listing_id', u.listing_id)
+      if (e1) return { ok: false, error: e1.message }
+      refresh(); return { ok: true, merged: u.listing_name }
+    }
+    if (cands.length > 1) return { ok: false, error: `Takýto byt už v evidencii je bez pozície (${cands.map((c) => c.listing_name).join(', ')}). Nájdi ho v zozname nižšie a zapíš mu pozíciu tam, aby nevznikol duplikát.` }
+  }
   const id = 'manual-' + Date.now().toString(36) + '-' + name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30)
   const { error } = await v.s.from('key_units').insert({ listing_id: id, listing_name: name, hook_no: h, sets, manual: true, note: String(payload.note || '').slice(0, 300) || null, address: String(payload.address || '').slice(0, 200) || null, detail: String(payload.detail || '').slice(0, 200) || null, updated_by: who(v) })
   if (error) return { ok: false, error: error.message }
