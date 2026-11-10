@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { board, tileState, matches, owedBy } from '@/lib/keys-core'
+import { board, tileState, matches, owedBy, dupHeads, tileName } from '@/lib/keys-core'
 import { takeKeysAction, returnKeysAction } from '@/app/kluce/actions'
 
 const STATE_LABEL = { ok: 'na háčiku', part: 'časť vonku', out: 'vonku', none: 'bez sád', unknown: 'nie je v evidencii' }
@@ -23,6 +23,7 @@ export default function KeysBoard({ units = [], rows = [], persons = [], days = 
   const [q, setQ] = useState('')
   const [person, setPerson] = useState(null)
   const [picked, setPicked] = useState([])          // listing_id[]
+  const [info, setInfo] = useState(null)            // listing_id – byt, ktorého detail je v lište
   const [msg, setMsg] = useState(null)
   const [day, setDay] = useState(0)
   const [needPerson, setNeedPerson] = useState(false)
@@ -45,6 +46,7 @@ export default function KeysBoard({ units = [], rows = [], persons = [], days = 
   useEffect(() => { if (!msg) return; const t = setTimeout(() => setMsg(null), msg.err ? 15000 : 8000); return () => clearTimeout(t) }, [msg])
 
   const b = useMemo(() => board(units, rows), [units, rows])
+  const dups = useMemo(() => dupHeads(units), [units])
   const byId = useMemo(() => new Map(units.map((u) => [u.listing_id, u])), [units])
   const owed = useMemo(() => (person ? owedBy(units, person) : []), [units, person])
   const list = days[day] || { date: today, items: [] }
@@ -57,7 +59,7 @@ export default function KeysBoard({ units = [], rows = [], persons = [], days = 
   const canTake = pickedUnits.filter((u) => tileState(u) === 'ok' || tileState(u) === 'part')
   const canReturn = pickedUnits.filter((u) => (u.out_sets || 0) > 0)
 
-  const toggle = (u) => setPicked((p) => (p.includes(u.listing_id) ? p.filter((x) => x !== u.listing_id) : [...p, u.listing_id]))
+  const toggle = (u) => { setInfo(u.listing_id); setPicked((p) => (p.includes(u.listing_id) ? p.filter((x) => x !== u.listing_id) : [...p, u.listing_id])) }
   const requirePerson = () => { if (person) return true; setNeedPerson(true); setMsg({ err: 'Najprv vyber meno hore.' }); try { selRef.current && selRef.current.focus() } catch {} return false }
 
   /** Zápis: zobrať alebo vrátiť zoznam bytov za vybranú osobu. Chyby sa ukážu v lište. */
@@ -70,7 +72,7 @@ export default function KeysBoard({ units = [], rows = [], persons = [], days = 
       if (!r || (!r.ok && !r.done)) { setMsg({ err: (r && (r.error || (r.failed || []).join(' · '))) || 'Zápis zlyhal. Skús znova.' }); return }
       const names = items.map((i) => { const u = byId.get(i.listing_id); return u ? (u.hook_no != null ? `${u.hook_no} ` : '') + shortName(u.listing_name) : '' }).filter(Boolean)
       setMsg({ ok: `${label}: ${names.slice(0, 8).join(', ')}${names.length > 8 ? ` +${names.length - 8}` : ''}${r.failed && r.failed.length ? ` · nepodarilo sa: ${r.failed.join('; ')}` : ''}${r.mismatch ? ' · vrátené bez záznamu o zobratí' : ''}` })
-      setPicked([]); router.refresh()
+      setPicked([]); setInfo(null); router.refresh()
     } catch (e) {
       console.error('kluce action', e)
       setMsg({ err: 'Zápis sa nepodaril (spojenie alebo prihlásenie). Obnov stránku a skús znova.' })
@@ -90,7 +92,7 @@ export default function KeysBoard({ units = [], rows = [], persons = [], days = 
         aria-label={`${n != null ? 'Pozícia ' + n + ', ' : ''}${u.listing_name}, ${td ? 'dnes zobrať' : STATE_LABEL[st]}${who ? ', má ' + who : ''}`}
         title={`${u.listing_name}${u.note ? ' · ' + u.note : ''}\n${td ? 'dnes zobrať' : STATE_LABEL[st]}${(u.holders || []).length ? '\n' + u.holders.map((h) => `${h.name} (${h.sets}) ${fmtT(h.at)}`).join('\n') : ''}`}>
         <span className="n">{n != null ? n : '–'}{u.sets > 1 && <i className="c">{u.sets - (u.out_sets || 0)}/{u.sets}</i>}</span>
-        <span className="a">{shortName(u.listing_name)}</span>
+        <span className="a">{tileName(u.listing_name, dups)}</span>
         {st !== 'ok' && who && <span className="h">{who}</span>}
       </button>
     )
@@ -135,6 +137,17 @@ export default function KeysBoard({ units = [], rows = [], persons = [], days = 
               <button type="button" className="kl-x" onClick={() => setPicked([])} aria-label="Zrušiť výber">✕</button>
             </div>
           )}
+
+          {info && byId.get(info) && (() => { const u = byId.get(info); const st = tileState(u); return (
+            <div className="kl-info" role="note">
+              <div className="kl-info-h"><b>{u.hook_no != null ? `${u.hook_no} · ` : ''}{u.listing_name}</b><button type="button" className="kl-x" onClick={() => setInfo(null)} aria-label="Zavrieť">✕</button></div>
+              {u.address && <div className="kl-info-r">📍 {u.address}</div>}
+              {u.detail && <div className="kl-info-r">🏢 {u.detail}</div>}
+              {u.note && <div className="kl-info-r kl-info-n">{u.note}</div>}
+              <div className="kl-info-r"><i className={`kl-dot s-${st}`} />{todayIds.has(u.listing_id) ? 'dnes zobrať · ' : ''}{STATE_LABEL[st]}{u.sets > 1 ? ` · ${u.sets - (u.out_sets || 0)}/${u.sets} sád na háčiku` : ''}{(u.holders || []).length ? ' · má ' + u.holders.map((h) => `${h.name} (${fmtT(h.at)})`).join(', ') : ''}</div>
+              {!u.address && !u.detail && <div className="kl-info-r kl-hint">Adresa a poschodie sa dopĺňajú v Nastaveniach pri tomto kľúči.</div>}
+            </div>
+          ) })()}
 
           <input id="kl-q" className="kl-search" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Hľadať byt alebo pozíciu" aria-label="Hľadať byt alebo pozíciu" autoComplete="off" />
 

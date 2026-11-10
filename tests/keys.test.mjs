@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { normalizeRows, rowOf, sortUnits, board, tileState, applyTake, applyReturn, owedBy, overdue, dayList, matches, personOptions, canKeys } from '../lib/keys-core.js'
+import { dupHeads, tileName, headOf, normalizeRows, rowOf, sortUnits, board, tileState, applyTake, applyReturn, owedBy, overdue, dayList, matches, personOptions, canKeys } from '../lib/keys-core.js'
 
 const U = (id, name, hook, sets = 1, out = 0, holders = []) => ({ listing_id: id, listing_name: name, hook_no: hook, sets, out_sets: out, holders, active: true })
 
@@ -57,4 +57,14 @@ test('osoby bez technických účtov a duplicít', () => {
   const p = personOptions([{ name: 'LIVE-IN automatizácia', email: 'bot@x' }, { name: 'Angelika Jankóová', email: 'a@x.sk' }, { name: 'Zákaznícky servis (info)', email: 'info@x' }], [{ display_name: 'Angelika' }, { display_name: 'Zuzka' }, { display_name: 'crm-bot' }, { display_name: 'knititsewit.com' }])
   assert.deepEqual(p.map((x) => x.name), ['Angelika Jankóová', 'Zuzka'])
   assert.ok(canKeys({ roles: ['cleaning'] })); assert.ok(!canKeys({ roles: ['marketing'] }))
+})
+
+test('názov na dlaždici: krátky, ale jednoznačný', () => {
+  const units = [U('a', 'Eurovea, 1 Danube', 115), U('b', 'Eurovea, 2 Sky', 116), U('c', '29. Augusta, Grand', 10), U('d', 'Modrá Guľa 2 (2nd Floor)', 124), U('e', 'Skypark, Luxury I', 55), U('f', 'Skypark Luxe I', 50)]
+  const d = dupHeads(units)
+  assert.equal(headOf('Modrá Guľa 2 (2nd Floor)'), 'Modrá Guľa 2')
+  assert.equal(tileName('29. Augusta, Grand', d), '29. Augusta')
+  assert.equal(tileName('Eurovea, 1 Danube', d), 'Eurovea · 1 Danube')
+  assert.equal(tileName('Skypark, Luxury I', d), 'Skypark · Luxury I')
+  assert.equal(tileName('Skypark Luxe I', d), 'Skypark Luxe I')
 })

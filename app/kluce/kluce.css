@@ -142,3 +142,10 @@
 @media (max-width:480px){.kl-hooks{grid-template-columns:repeat(5,1fr);gap:4px}.kl-legend{gap:6px 10px;font-size:10.5px}.kl-od{margin-left:0}}
 
 .kl-names{width:100%;max-width:360px;padding:9px 12px;border:1px solid #173e2c26;border-radius:12px;background:#ffffffa6;font:inherit;font-size:14px;color:#173E2C;resize:vertical;margin-bottom:8px}
+
+/* detail ťuknutého kľúča v lište: celý názov, adresa, poschodie, kto ho má */
+.kl-info{border:1px solid #ffffffcc;border-radius:14px;background:#ffffff8c;padding:10px 12px;display:grid;gap:4px;font-size:12.5px;color:#233E31;box-shadow:inset 0 1px 0 #fff}
+.kl-info-h{display:flex;align-items:flex-start;gap:8px}.kl-info-h b{flex:1;min-width:0;color:#173E2C;font-size:13.5px;line-height:1.25;overflow-wrap:anywhere}
+.kl-info-r{line-height:1.35}.kl-info-n{color:#66716A}
+.kl-tr-txt{display:grid;gap:4px}.kl-tr-txt input{width:100%}
+.kl-tr{grid-template-columns:90px minmax(150px,1.2fr) 84px minmax(150px,1fr) minmax(220px,1.4fr) auto}

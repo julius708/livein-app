@@ -71,6 +71,8 @@ export async function saveUnitAction(payload) {
   if ('sets' in payload) { const n = Number(payload.sets); if (!Number.isInteger(n) || n < 0 || n > 20) return { ok: false, error: 'Počet sád 0 až 20.' }; patch.sets = n }
   if ('active' in payload) patch.active = !!payload.active
   if ('note' in payload) patch.note = String(payload.note || '').slice(0, 300) || null
+  if ('address' in payload) patch.address = String(payload.address || '').slice(0, 200) || null
+  if ('detail' in payload) patch.detail = String(payload.detail || '').slice(0, 200) || null
   if (patch.hook_no != null) {
     const { data: clash } = await v.s.from('key_units').select('listing_id,listing_name').eq('hook_no', patch.hook_no).neq('listing_id', id).maybeSingle()
     if (clash) return { ok: false, error: `Pozícia ${patch.hook_no} už patrí bytu ${clash.listing_name}. Najprv ju uvoľni.` }
@@ -89,7 +91,7 @@ export async function addManualUnitAction(payload) {
   if (h !== null && (!Number.isInteger(h) || h < 1 || h > 999)) return { ok: false, error: 'Pozícia musí byť číslo 1 až 999.' }
   if (h !== null) { const { data: clash } = await v.s.from('key_units').select('listing_name').eq('hook_no', h).maybeSingle(); if (clash) return { ok: false, error: `Pozícia ${h} už patrí kľúču ${clash.listing_name}.` } }
   const id = 'manual-' + Date.now().toString(36) + '-' + name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30)
-  const { error } = await v.s.from('key_units').insert({ listing_id: id, listing_name: name, hook_no: h, sets, manual: true, note: String(payload.note || '').slice(0, 300) || null, updated_by: who(v) })
+  const { error } = await v.s.from('key_units').insert({ listing_id: id, listing_name: name, hook_no: h, sets, manual: true, note: String(payload.note || '').slice(0, 300) || null, address: String(payload.address || '').slice(0, 200) || null, detail: String(payload.detail || '').slice(0, 200) || null, updated_by: who(v) })
   if (error) return { ok: false, error: error.message }
   refresh(); return { ok: true }
 }

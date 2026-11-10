@@ -14,7 +14,7 @@ export default function KeysAdmin({ units = [], rows = [], overdueHours = 24, pe
   const [rw, setRw] = useState(rows.map((r) => ({ ...r })))
   const [hours, setHours] = useState(overdueHours)
   const [names, setNames] = useState(persons.map((p) => p.name).join('\n'))
-  const [nu, setNu] = useState({ name: '', hook_no: '', sets: 1, note: '' })
+  const [nu, setNu] = useState({ name: '', hook_no: '', sets: 1, note: '', address: '', detail: '' })
   const list = useMemo(() => sortUnits(units).filter((u) => matches(u, q)).filter((u) => only === 'all' ? true : only === 'unplaced' ? u.hook_no == null && u.active !== false : only === 'out' ? (u.out_sets || 0) > 0 : u.active === false), [units, q, only])
   const run = (fn, okText) => start(async () => { const r = await fn(); setMsg(r && r.ok ? { ok: okText(r) } : { err: (r && r.error) || 'Nepodarilo sa.' }); if (r && r.ok) router.refresh() })
   const save = (listing_id, patch) => run(() => saveUnitAction({ listing_id, ...patch }), () => 'Uložené.')
@@ -31,8 +31,10 @@ export default function KeysAdmin({ units = [], rows = [], overdueHours = 24, pe
           <label>Názov<input type="text" maxLength={80} value={nu.name} onChange={(e) => setNu({ ...nu, name: e.target.value })} placeholder="napr. Parkovanie 25, Modrá guľa" /></label>
           <label>Pozícia<input type="number" min={1} max={999} value={nu.hook_no} onChange={(e) => setNu({ ...nu, hook_no: e.target.value })} placeholder="–" /></label>
           <label>Sady<input type="number" min={0} max={20} value={nu.sets} onChange={(e) => setNu({ ...nu, sets: e.target.value })} /></label>
+          <label>Adresa<input type="text" maxLength={200} value={nu.address} onChange={(e) => setNu({ ...nu, address: e.target.value })} placeholder="ulica a číslo" /></label>
+          <label>Poschodie / byt<input type="text" maxLength={200} value={nu.detail} onChange={(e) => setNu({ ...nu, detail: e.target.value })} placeholder="napr. 3. poschodie · byt 12" /></label>
           <label>Poznámka<input type="text" maxLength={300} value={nu.note} onChange={(e) => setNu({ ...nu, note: e.target.value })} placeholder="voliteľné" /></label>
-          <button type="button" className="btn" disabled={pending || !nu.name.trim()} onClick={() => run(() => addManualUnitAction({ name: nu.name, hook_no: nu.hook_no === '' ? null : Number(nu.hook_no), sets: Number(nu.sets), note: nu.note }), () => { setNu({ name: '', hook_no: '', sets: 1, note: '' }); return 'Kľúč pridaný.' })}>Pridať</button>
+          <button type="button" className="btn" disabled={pending || !nu.name.trim()} onClick={() => run(() => addManualUnitAction({ name: nu.name, hook_no: nu.hook_no === '' ? null : Number(nu.hook_no), sets: Number(nu.sets), note: nu.note, address: nu.address, detail: nu.detail }), () => { setNu({ name: '', hook_no: '', sets: 1, note: '', address: '', detail: '' }); return 'Kľúč pridaný.' })}>Pridať</button>
         </div>
       </section>
 
@@ -60,7 +62,7 @@ export default function KeysAdmin({ units = [], rows = [], overdueHours = 24, pe
       <section className="card">
         <div className="row"><input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Hľadať byt alebo pozíciu…" aria-label="Hľadať" /><div className="kl-filters">{[['all', 'Všetky'], ['unplaced', 'Bez pozície'], ['out', 'Vonku'], ['inactive', 'Vyradené']].map(([k, l]) => <button type="button" key={k} className={only === k ? 'on' : ''} onClick={() => setOnly(k)}>{l}</button>)}</div></div>
         <div className="kl-table" role="table">
-          <div className="kl-tr head" role="row"><span>Pozícia</span><span>Byt</span><span>Sady</span><span>Stav</span><span>Poznámka</span><span></span></div>
+          <div className="kl-tr head" role="row"><span>Pozícia</span><span>Byt</span><span>Sady</span><span>Stav</span><span>Adresa · poschodie / byt · poznámka</span><span></span></div>
           {list.map((u) => <Row key={u.listing_id} u={u} save={save} pending={pending} isAdmin={isAdmin} onReset={() => run(() => resetUnitAction({ listing_id: u.listing_id }), () => 'Stav vynulovaný, zapísané do histórie.')} />)}
           {!list.length && <p className="hint">Nič.</p>}
         </div>
@@ -73,16 +75,18 @@ function Row({ u, save, pending, isAdmin, onReset }) {
   const [hook, setHook] = useState(u.hook_no == null ? '' : String(u.hook_no))
   const [sets, setSets] = useState(String(u.sets))
   const [note, setNote] = useState(u.note || '')
+  const [address, setAddress] = useState(u.address || '')
+  const [detail, setDetail] = useState(u.detail || '')
   const st = tileState(u)
-  const dirty = hook !== (u.hook_no == null ? '' : String(u.hook_no)) || sets !== String(u.sets) || note !== (u.note || '')
+  const dirty = hook !== (u.hook_no == null ? '' : String(u.hook_no)) || sets !== String(u.sets) || note !== (u.note || '') || address !== (u.address || '') || detail !== (u.detail || '')
   return (
     <div className={`kl-tr${u.active === false ? ' off' : ''}`} role="row">
       <span><input type="number" min={1} max={999} value={hook} onChange={(e) => setHook(e.target.value)} aria-label={`Pozícia ${u.listing_name}`} placeholder="–" /></span>
       <span className="nm">{u.listing_name}{u.manual && <em> · ručná položka</em>}{u.active === false && <em> · vyradený</em>}</span>
       <span><input type="number" min={0} max={20} value={sets} onChange={(e) => setSets(e.target.value)} aria-label={`Sady ${u.listing_name}`} /></span>
       <span><i className={`kl-dot s-${st}`} />{st === 'ok' ? 'na háčiku' : st === 'none' ? 'bez sád' : `${u.out_sets}/${u.sets} vonku${u.holders && u.holders.length ? ': ' + u.holders.map((h) => h.name).join(', ') : ''}`}</span>
-      <span><input type="text" maxLength={300} value={note} onChange={(e) => setNote(e.target.value)} placeholder="napr. 2. sada u majiteľa" aria-label={`Poznámka ${u.listing_name}`} /></span>
-      <span className="act">{dirty && <button type="button" className="btn" disabled={pending} onClick={() => save(u.listing_id, { hook_no: hook === '' ? null : Number(hook), sets: Number(sets), note })}>Uložiť</button>}{isAdmin && (u.out_sets || 0) > 0 && <button type="button" className="btn line" disabled={pending} onClick={onReset} title="Kľúče sa našli / stav nesedí: vynuluje vonku a držiteľov">Napraviť</button>}<button type="button" className="btn line" disabled={pending} onClick={() => save(u.listing_id, { active: u.active === false })} title={u.active === false ? 'Vrátiť na tabuľu' : 'Skryť z tabule (história ostáva)'}>{u.active === false ? 'Zaradiť' : 'Vyradiť'}</button></span>
+      <span className="kl-tr-txt"><input type="text" maxLength={200} value={address} onChange={(e) => setAddress(e.target.value)} placeholder="adresa" aria-label={`Adresa ${u.listing_name}`} /><input type="text" maxLength={200} value={detail} onChange={(e) => setDetail(e.target.value)} placeholder="poschodie / byt" aria-label={`Poschodie ${u.listing_name}`} /><input type="text" maxLength={300} value={note} onChange={(e) => setNote(e.target.value)} placeholder="poznámka" aria-label={`Poznámka ${u.listing_name}`} /></span>
+      <span className="act">{dirty && <button type="button" className="btn" disabled={pending} onClick={() => save(u.listing_id, { hook_no: hook === '' ? null : Number(hook), sets: Number(sets), note, address, detail })}>Uložiť</button>}{isAdmin && (u.out_sets || 0) > 0 && <button type="button" className="btn line" disabled={pending} onClick={onReset} title="Kľúče sa našli / stav nesedí: vynuluje vonku a držiteľov">Napraviť</button>}<button type="button" className="btn line" disabled={pending} onClick={() => save(u.listing_id, { active: u.active === false })} title={u.active === false ? 'Vrátiť na tabuľu' : 'Skryť z tabule (história ostáva)'}>{u.active === false ? 'Zaradiť' : 'Vyradiť'}</button></span>
     </div>
   )
 }
