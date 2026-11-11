@@ -2,6 +2,7 @@
 import CallScript from './CallScript'
 import CallNotes from './CallNotes'
 import LeadTasks from './LeadTasks'
+import LeadInvest from '../investicie/LeadInvest'
 import { useEffect, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -45,7 +46,7 @@ function CityField({ lead, setLead, setErr, start }) {
   </dd>
 }
 
-export default function LeadDetail({ lead: initial, events: initialEvents, tasks = [], people, me, serverNow }) {
+export default function LeadDetail({ lead: initial, events: initialEvents, tasks = [], people, me, serverNow, invest = null }) {
   const router = useRouter()
   const [lead, setLead] = useState(initial)
   const [events, setEvents] = useState(initialEvents)
@@ -93,7 +94,7 @@ export default function LeadDetail({ lead: initial, events: initialEvents, tasks
       </section>
       <CallScript compact />
       </div>
-      <aside className="crm-detail-side"><CallNotes value={note} onChange={setNote} onSave={saveNote} busy={busy} /><LeadTasks lead={lead} tasks={tasks} people={people} onChanged={refresh} /></aside>
+      <aside className="crm-detail-side"><CallNotes value={note} onChange={setNote} onSave={saveNote} busy={busy} /><LeadTasks lead={lead} tasks={tasks} people={people} onChanged={refresh} />{invest && <LeadInvest leadId={lead.id} inquiries={invest.inquiries} matchCounts={invest.matchCounts} people={people} />}</aside>
       </div>
       <div className="eko-two">
         <section className="card">
