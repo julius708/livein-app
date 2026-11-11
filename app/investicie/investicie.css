@@ -56,3 +56,6 @@
 .iv-toast.ok{background:#ddf1e6;color:#1E6B45}.iv-toast.err{background:#fbe4e2;color:#C23B3B}
 @media(max-width:1000px){.iv-row{grid-template-columns:1fr 1fr 1fr}.iv-row>:first-child{grid-column:1/-1}.iv-grid2{grid-template-columns:1fr}}
 @media(max-width:640px){.iv-match{grid-template-columns:1fr}.iv-row{grid-template-columns:1fr 1fr}.iv .card{padding:12px}}
+
+.iv-offer{overflow-wrap:anywhere;min-width:0}.iv-offer .iv-scroll{max-width:100%}.iv-offer ul{padding-left:20px}
+@media(max-width:640px){.iv-actions .btn{flex:1 1 auto}.iv-offer{padding:12px}}

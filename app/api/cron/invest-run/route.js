@@ -13,5 +13,8 @@ export async function GET(request) {
     const s = await adminClientAsync()
     const r = u.searchParams.get('force') === '1' ? await runAgent(s, { trigger: 'manual', maxMs: 100000 }) : await runIfDue(s, { maxMs: 100000 })
     return NextResponse.json({ ok: r.ok !== false, ...r })
-  } catch (e) { console.error('[invest] cron', String(e && e.message).slice(0, 160)); return NextResponse.json({ ok: false, error: 'Beh zlyhal.' }, { status: 500 }) }
+  } catch (e) {
+    if (/relation .* does not exist|schema cache|inv_/i.test(String(e && e.message))) return NextResponse.json({ ok: true, ran: false, reason: 'Migrácia investícií ešte nie je aplikovaná.' })
+    console.error('[invest] cron', String(e && e.message).slice(0, 160)); return NextResponse.json({ ok: false, error: 'Beh zlyhal.' }, { status: 500 })
+  }
 }

@@ -41,7 +41,7 @@ export default function PropertyList({ props, calcs, counts, serverNow, ready })
       <div className="iv-list">
         {list.map((p) => {
           const c = calcs[p.calc_id] || null
-          const age = p.last_checked_at ? Math.floor((serverNow - Date.parse(p.last_checked_at)) / 864e5) : null
+          const age = p.last_checked_at ? Math.max(0, Math.floor((serverNow - Date.parse(p.last_checked_at)) / 864e5)) : null
           return (
             <Link key={p.id} href={`/investicie/n/${p.id}`} className="iv-row">
               <div><div className="t">{[p.address || p.district, p.city].filter(Boolean).join(', ') || 'Bez adresy'}</div><small>{[p.rooms ? `${p.rooms}-izbový` : null, p.area_interior ? `${String(p.area_interior).replace('.', ',')} m²` : null, p.area_exterior ? `+ ${String(p.area_exterior).replace('.', ',')} m² exteriér` : null].filter(Boolean).join(' · ') || 'rozmery neznáme'}</small></div>

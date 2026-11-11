@@ -47,7 +47,7 @@ export default function PropertyDetail({ d, calcNode, isAdmin }) {
   const { run, pending, msg, setMsg } = useAct()
   const leadName = (qid) => { const q = inqs.find((x) => x.id === qid); const l = q && leads.find((x) => x.id === q.lead_id); return `${(l && l.name) || 'Klient'}${q && q.label ? ' · ' + q.label : ''}` }
   return (
-    <div style={{ display: 'grid', gap: 14 }}>
+    <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'minmax(0,1fr)' }}>
       <section className="card">
         <div className="iv-head"><div><h1>{[p.address || p.district, p.city].filter(Boolean).join(', ') || 'Nehnuteľnosť'}</h1><p className="iv-sub">{[p.rooms ? `${p.rooms}-izbový ${p.type || 'byt'}` : p.type, p.area_interior ? `${String(p.area_interior).replace('.', ',')} m² interiér` : 'výmera neznáma', p.area_exterior ? `${String(p.area_exterior).replace('.', ',')} m² exteriér` : null, p.floor != null ? `${p.floor}. poschodie` : null, p.condition].filter(Boolean).join(' · ')}</p></div><div style={{ textAlign: 'right' }}><div style={{ fontSize: 26, fontWeight: 800 }}>{p.price != null ? eur(p.price) : <span className="iv-unknown">cena neznáma</span>}</div><div className="iv-actions" style={{ justifyContent: 'flex-end' }}><StatusPill status={p.status} /><FreshPill f={fresh} /></div></div></div>
         <p className="iv-hint" style={{ marginTop: 8 }}>{statusTitle(p.status)} {fresh.seller === 'never' ? 'Predajca dostupnosť zatiaľ nepotvrdil.' : `Predajca potvrdil dostupnosť ${fmtDate(p.last_confirmed_at)} (${p.last_confirmed_by || '—'}).`}{p.availability_note ? ` Poznámka: ${p.availability_note}` : ''}</p>
@@ -75,7 +75,7 @@ export default function PropertyDetail({ d, calcNode, isAdmin }) {
         <section className="card"><h2>Výpočet a kvalita podkladov</h2>{calcNode}
           {versions.length > 1 && <details style={{ marginTop: 8 }}><summary style={{ cursor: 'pointer', fontWeight: 800 }}>História verzií výpočtu ({versions.length})</summary><ul className="iv-hint">{versions.map((v) => <li key={v.id}>v{v.version} · {fmtDateTime(v.created_at)} · kvalita {v.quality_score}/100{v.id === p.calc_id ? ' · aktuálna' : ''}</li>)}</ul></details>}
         </section>
-        <div style={{ display: 'grid', gap: 14 }}>
+        <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'minmax(0,1fr)' }}>
           <section className="card"><h2>Zdroje inzerátu</h2>
             {listings.map((l) => <div key={l.id} style={{ borderTop: '1px solid #173e2c14', padding: '8px 0' }}><b>{l.source_key}</b> <span className={`iv-pill ${l.state === 'active' ? 'ok' : 'muted'}`}>{l.state === 'active' ? 'na portáli' : l.state === 'removed' ? 'odstránený z portálu' : 'chyba'}</span>{l.missing_checks > 0 && l.state === 'active' ? <span className="iv-pill warn">chýba {l.missing_checks}×</span> : null}<br />{l.url ? <a href={l.url} target="_blank" rel="noopener noreferrer">{l.url.replace(/^https?:\/\//, '').slice(0, 60)}</a> : <small>bez odkazu</small>}<small className="iv-hint" style={{ display: 'block' }}>{l.price ? eur(l.price) : 'cena neznáma'} · prvýkrát {fmtDate(l.first_seen_at)} · kontrola {l.last_checked_at ? fmtDateTime(l.last_checked_at) : '—'}</small></div>)}
             {!listings.length && <p className="iv-hint">Žiadny zdrojový inzerát.</p>}

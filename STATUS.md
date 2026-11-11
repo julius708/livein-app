@@ -1,3 +1,7 @@
+## 12. 11. 2026 – Investičné nehnuteľnosti a kupujúci (vetva `feature/investicie`, ešte nenasadené)
+- Nový modul `/investicie` (rola CRM): databáza ponúk, kalkulačka LIVE-IN, párovanie s dopytmi z CRM, agent na pozadí (cron, zámok, opakovanie), ingest API, návrh klientskej ponuky. Dokumentácia `docs/investicie/README.md`.
+- Migrácia `20261112_investicie` zatiaľ NEaplikovaná v produkcii. Nová premenná `INVEST_INGEST_SECRET`. Middleware: otvorená cesta `/api/invest/ingest` (vlastný Bearer token).
+
 ## 11. 11. 2026 – Vyúčtovanie majiteľom
 - Nový modul `/vyuctovanie` (admin, asistentka, operácie): tabuľka po bytoch, úprava priamo v riadku, filtre, stavy, firma bytu, medzisúčty častí (Modrá guľa, Dicer), kalkulačka prádla, nový mesiac, export do Excelu. Dokumentácia `docs/vyuctovanie/README.md`.
 - Migrácia `20261111_vyuctovanie` aplikovaná; október 2026 naimportovaný (239 riadkov, súčet 9 399,96 € sedí). Fáza 2 (Asana, Gmail, editor cenníka) zatiaľ len návrh.

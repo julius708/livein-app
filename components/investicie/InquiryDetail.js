@@ -68,7 +68,7 @@ export default function InquiryDetail({ d, serverNow }) {
   const confirmedDays = q.last_confirmed_at ? Math.floor((serverNow - Date.parse(q.last_confirmed_at)) / 864e5) : null
   const card = (m) => <MatchCard key={m.id} m={m} p={pBy[m.property_id]} q={q} sel={!!sel[m.id]} toggleSel={() => setSel({ ...sel, [m.id]: !sel[m.id] })} run={run} pending={pending} />
   return (
-    <div style={{ display: 'grid', gap: 14 }}>
+    <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'minmax(0,1fr)' }}>
       <section className="card">
         <div className="iv-head"><div><h1>{q.label || 'Investičný dopyt'}</h1><p className="iv-sub">{lead ? <Link href={`/crm/lead/${lead.id}`}>{lead.name}</Link> : 'Kontakt'} · {inqStatusLabel(q.status)} · zodpovedá {(q.owner_email || '').split('@')[0] || '—'} · zdroj: {q.source || '—'}</p></div>
           <div className="iv-actions"><select value={q.status} onChange={(e) => run(() => updateInquiryAction(q.id, { status: e.target.value }), 'Stav dopytu zmenený.')} aria-label="Stav dopytu">{INQ_STATUS.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}</select><button type="button" className="btn line" disabled={pending} onClick={() => run(() => confirmInquiryAction(q.id), 'Záujem klienta potvrdený.')}>Záujem potvrdený dnes</button><button type="button" className="btn" onClick={() => setEdit(!edit)}>{edit ? 'Zavrieť úpravu' : 'Upraviť dopyt'}</button></div></div>

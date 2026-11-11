@@ -310,3 +310,12 @@ test('prístup k odpočtu: isRunDue nespúšťa vypnutého agenta', async () => 
   const settings = await loadSettings(s)
   assert.equal(isRunDue({ agent: { ...settings.agent, enabled: false }, lastRun: null, now: NOW }).due, false)
 })
+import { isPublicHttpsUrl, fetchText, checkUrl } from '../lib/inv-sources.js'
+test('bezpečnosť: čítajú sa len verejné https adresy (nie localhost, IP, interné názvy, http, prihlasovacie údaje)', async () => {
+  for (const ok of ['https://www.nehnutelnosti.sk/123/byt', 'https://feed.example/l.json']) assert.equal(isPublicHttpsUrl(ok), true, ok)
+  for (const bad of ['http://portal.sk/1', 'https://localhost/x', 'https://127.0.0.1/x', 'https://169.254.169.254/latest', 'https://[::1]/x', 'https://svc.internal/x', 'https://intranet/x', 'https://user:pw@portal.sk/x', 'ftp://portal.sk/x', 'nie url']) assert.equal(isPublicHttpsUrl(bad), false, bad)
+  let called = false
+  const r = await fetchText('https://169.254.169.254/latest', { fetchImpl: async () => { called = true; return resp(200) } })
+  assert.equal(r.status, 0); assert.equal(called, false)
+  assert.equal((await checkUrl('https://10.0.0.5/inzerat/1234567', { fetchImpl: async () => { called = true; return resp(200) } })).state === 'ok', false)
+})

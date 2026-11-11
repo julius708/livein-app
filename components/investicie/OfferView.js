@@ -36,7 +36,7 @@ export default function OfferView({ offer, notices, inquiry, lead }) {
   const locked = offer.status === 'sent'
   const dirty = intro !== offer.content.intro || notes !== ((offer.internal && offer.internal.notes) || '')
   return (
-    <div style={{ display: 'grid', gap: 14 }}>
+    <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'minmax(0,1fr)' }}>
       <section className="card">
         <div className="iv-head"><div><h1>Návrh klientskej ponuky</h1><p className="iv-sub">{lead ? lead.name : 'Klient'} · {inquiry.label || 'dopyt'} · pripravené {fmtDateTime(offer.created_at)} · <span className={`iv-pill ${offer.status === 'draft' ? 'warn' : 'ok'}`}>{offer.status === 'draft' ? 'čaká na kontrolu človekom' : offer.status === 'reviewed' ? `skontrolovaná (${(offer.reviewed_by || '').split('@')[0]}, ${fmtDate(offer.reviewed_at)})` : 'označená ako odoslaná'}</span></p></div><Link className="btn line" href={`/investicie/dopyt/${inquiry.id}`}>← Späť na dopyt</Link></div>
         <div className="iv-msg warn" style={{ marginTop: 10 }}>Aplikácia ponuku neodosiela. Skontroluj ju, skopíruj alebo vytlač a odošli vedome sám. Interné poznámky sú nižšie oddelene a v klientskom náhľade nie sú.</div>

@@ -18,10 +18,27 @@ const DEFAULTS = {
   inv_offers: () => ({ status: 'draft', match_ids: [], content: {}, internal: {}, calc_snapshot: {}, created_at: nowIso(), updated_at: nowIso() }),
   inv_runs: () => ({ status: 'running', attempt: 1, started_at: nowIso(), heartbeat_at: nowIso(), stats: {}, source_results: [], cursor: {} }),
   inv_sources: () => ({ enabled: true, blocked: false, mode: 'both', config: {}, consecutive_failures: 0, created_at: nowIso(), updated_at: nowIso() }),
+  inv_merge_candidates: () => ({ status: 'pending', reasons: [], created_at: nowIso() }),
   inv_events: () => ({ payload: {}, at: nowIso() }), inv_price_history: () => ({ at: nowIso() }), inv_calcs: () => ({ created_at: nowIso() }),
   notifications: () => ({ created_at: nowIso(), read_at: null }),
 }
 const clone = (x) => (x === undefined ? x : JSON.parse(JSON.stringify(x)))
+/** Projekcia stĺpcov vrátane JSON ciest PostgREST (`alias:col->a->>b`). */
+function project(cols, row) {
+  if (!cols || cols === '*' || !/->|:/.test(cols)) return row
+  const out = {}
+  for (const tok of cols.split(',').map((x) => x.trim()).filter(Boolean)) {
+    const m = tok.match(/^(?:(\w+):)?([\w]+)((?:->>?[\w]+)*)$/)
+    if (!m) { out[tok] = row[tok]; continue }
+    const [, alias, col, path] = m
+    let v = row[col]
+    const steps = [...path.matchAll(/->>?(\w+)/g)].map((x) => x[1])
+    for (const k of steps) v = v == null ? v : v[k]
+    if (path.includes('->>') && v != null && typeof v !== 'string') v = String(v)
+    out[alias || (steps.length ? steps[steps.length - 1] : col)] = v
+  }
+  return out
+}
 
 export function fakeSupabase(seed = {}) {
   const db = { tables: {}, serial: {}, locks: {}, log: [] }
@@ -30,11 +47,11 @@ export function fakeSupabase(seed = {}) {
   const client = {
     db,
     from(table) {
-      const q = { mode: 'select', filters: [], ord: null, lim: null, rng: null, rows: null, patch: null, one: null, head: false, count: false, returning: false }
+      const q = { cols: null, mode: 'select', filters: [], ord: null, lim: null, rng: null, rows: null, patch: null, one: null, head: false, count: false, returning: false }
       const test = (r) => q.filters.every((f) => f(r))
       const cmp = (op) => (c, v) => { q.filters.push((r) => op(r[c], v)); return b }
       const b = {
-        select(cols, o) { if (q.mode === 'insert' || q.mode === 'update' || q.mode === 'delete') q.returning = true; if (o && o.head) q.head = true; if (o && o.count) q.count = true; return b },
+        select(cols, o) { q.cols = cols; if (q.mode === 'insert' || q.mode === 'update' || q.mode === 'delete') q.returning = true; if (o && o.head) q.head = true; if (o && o.count) q.count = true; return b },
         insert(rows) { q.mode = 'insert'; q.rows = Array.isArray(rows) ? rows : [rows]; return b },
         update(patch) { q.mode = 'update'; q.patch = patch; return b },
         delete() { q.mode = 'delete'; return b },
@@ -44,6 +61,7 @@ export function fakeSupabase(seed = {}) {
         in(c, arr) { q.filters.push((r) => arr.includes(r[c])); return b },
         is(c, v) { q.filters.push((r) => (v === null ? r[c] == null : r[c] === v)); return b },
         not(c, op, v) { if (op === 'is') q.filters.push((r) => (v === null ? r[c] != null : r[c] !== v)); else if (op === 'in') q.filters.push((r) => !String(v).replace(/[()]/g, '').split(',').includes(String(r[c]))); return b },
+        or(expr) { const parts = String(expr).split(',').map((x) => x.split('.')); q.filters.push((r) => parts.some(([c, op, ...v]) => (op === 'eq' ? String(r[c]) === v.join('.') : false))); return b },
         ilike(c, pat) { const re = new RegExp('^' + String(pat).replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/%/g, '.*') + '$', 'i'); q.filters.push((r) => re.test(String(r[c] ?? ''))); return b },
         contains(c, arr) { q.filters.push((r) => arr.every((x) => (r[c] || []).includes(x))); return b },
         order(c, o = {}) { q.ord = [c, o.ascending !== false]; return b },
@@ -81,7 +99,7 @@ export function fakeSupabase(seed = {}) {
         if (q.rng) sel = sel.slice(q.rng[0], q.rng[1] + 1)
         if (q.lim != null) sel = sel.slice(0, q.lim)
         if (q.head) return { data: null, error: null, count: sel.length }
-        return fin(sel.map(clone), q.count ? sel.length : undefined)
+        return fin(sel.map((r) => project(q.cols, clone(r))), q.count ? sel.length : undefined)
       }
       function fin(out, count) {
         if (q.mode !== 'select' && !q.returning) return { data: null, error: null }

@@ -25,7 +25,7 @@ export default function AgentAdmin({ status, runs, sources, settings }) {
   const saveCalc = () => run(() => saveSettingsAction('calc', { ...settings.calc, thresholds: thr, mortgage: mort, costs: { commission_pct: costs.commission_pct, legal_pct: costs.legal_pct, reserve_pct: costs.reserve_pct }, ltr: { vacancy_pct: costs.vacancy, management_pct: costs.mgmt } }), 'Nastavenia kalkulačky uložené. Výpočty sa pri ďalšom behu prepočítajú.')
   const last = status.last, lastOk = status.lastOk
   return (
-    <div style={{ display: 'grid', gap: 14 }}>
+    <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'minmax(0,1fr)' }}>
       <section className="card">
         <div className="iv-head"><h2>Stav agenta: <span className={`iv-pill ${status.active ? 'ok' : 'warn'}`}>{status.state}</span></h2>
           <div className="iv-actions"><select value={mode} onChange={(e) => setMode(e.target.value)} aria-label="Režim"><option value="both">Všeobecný + cielený</option><option value="general">Len všeobecné vyhľadávanie</option><option value="targeted">Len cielené (podľa dopytov)</option></select><button type="button" className="btn" disabled={pending} onClick={() => run(() => runNowAction(mode), (r) => `Beh skončil: ${r.status}. Nových ${r.stats.created}, aktualizovaných ${r.stats.updated}.`)}>{pending ? 'Beží…' : 'Spustiť teraz'}</button></div></div>
