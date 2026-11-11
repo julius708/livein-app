@@ -1,0 +1,95 @@
+/* Vyúčtovanie majiteľom – liquid glass ako zvyšok appky (glass.css). Stavy: s-ok, s-doplnit, s-patrik, s-dup, s-nov, s-neuct. */
+.vy{color:#233E31}
+.vy-wrap{display:flex;flex-direction:column;gap:14px;min-width:0}
+.vy .card{margin-top:0;border-radius:18px;padding:14px 16px}
+.vy-top{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:flex-end;justify-content:space-between}
+.vy-top h1{margin:0 0 4px;font-size:24px}
+.vy-top p{margin:0;color:#66716A;font-size:13.5px}
+.vy-tools{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}
+.vy-tools label,.vy-form label,.vy-n,.vy-pz,.vy-zi,.vy-move{display:flex;flex-direction:column;gap:3px;font-size:10.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#66716A}
+.vy-tools .btn,.vy-top .btn{min-height:40px;display:inline-flex;align-items:center;text-decoration:none}
+.vy-msg{border-radius:12px;padding:9px 12px;font-weight:700;font-size:12.5px;width:100%;margin:0}
+.vy-msg.err{background:#fbe4e2cc;color:#C23B3B}
+
+.vy-stats{display:grid;grid-template-columns:2fr repeat(4,minmax(0,1fr));gap:10px}
+.vy-stat{display:flex;flex-direction:column;gap:2px;border-radius:18px;padding:12px 14px;text-align:left;font:inherit;color:inherit;cursor:default;
+  background:linear-gradient(135deg,#ffffff80,#ffffff20),#ffffff40;border:1px solid #ffffffd9;box-shadow:inset 0 1px 0 #fff,0 16px 36px -22px #173e2c66}
+button.vy-stat{cursor:pointer}
+.vy-stat span{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#66716A}
+.vy-stat b{font-size:24px;line-height:1.1;font-variant-numeric:tabular-nums}
+.vy-stat.main b{font-size:30px}
+.vy-stat small{font-size:11.5px;color:#66716A;font-variant-numeric:tabular-nums}
+.vy-stat.warn b{color:#8A5A00}.vy-stat.pat b{color:#7A4FB0}.vy-stat.red b{color:#C23B3B}
+.vy-stat[aria-pressed=true]{outline:2px solid #7A4FB0}
+
+.vy-filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.vy-filters input[type=search]{flex:1 1 240px;min-width:0}
+.vy-filters select{flex:0 1 200px;min-width:0}
+
+.vy-panel{border-radius:18px;padding:12px 16px;background:linear-gradient(135deg,#ffffff80,#ffffff20),#ffffff40;border:1px solid #ffffffd9;box-shadow:inset 0 1px 0 #fff,0 16px 36px -22px #173e2c66}
+.vy-panel>summary{cursor:pointer;font-weight:800;font-size:14px}
+.vy-hint{color:#66716A;font-size:12.5px;line-height:1.45;margin:6px 0}
+.vy-form{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;margin:10px 0}
+.vy-own{margin:6px 0}.vy-own>summary{cursor:pointer;font-size:13px;font-weight:700}
+.vy-calc{display:flex;gap:16px;flex-wrap:wrap;align-items:center;font-size:14px;font-variant-numeric:tabular-nums}
+.vy-calc .btn{margin-left:auto}
+
+.vy-group{display:flex;flex-direction:column;gap:8px}
+.vy-group>h2{margin:10px 0 2px;font-size:13px;text-transform:uppercase;letter-spacing:.1em;color:#233E31}
+.vy-group>h2 small{opacity:.8;font-weight:700}
+.vy-card{border-radius:18px;background:linear-gradient(135deg,#ffffff80,#ffffff20),#ffffff40;border:1px solid #ffffffd9;box-shadow:inset 0 1px 0 #fff,0 16px 36px -22px #173e2c66;min-width:0}
+.vy-h{display:flex;gap:10px;align-items:center;padding:6px 12px 6px 4px;flex-wrap:wrap}
+.vy-t{display:flex;flex:1 1 280px;min-width:0;align-items:center;gap:8px;flex-wrap:wrap;background:none!important;border:0!important;box-shadow:none!important;transform:none!important;color:inherit;text-align:left;font:inherit;padding:8px;cursor:pointer;min-height:44px}
+.vy-chev{display:inline-block;transition:transform .2s;font-size:12px}
+.vy-card.open .vy-chev{transform:rotate(90deg)}
+.vy-name{font-weight:800;font-size:15px;overflow-wrap:anywhere}
+.vy-meta{font-size:12px;color:#66716A}
+.vy-b{font-size:11px;font-weight:800;border-radius:999px;padding:2px 9px}
+.vy-b.warn{background:#fbf0d3;color:#8A5A00}.vy-b.pat{background:#ece2f8;color:#6B3FA0}.vy-b.red{background:#fbe4e2;color:#C23B3B}
+.vy-firm{flex:0 1 220px;min-width:0;min-height:36px;font-size:12.5px}
+.vy-total{font-size:18px;font-variant-numeric:tabular-nums;white-space:nowrap;margin-left:auto}
+.vy-total.none{font-size:12px;color:#66716A;font-weight:700}
+.vy-body{padding:2px 12px 12px;display:flex;flex-direction:column;gap:6px}
+.vy-kat{font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#66716A;margin:8px 0 0}
+.vy-part{border-top:1px dashed #23402f33;padding-top:6px;margin-top:4px}
+.vy-part-h{display:flex;justify-content:space-between;gap:10px;font-weight:800;font-size:13.5px;background:#f6f3e6aa;border-radius:10px;padding:6px 10px;font-variant-numeric:tabular-nums}
+
+.vy-row{display:grid;grid-template-columns:minmax(220px,3fr) 64px 88px 104px minmax(150px,1.1fr) minmax(150px,1.5fr) minmax(110px,1fr) auto;gap:8px;align-items:start;padding:8px;border-radius:12px;background:#ffffff59;border:1px solid #ffffffa6}
+.vy-row.miss{background:#fbf0d3aa;border-color:#e7c46a}
+.vy-row.dim{opacity:.72}
+.vy-row textarea,.vy-row input,.vy-row select{width:100%;min-width:0;font:inherit;font-size:13px;box-sizing:border-box}
+.vy-row textarea{resize:none;overflow:hidden;line-height:1.4}
+.vy-row .vy-pol{font-weight:800}
+.vy-row .vy-pz textarea{font-weight:500}
+.vy-sum b{font-size:14px;padding-top:7px;font-variant-numeric:tabular-nums;text-transform:none;letter-spacing:0;color:#233E31}
+.vy-sum b.dim{color:#66716A}
+.vy-n input{text-align:right;font-variant-numeric:tabular-nums}
+.vy-zi input{color:#C23B3B;font-weight:700}
+.vy-move{margin-top:6px}
+.vy-act{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end;font-size:12px;padding-top:4px}
+.vy-act a{color:#1E6B45;font-weight:800}
+.vy-ico{min-width:34px;min-height:34px;padding:0;border-radius:999px;line-height:1}
+.vy-ico.del{color:#C23B3B}
+.vy-stav{border-radius:999px;font-weight:800;font-size:12px}
+.vy-stav.s-ok{background:#ddf1e6;color:#1E6B45}.vy-stav.s-doplnit{background:#fbf0d3;color:#8A5A00}.vy-stav.s-patrik{background:#ece2f8;color:#6B3FA0}
+.vy-stav.s-dup{background:#fbe4e2;color:#C23B3B}.vy-stav.s-nov{background:#e3edf8;color:#2F5F9A}.vy-stav.s-neuct{background:#e8e8e4;color:#66716A}
+.vy-add{margin-top:6px}
+.vy-toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:60;max-width:min(560px,calc(100vw - 32px));padding:11px 16px;border-radius:14px;font-weight:700;font-size:13px;cursor:pointer;box-shadow:0 18px 40px -16px #0007}
+.vy-toast.ok{background:#ddf1e6;color:#1E6B45}.vy-toast.err{background:#fbe4e2;color:#C23B3B}
+
+@media(max-width:1100px){
+  .vy-row{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .vy-main{grid-column:1/-1}
+  .vy-stav{grid-column:span 2}.vy-pz,.vy-zi{grid-column:span 2}.vy-act{grid-column:1/-1;justify-content:flex-start}
+}
+@media(max-width:720px){
+  .vy-stats{grid-template-columns:1fr 1fr}.vy-stat.main{grid-column:1/-1}
+  .vy-row{grid-template-columns:1fr 1fr 1fr;gap:8px}
+  .vy-main,.vy-stav,.vy-pz,.vy-zi,.vy-act{grid-column:1/-1}
+  .vy-sum{grid-column:span 1}
+  .vy-total{margin-left:0}
+  .vy-tools{width:100%}.vy-tools label{flex:1 1 100%}.vy-tools .btn{flex:1 1 auto;justify-content:center}
+  .vy-calc .btn{margin-left:0;width:100%}
+  .vy-firm{flex:1 1 100%}
+}
+@media(prefers-reduced-motion:reduce){.vy-chev{transition:none}}
