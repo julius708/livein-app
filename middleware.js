@@ -4,7 +4,7 @@ import { SUPABASE_URL, SUPABASE_ANON } from './lib/env'
 
 // Verejné cesty (bez prihlásenia)
 // Práčovňa pod /pracovna: service worker, manifest a ikony sa sťahujú bez session (push, pridanie na plochu)
-const OPEN = ['/login', '/auth/', '/api/auth/', '/api/cron/', '/api/crm/create-lead', '/api/crm/hubspot-callback', '/api/crm/import', '/api/crm/asana-maintenance', '/api/newsletter/unsubscribe', '/api/maint/email-inbound', '/api/maint/call-webhook', '/api/maint/call-events', '/api/maint/health', '/api/kluce/lock-event', '/kluce.webmanifest', '/p/', '/g/', '/api/g/', '/pracovna/sw.js', '/pracovna/manifest.webmanifest', '/pracovna/icons/']
+const OPEN = ['/login', '/auth/', '/api/auth/', '/api/cron/', '/api/crm/create-lead', '/api/crm/hubspot-callback', '/api/crm/import', '/api/crm/asana-maintenance', '/api/newsletter/unsubscribe', '/api/maint/email-inbound', '/api/maint/call-webhook', '/api/maint/call-events', '/api/maint/health', '/api/kluce/lock-event', '/api/invest/ingest', '/kluce.webmanifest', '/p/', '/g/', '/api/g/', '/pracovna/sw.js', '/pracovna/manifest.webmanifest', '/pracovna/icons/']
 
 export async function middleware(req) {
   let res = NextResponse.next({ request: req })

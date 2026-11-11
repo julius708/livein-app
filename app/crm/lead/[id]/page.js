@@ -23,9 +23,19 @@ export default async function LeadPage({ params }) {
     s.from('lead_tasks').select('id,kind,title,due_at,status,asana_gid,payload,done_at').eq('lead_id', id).order('status').order('due_at', { ascending: true, nullsFirst: false }).order('created_at'),
   ])
   if (!lead) notFound()
+  // Investičné dopyty pri kontakte; pred nasadením migrácie (chýbajúca tabuľka) sa sekcia jednoducho nezobrazí
+  const ir = await s.from('inv_inquiries').select('id,label,status,cities,budget_total,budget_kind,equity,loan_planned,price_cap,last_confirmed_at').eq('lead_id', id).order('created_at', { ascending: false })
+  let invest = null
+  if (ir && !ir.error) {
+    const ids = (ir.data || []).map((q) => q.id)
+    const mr = ids.length ? ((await s.from('inv_matches').select('inquiry_id').in('inquiry_id', ids).eq('category', 'match').neq('decision', 'rejected')).data || []) : []
+    const matchCounts = {}
+    for (const m of mr) matchCounts[m.inquiry_id] = (matchCounts[m.inquiry_id] || 0) + 1
+    invest = { inquiries: ir.data || [], matchCounts }
+  }
   return (
     <Shell me={me} user={user} isAdmin={isAdmin} active="crm" guruApp="crm" hideFooter>
-      <LeadDetail lead={lead} events={events || []} tasks={tasks || []} people={(people || []).filter((p) => !p.email.startsWith('crm-bot'))} me={{ email: user.email.toLowerCase(), name: me.name || '' }} serverNow={Date.now()} />
+      <LeadDetail lead={lead} events={events || []} tasks={tasks || []} people={(people || []).filter((p) => !p.email.startsWith('crm-bot'))} me={{ email: user.email.toLowerCase(), name: me.name || '' }} serverNow={Date.now()} invest={invest} />
     </Shell>
   )
 }
