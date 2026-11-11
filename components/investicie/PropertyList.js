@@ -44,7 +44,7 @@ export default function PropertyList({ props, calcs, counts, serverNow, ready })
           const age = p.last_checked_at ? Math.max(0, Math.floor((serverNow - Date.parse(p.last_checked_at)) / 864e5)) : null
           return (
             <Link key={p.id} href={`/investicie/n/${p.id}`} className="iv-row">
-              <div><div className="t">{[p.address || p.district, p.city].filter(Boolean).join(', ') || 'Bez adresy'}</div><small>{[p.rooms ? `${p.rooms}-izbový` : null, p.area_interior ? `${String(p.area_interior).replace('.', ',')} m²` : null, p.area_exterior ? `+ ${String(p.area_exterior).replace('.', ',')} m² exteriér` : null].filter(Boolean).join(' · ') || 'rozmery neznáme'}</small></div>
+              <div><div className="t">{p.created_by === 'demo' && <span className="iv-pill muted" style={{ marginRight: 6 }}>ukážka</span>}{[p.address || p.district, p.city].filter(Boolean).join(', ') || 'Bez adresy'}</div><small>{[p.rooms ? `${p.rooms}-izbový` : null, p.area_interior ? `${String(p.area_interior).replace('.', ',')} m²` : null, p.area_exterior ? `+ ${String(p.area_exterior).replace('.', ',')} m² exteriér` : null].filter(Boolean).join(' · ') || 'rozmery neznáme'}</small></div>
               <div><span className="n">{p.price != null ? eur(p.price) : '—'}</span><small>cena</small></div>
               <div><span className="n">{c && c.total != null ? eur(c.total) : '—'}</span><small>{c ? (c.complete ? 'celková investícia' : <span className="iv-unknown">aspoň, chýba {c.unknown} pol.</span>) : 'bez výpočtu'}</small></div>
               <div><span className="n">{c && c.yield != null ? pct1(c.yield) : '—'}</span><small>{c && c.yield != null ? (c.provisional ? 'výnos (predbežne)' : 'výnos z investície') : 'výnos neznámy'}</small></div>

@@ -42,6 +42,11 @@ Pozor: poplatky portálov sú predvolene 0 %; ak cena za noc ešte nie je zníž
 Najviac 200 položiek. Rovnaký `source_key` + `external_id` aktualizuje ten istý záznam. Neúplné položky sa odmietnu s dôvodom. `complete: true` = úplný prehľad aktívnych inzerátov zdroja (len vtedy sa chýbajúce po 2 kontrolách označia ako odstránené).
 Odpoveď: `{ ok, summary, items:[{ external_id, status: created|updated|merged|invalid|error, property_id }] }`.
 
+## Ukážka, predvoľba a vyhľadávanie na internete
+- **Ukážkové dáta** (`lib/inv-demo.js`): tlačidlo v `/investicie` (admin) vytvorí fiktívne nehnuteľnosti, troch fiktívnych klientov „[UKÁŽKA] …“ (kontakty s `origin='demo'`, nie sú leady), dopyty, zhody, rozhodnutia, úlohu a návrh ponuky. Nikomu sa neposielajú upozornenia. „Odstrániť ukážkové dáta“ zmaže len ukážku.
+- **Predvoľba Lazaretská 15** (`lib/inv-presets.js`): cena za noc okolo 98 €, portály 15 %, správa 17 %, DPH 5 %, upratovanie 25 €, energie 200 €/mes., zariadenie 15 000 € (ilustračne), scenáre 90/60, 98/70, 105/75. Kritérium výnosu 5 % je ukážkové, nie schválené.
+- **Vyhľadávanie na internete (AI)** (`lib/inv-websearch.js`): zdroj `web-search` (kind `feed`, `config.engine = 'web_search'`). AI s webovým vyhľadávaním nájde aktuálne inzeráty podľa filtrov firmy a aktívnych dopytov; každý odkaz sa overí na stránke inzerátu (JSON-LD/OpenGraph, robots.txt). Mŕtve odkazy sa zahodia, neoverené údaje sú označené ako predpoklad. Vyžaduje `ANTHROPIC_API_KEY` vo Verceli.
+
 ## Konfigurácia
 Nová premenná: `INVEST_INGEST_SECRET` (ingest API; bez nej vracia 503). Existujúce: `CRON_SECRET`, `SUPABASE_*`, voliteľne `ANTHROPIC_API_KEY` (AI úvod ponuky; čísla sú vždy z kódu, AI text s číslom mimo adresy sa zahodí).
 Migrácia: `supabase/migrations/20261112_investicie.sql` (len nové tabuľky `inv_*`, RLS na rolu `crm`; nastavenia a zdroje píše admin; behy agenta server).

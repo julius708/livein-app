@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { runNowAction, saveSettingsAction, saveSourceAction, resetSourceAction, pilotPreviewAction, pilotCommitAction } from '@/app/investicie/actions'
+import { runNowAction, saveSettingsAction, saveSourceAction, resetSourceAction, pilotPreviewAction, pilotCommitAction, enableWebSearchAction, applyPresetAction } from '@/app/investicie/actions'
 import { THRESHOLD_DEFS, mergeSettings } from '@/lib/inv-calc'
 import { fmtDateTime } from '@/lib/fmt'
 import { useAct, Toast } from './ui'
@@ -36,6 +36,10 @@ export default function AgentAdmin({ status, runs, sources, settings }) {
           <dt>Zdroje</dt><dd>{status.configured} nakonfigurovaných{status.blocked.length ? <span className="iv-pill bad" style={{ marginLeft: 8 }}>{status.blocked.length} zablokovaných</span> : null}{status.failing.length ? <span className="iv-pill warn" style={{ marginLeft: 8 }}>{status.failing.length} s chybou</span> : null}</dd>
         </dl>
         {status.configured === 0 && <div className="iv-msg warn" style={{ marginTop: 10 }}>Nie je nakonfigurovaný žiadny zdroj, preto agent zatiaľ nič nevyhľadáva. Pridaj feed alebo zoznam odkazov nižšie, alebo nechaj externého agenta posielať ponuky cez ingest API. Automatické hľadanie sa označí ako aktívne až po prvom skutočne úspešnom behu.</div>}
+      </section>
+      <section className="card"><h2>Vyhľadávanie na internete (AI)</h2>
+        <p className="iv-hint">Agent hľadá sám: podľa firemných filtrov (všeobecne) a podľa aktívnych dopytov klientov (cielene) prehľadá internet, nájde aktuálne inzeráty na predaj a overí ich priamo na stránke inzerátu, ak to portál dovolí (rešpektuje robots.txt). Čo sa nepodarí overiť, uloží sa ako <b>neoverené</b> a Zuzka to uvidí. Nevyžaduje žiadny feed ani prístup od portálov, vyžaduje kľúč Anthropic vo Verceli (ANTHROPIC_API_KEY).</p>
+        <div className="iv-actions"><button type="button" className="btn" disabled={pending} onClick={() => run(() => enableWebSearchAction(!sources.some((x) => x.key === 'web-search' && x.enabled)), 'Uložené.')}>{sources.some((x) => x.key === 'web-search' && x.enabled) ? 'Vypnúť vyhľadávanie na internete' : 'Zapnúť vyhľadávanie na internete'}</button><button type="button" className="btn line" disabled={pending} onClick={() => run(() => applyPresetAction(), 'Kalkulačka je nastavená podľa Lazaretskej 15. Pri ďalšom behu sa výpočty prepočítajú.')}>Nastaviť kalkulačku podľa Lazaretskej 15</button></div>
       </section>
       <section className="card"><h2>História behov</h2>
         <div className="iv-scroll"><table className="iv-table"><thead><tr><th>Začiatok</th><th>Stav</th><th>Spúšťač</th><th className="r">Nové</th><th className="r">Aktual.</th><th className="r">Zlúčené</th><th className="r">Zhody</th><th>Chyby zdrojov</th></tr></thead><tbody>
