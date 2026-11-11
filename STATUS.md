@@ -1,3 +1,7 @@
+## 12. 11. 2026 (večer) – Investície: ukážka, Lazaretská 15, vyhľadávanie na internete
+- Tlačidlá v `/investicie` (admin): ukážkové dáta (fiktívne), nastavenie kalkulačky podľa Lazaretskej 15, zapnutie AI vyhľadávania na internete; návod na vyskúšanie na stránke.
+- Agent má nový zdroj `web-search` (AI + overenie na stránke inzerátu). Živý beh s kľúčom Anthropic ešte neoverený.
+
 ## 12. 11. 2026 – Investičné nehnuteľnosti a kupujúci (vetva `feature/investicie`, ešte nenasadené)
 - Nový modul `/investicie` (rola CRM): databáza ponúk, kalkulačka LIVE-IN, párovanie s dopytmi z CRM, agent na pozadí (cron, zámok, opakovanie), ingest API, návrh klientskej ponuky. Dokumentácia `docs/investicie/README.md`.
 - Migrácia `20261112_investicie` zatiaľ NEaplikovaná v produkcii. Nová premenná `INVEST_INGEST_SECRET`. Middleware: otvorená cesta `/api/invest/ingest` (vlastný Bearer token).

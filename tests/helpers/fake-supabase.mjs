@@ -54,6 +54,7 @@ export function fakeSupabase(seed = {}) {
         select(cols, o) { q.cols = cols; if (q.mode === 'insert' || q.mode === 'update' || q.mode === 'delete') q.returning = true; if (o && o.head) q.head = true; if (o && o.count) q.count = true; return b },
         insert(rows) { q.mode = 'insert'; q.rows = Array.isArray(rows) ? rows : [rows]; return b },
         update(patch) { q.mode = 'update'; q.patch = patch; return b },
+        upsert(rows) { q.mode = 'upsert'; q.rows = Array.isArray(rows) ? rows : [rows]; return b },
         delete() { q.mode = 'delete'; return b },
         eq: cmp((a, v) => a === v || (a != null && v != null && String(a) === String(v))),
         neq: cmp((a, v) => a !== v),
@@ -84,6 +85,11 @@ export function fakeSupabase(seed = {}) {
             rows.push(r); out.push(r)
           }
           return fin(out.map(clone))
+        }
+        if (q.mode === 'upsert') {
+          const keys = (UNIQUE[table] || [['id']])[0]
+          for (const r0 of q.rows) { const ex = rows.find((x) => keys.every((k) => x[k] === r0[k])); if (ex) Object.assign(ex, clone(r0)); else rows.push({ ...(DEFAULTS[table] ? DEFAULTS[table]() : {}), ...clone(r0) }) }
+          return fin(q.rows.map(clone))
         }
         let sel = rows.filter(test)
         if (q.mode === 'update') {

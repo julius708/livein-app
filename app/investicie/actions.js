@@ -11,6 +11,8 @@ import { runAgent } from '@/lib/inv-agent'
 import { mergeSettings } from '@/lib/inv-calc'
 import { normalizePhone } from '@/lib/crm'
 import { callClaude } from '@/lib/anthropic'
+import { seedDemo, clearDemo } from '@/lib/inv-demo'
+import { LAZARETSKA_15 } from '@/lib/inv-presets'
 
 async function viewer({ admin = false } = {}) {
   const v = await getViewer()
@@ -278,4 +280,28 @@ export const pilotCommitAction = guard(async (text, dataDate) => {
     if (!error) out.inquiries++
   }
   refresh(); return { ok: true, ...out }
+})
+
+/* ---------- ukážka, predvoľba a vyhľadávanie na internete (admin) ---------- */
+export const seedDemoAction = guard(async () => {
+  const v = await viewer({ admin: true }); if (v.error) return fail(v.error)
+  const r = await seedDemo(await adminClientAsync(), { actor: who(v) })
+  refresh(); return r.already ? { ok: true, already: true } : r
+})
+export const clearDemoAction = guard(async () => {
+  const v = await viewer({ admin: true }); if (v.error) return fail(v.error)
+  const r = await clearDemo(await adminClientAsync()); refresh(); return r
+})
+export const applyPresetAction = guard(async () => {
+  const v = await viewer({ admin: true }); if (v.error) return fail(v.error)
+  const { error } = await v.s.from('inv_settings').upsert({ key: 'calc', value: LAZARETSKA_15.calc, updated_by: who(v), updated_at: new Date().toISOString() })
+  if (error) return fail(error.message)
+  revalidatePath('/investicie/agent'); refresh(); return { ok: true }
+})
+/** Zapne zdroj „vyhľadávanie na internete (AI)“: agent hľadá sám podľa filtrov firmy a aktívnych dopytov, bez dodaných feedov. */
+export const enableWebSearchAction = guard(async (enabled = true) => {
+  const v = await viewer({ admin: true }); if (v.error) return fail(v.error)
+  const { error } = await v.s.from('inv_sources').upsert({ key: 'web-search', name: 'Vyhľadávanie na internete (AI)', kind: 'feed', url: null, mode: 'both', enabled: !!enabled, config: { engine: 'web_search', verify: true, max_listings: 20, max_per_query: 12 } })
+  if (error) return fail(error.message)
+  revalidatePath('/investicie/agent'); return { ok: true }
 })
