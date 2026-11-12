@@ -31,3 +31,11 @@ body:has(#livein-hq){background:#e9ece2}
 #livein-hq button{letter-spacing:normal;text-transform:none}
 /* appka na ploche telefónu: obsah nezalieza pod stavový riadok a spodnú lištu */
 @media (display-mode:standalone){body:has(#livein-hq){padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}}
+/* živé údaje: metriky, signály a agenda ako odkazy do modulov appky */
+#livein-hq a.li-metric{text-decoration:none;color:var(--li-ink);display:block}
+#livein-hq a.li-priority{text-decoration:none;color:inherit}
+#livein-hq .li-agenda a{display:block;text-decoration:none;color:inherit;background:#eef2e8;border-left:3px solid #8faaa0;border-radius:0 9px 9px 0;padding:9px 11px}
+#livein-hq .li-agenda a strong{display:block;font-size:11px;font-weight:500}
+#livein-hq .li-agenda a small{display:block;font-size:10px;color:var(--li-muted);margin-top:3px}
+#livein-hq .li-agenda a.attention{background:#fbefdf;border-left-color:var(--li-orange)}
+#livein-hq #li-content>.li-metrics:first-child{margin-top:0}
