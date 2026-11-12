@@ -100,6 +100,8 @@ test('zápisy v Braine: priečinok Claude sú zápisy Claude, meno roly je z nad
   assert.equal(v.hasSnapshot, false)
   assert.deepEqual([v.roles[0].id, v.roles[0].name, v.roles[0].state], ['A1', 'Atlas', 'quiet'])
   assert.equal(v.totals.brainLastClaude, h(680))
+  // meno z Brainu má prednosť pred menom, ktoré prišlo v prehľade
+  assert.equal(buildAgents(snap({ roles: [{ id: 'A1', name: 'Marketing' }] }), ix, NOW).roles[0].name, 'Atlas')
   assert.equal(buildAgents(null, null, NOW), null)
   assert.equal(buildAgents(null, { notes: [] }, NOW), null)
 })

@@ -34,7 +34,9 @@ if (opt.slack) { const j = JSON.parse(fs.readFileSync(home(opt.slack), 'utf8'));
 // mená rolí: z podpisov v Slacku („[A21 Rio]“) a z názvov rozvrhov („A27 Mira – e-mailová agentúra“), ak ich register nemá
 const named = (id, name) => { if (!id || !name) return; const r = roles.find((x) => x.id === id); if (!r) roles.push({ id, name }); else if (!r.name) r.name = name }
 for (const m of slack) named(m.role, m.name)
-for (const x of schedules) { const m = x.role && new RegExp('\\b' + x.role + '\\s+(\\p{Lu}\\p{Ll}{2,12})\\s+[–—-]\\s', 'u').exec(x.name); if (m && x.runtime === 'Claude') named(x.role, m[1]) }
+// z názvu rozvrhu len pri rolách mimo registra: roly z registra majú meno v Braine („Viktor · A7“) a slovo za ID tam býva téma („A7 Marketing – …“)
+const registered = new Set(roles.filter((r) => r.func).map((r) => r.id))
+for (const x of schedules) { const m = x.role && !registered.has(x.role) && new RegExp('\\b' + x.role + '\\s+(\\p{Lu}\\p{Ll}{2,12})\\s+[–—-]\\s', 'u').exec(x.name); if (m && x.runtime === 'Claude') named(x.role, m[1]) }
 if (opt.asks) asks = JSON.parse(fs.readFileSync(home(opt.asks), 'utf8'))
 coverage.push(...notes)
 

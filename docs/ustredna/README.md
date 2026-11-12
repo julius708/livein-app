@@ -102,6 +102,9 @@ node tools/ustredna/agents-sync.mjs --outputs "<Disk>/Live-in/Vystupy_agentov" -
 - **Doručenie agentom**: kým server nemá `SLACK_BOT_TOKEN`, detail úlohy ponúka „Skopírovať správu pre Slack“ (so značkou `hq:<úloha>#<poradie>`) a odkaz na #ai-tim. S tokenom posiela ústredňa udalosti do #ai-tim sama.
 - Register práce (zadania a výsledky) ostáva oddelený: zapisovať doň vedia len vykonávatelia s identitou (Claude Code, Codex, ľudia).
 
+Stav 13. 11. 2026: nasadené v produkcii (`main` `b43993d`), prvý prehľad agentov nahraný cez prihlásený prehliadač (33 rolí v prehľade, 29 rozvrhov; so zápismi v Braine 48 rolí). Prehľad sa sám neobnovuje, kým server nemá `HQ_AGENT_TOKENS`; po 36 hodinách ho obrazovka označí ako starý.
+Meno roly sa berie z Brainu (nadpis `Agenti/<ID>/00_Index.md`); meno z prehľadu sa použije len tam, kde ho Brain nemá.
+
 ## Prehľad pre vedenie
 
 Úvod ukazuje: výnosy mesiaca (len účtu s prístupom do Ekonomiky), noci oproti vlaňajšku, portfólio oproti cieľu, nové leady za 7 dní, čo čaká na rozhodnutie, dnešnú prevádzku, obchod, rast a AI tím. Čo sa nenačíta, je „–“.
