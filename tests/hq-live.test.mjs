@@ -8,8 +8,9 @@ const NOW = Date.parse('2026-11-12T10:00:00Z')   // 11:00 v Bratislave
 const d = (x) => ({ data: x })
 const RAW = {
   facts: d({ arrivals: 3, departures: 2, guests_in_house: 40, tomorrow_arrivals: 5, listings: 12 }),
-  dash: d({ occupancy: 74, arrivals_list: [{ name: 'Skúšobný byt A', city: 'Mesto', guests: 2, nights: 3, source: 'Booking' }] }),
+  dash: d({ occupancy: 74, booking_pct: 72, airbnb_pct: 25, next7_arrivals: 105, avg_stay: 4.4, month_nights: 2028, week: [{ day: '2026-11-12', arr: 3, dep: 2 }, { day: '2026-11-13', arr: 5, dep: 1 }], cities: [{ city: 'Mesto', guests: 38, staying: 20 }, { city: 'Iné', guests: 2, staying: 1 }], arrivals_list: [{ name: 'Skúšobný byt A', city: 'Mesto', guests: 2, nights: 3, source: 'Booking' }] }),
   work: d({ today_todo: 1, today_packed: 4, tomorrow_total: 6 }),
+  numbers: d({ updated_at: '2026-11-12T09:20:00Z', stays_ytd: 500, stays_ytd_prev: 100, nights_ytd: 2000, guests_since_2025: 1700 }),
   leadCounts: d({ new: 2, contacted: 0, viewing: 1, offer: 0 }),
   overdue: d({ rows: [{ id: 'l1', name: 'Lead Jeden', city: 'Mesto', assigned_to: 'obchod@example.test', due_at: '2026-11-11T10:00:00Z' }], count: 1 }),
   taskLeads: d([{ id: 'l1', name: 'Lead Jeden', city: 'Mesto' }, { id: 'l2', name: 'Lead Dva', city: 'Mesto' }, { id: 'l3', name: 'Lead Tri', city: 'Mesto' }]),
@@ -41,7 +42,7 @@ test('prevádzka: príchody, hostia a opravy z existujúcich modulov; naliehavá
   assert.equal(o.lists[1].rows[0].tone, 'red'); assert.equal(o.lists[1].rows[0].href, '/udrzba/c1'); assert.match(o.lists[1].rows[0].sub, /bez riešiteľa/)
   assert.equal(o.lists[2].rows[0].external, true)
   assert.ok(L.signals.some((s) => /naliehavý prípad údržby/.test(s.title)))
-  assert.match(L.overview.operations, /3 príchodov, 2 odchodov, 40 hostí/)
+  assert.match(L.overview.operations, /3 príchody, 2 odchody, 40 hostí/)
 })
 
 test('obhliadky a leady z CRM: dnešné, týždňové, po termíne a leady po lehote', () => {
@@ -60,7 +61,7 @@ test('obhliadky a leady z CRM: dnešné, týždňové, po termíne a leady po le
 test('financie, marketing, správy a znalosti ukazujú len to, čo appka naozaj má', () => {
   const L = buildLive(RAW, NOW)
   assert.match(L.areas.finance.metrics[0].value, /1[\s  ]?235/); assert.equal(L.areas.finance.metrics[1].value, '2')
-  assert.ok(L.signals.some((s) => /2 riadkov bez sumy/.test(s.title)))
+  assert.ok(L.signals.some((s) => /2 riadky bez sumy/.test(s.title)))
   assert.deepEqual(L.areas.marketing.metrics.slice(0, 3).map((m) => m.value), ['2', '1', '1'])
   assert.match(L.areas.marketing.notes[0], /nie sú k appke pripojené/)
   assert.equal(L.areas.messages.lists[0].rows[0].title, 'Skúšobný oznam'); assert.match(L.areas.messages.notes[0], /len odosielať/)
@@ -71,7 +72,8 @@ test('stav zdrojov: naživo len s úspešným načítaním alebo časom synchron
   const s = statusOf(buildLive(RAW, NOW))
   for (const k of ['crm', 'maintenance', 'asana', 'hubspot', 'finance', 'invest-feed', 'content', 'kb']) assert.equal(s[k].status, 'live', k)
   assert.equal(s.hubspot.lastOkAt, '2026-11-12T09:55:00.000Z')
-  assert.equal(s.guesty.status, 'partial'); assert.match(s.guesty.note, /zrkadla/)   // dáta sú, ale bez časovej pečiatky synchronizácie
+  assert.equal(s.guesty.status, 'live'); assert.equal(s.guesty.lastOkAt, '2026-11-12T09:20:00.000Z')   // čas posledného prepočtu čísel z rezervácií
+  assert.equal(statusOf(buildLive({ ...RAW, numbers: { error: 'x' } }, NOW)).guesty.status, 'partial')   // bez časovej pečiatky len „čiastočne“
   assert.equal(s.pricelabs.status, 'partial'); assert.match(s.pricelabs.note, /nemá v appke vlastné prepojenie/)
   for (const k of ['gmail', 'outlook', 'whatsapp', 'calendar', 'social', 'voice']) assert.equal(s[k].status, 'off', k)
   // synchronizácia HubSpotu staršia než 48 hodín už nie je „naživo“
@@ -88,4 +90,15 @@ test('zlyhanie zdroja sa neukáže ako nula: hodnota je „–“ a zdroj má ch
   assert.equal(s.asana.status, 'pending'); assert.equal(s.hubspot.status, 'pending'); assert.match(s.crm.lastError, /rls/)
   assert.equal(L.signals.length, 0)
   assert.doesNotThrow(() => buildLive({}, NOW))
+})
+
+test('grafy a živé čísla: len z toho, čo zdroje vrátili; mesiac vyúčtovania je čitateľný', () => {
+  const L = buildLive({ ...RAW, billing: d({ month: '2026-10-01', status: 'open', stats: { sumC: 100, missing: 3, zistit: 0, patrik: 0, apts: 1 } }) }, NOW)
+  assert.deepEqual(L.charts.week.map((x) => [x.arr, x.dep, x.today]), [[3, 2, true], [5, 1, false]])
+  assert.deepEqual(L.charts.channels.map((c) => c.pct), [72, 25, 3]); assert.deepEqual(L.charts.cities.map((c) => c.value), [38, 2])
+  assert.deepEqual(L.charts.funnel.map((f) => f.value), [2, 0, 1, 0]); assert.equal(L.charts.occupancy, 74)
+  assert.equal(L.kpis.arrivals, 3); assert.equal(L.kpis.next7, 105); assert.equal(L.kpis.staysYtd, 500); assert.equal(L.kpis.overdueLeads, 1)
+  assert.match(L.areas.finance.metrics[0].label, /október 2026/); assert.ok(L.signals.some((s) => /Vyúčtovanie október 2026: 3 riadky/.test(s.title)))
+  const empty = buildLive({}, NOW)
+  assert.equal(empty.charts.week, null); assert.equal(empty.charts.channels, null); assert.equal(empty.charts.funnel, null); assert.equal(empty.kpis.arrivals, null)
 })

@@ -25,6 +25,16 @@ const P = {
   info: 'M12 3a9 9 0 1 0 0 18a9 9 0 0 0 0-18M12 16v-4M12 8h.01',
   hand: 'M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11',
   play: 'M6 3l14 9l-14 9z',
+  graph: 'M12 3a2 2 0 1 0 0 4a2 2 0 0 0 0-4M5 15a2 2 0 1 0 0 4a2 2 0 0 0 0-4M19 15a2 2 0 1 0 0 4a2 2 0 0 0 0-4M12 7v4M12 11l-5.5 4.5M12 11l5.5 4.5',
+  moon: 'M12 3a6 6 0 0 0 9 9a9 9 0 1 1-9-9',
+  sun: 'M12 8a4 4 0 1 0 0 8a4 4 0 0 0 0-8M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M6.3 17.7l-1.4 1.4M19.1 4.9l-1.4 1.4',
+  refresh: 'M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5',
+  bolt: 'M13 2L4 14h7l-1 8l9-12h-7z',
+  board: 'M4 4h5v16H4zM10 4h5v10h-5zM16 4h4v13h-4z',
+  rows: 'M3 6h18M3 12h18M3 18h18',
+  gem: 'M6 3h12l4 6l-10 13L2 9zM2 9h20M12 22L8 9l4-6l4 6z',
+  target: 'M12 3a9 9 0 1 0 0 18a9 9 0 0 0 0-18M12 8a4 4 0 1 0 0 8a4 4 0 0 0 0-8M12 12h.01',
+  left: 'M19 12H5M12 19l-7-7l7-7',
 }
 export default function Icon({ name, size = 16 }) {
   return <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={P[name] || P.dot} /></svg>

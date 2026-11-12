@@ -7,7 +7,9 @@ import { actorFromViewer } from '@/lib/hq-core'
 import { storeForViewer, localMode } from '@/lib/hq-server'
 import { hqDashboard } from '@/lib/hq-data'
 import { hqLive } from '@/lib/hq-live'
+import { loadVault } from '@/lib/hq-vault-server'
 import './ustredna.css'
+import './ustredna-plus.css'
 
 export const dynamic = 'force-dynamic'
 // Vlastný manifest: po „Pridať na plochu“ na telefóne vznikne samostatná ikona Ústredňa, ktorá sa otvára priamo tu.
@@ -21,6 +23,7 @@ export default async function HqPage() {
   if (!actor) return <main className="wrap"><section className="card"><h2>Ústredňa je zatiaľ len pre vedenie</h2><p>Ak ju potrebuješ, napíš Júliusovi.</p><p><Link href="/">Späť na domov</Link></p></section></main>
   // Živé údaje z existujúcich modulov appky sa vždy čítajú cez prihláseného používateľa (jeho práva v databáze), aj keď register beží lokálne.
   const live = await hqLive(v.s).catch((e) => { console.error('[hq] live', String(e && e.message).slice(0, 160)); return null })
-  const data = await hqDashboard(storeForViewer(v), { actor, local: localMode(), live })
+  const vault = await loadVault(v.s).catch((e) => ({ index: null, source: 'sync', error: String(e && e.message).slice(0, 160) }))
+  const data = await hqDashboard(storeForViewer(v), { actor, local: localMode(), live, vault })
   return <HqApp data={data} canWrite />
 }
