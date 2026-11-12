@@ -40,6 +40,27 @@ Pravidlá, ktoré stráži `lib/hq-events.js` (pôvodný modul Codexu, `livein-w
 - Odkazy na Slack, Asanu a iné zdroje (`refs`, `hq_links`) sú odkazy, nie dôkaz, že sa tam niečo vykonalo.
 - Autor správy v Slacku nie je overená identita agenta.
 
+## Živé údaje z existujúcich modulov appky
+
+Ústredňa nič nesynchronizuje sama. Pri každom otvorení číta to, čo appka už má, cez práva prihláseného admina (`lib/hq-live.js`, skladanie v `lib/hq-live-core.js`):
+
+| Oblasť | Čo ukazuje | Odkiaľ |
+|---|---|---|
+| Prevádzka | príchody, odchody, hostia v bytoch, obsadenosť, dnešné príchody, práčovňa | RPC `home_facts`, `home_dashboard`, `home_work` (zrkadlo Guesty, plní ho Práčovňa) |
+| Prevádzka | otvorené prípady údržby, škody v Asane | `maint_cases`; `fetchOpenDamageTasks()` (Asana, medzipamäť 5 min) |
+| Obhliadky | najbližšie obhliadky, obhliadky po termíne, leady po lehote | `lead_tasks` (kind `viewing`), `leads` |
+| Nehnuteľnosti | leady podľa fázy, investičné ponuky a dopyty | `leads` (presné počty), `inv_properties`, `inv_inquiries` |
+| Marketing | nápady na obsah, posledný newsletter | `content_ideas`, `newsletters` |
+| Financie | vyúčtovanie majiteľom za aktuálny mesiac, čas aktualizácie Ekonomiky | `billing_*` cez `lib/billing-server.js`, `economics_snapshots.updated_at` |
+| Správy | nástenka tímu | `board_notes` |
+| Moja pozornosť | signály: leady po lehote, naliehavá údržba, obhliadky bez výsledku, vyúčtovanie bez súm | odvodené z vyššie uvedeného |
+
+Pravidlá: čo sa nepodarí načítať, sa zobrazí ako „–“ a zdroj dostane chybu, nikdy nula. Zdroj je „Naživo“ len s úspešným načítaním alebo časom poslednej synchronizácie
+(HubSpot: `config.crm_sync.last_run`). Guesty je „Čiastočne“, lebo zrkadlo neuvádza čas svojej synchronizácie. Guesty ani HubSpot API sa z ústredne priamo nevolajú.
+
+Čo appka nemá, a preto to v ústredni nie je: čítanie firemnej pošty (Gmail, Outlook), WhatsApp, Google Calendar, výkon videí a kampaní, vlastné prepojenie PriceLabs
+(jeho údaje sú len vo vnútri podkladu Ekonomiky z Ringu) a správy hostí z Guesty Inboxu.
+
 ## Súbory
 
 - `lib/hq-events.js` kontrakt a validácia; `lib/hq-core.js` vykonávatelia, operácie, projekcie; `lib/hq-labels.js` popisky a oblasti.

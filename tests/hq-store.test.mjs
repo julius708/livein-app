@@ -176,3 +176,66 @@ test('buildEvent: poradie určuje server, povinné polia sú vyžadované', () =
   assert.throws(() => buildEvent('assign', { ...base, assigneeId: '' }, { actor: ceo }), (x) => x.code === 'assignee')
   assert.throws(() => buildEvent('finish', base, { actor: ceo }), (x) => x.code === 'bad_op')
 })
+
+// --- Nálezy nezávislej kontroly Codexu (CODEX_RESULT.md, 12. 11. 2026) ---
+// F1: opakovanie s rovnakým idempotencyKey je duplicita len pri úplnej zhode obsahu. Prvé tri testy sú prevzaté z CODEX_CONTRACT_CHECK.test.mjs.
+const cxCeo = { id: 'person:synthetic-ceo', workspaceId: 'livein', kind: 'person', capabilities: ['assign'] }
+const cxWorker = { id: 'agent:codex', workspaceId: 'livein', kind: 'agent', capabilities: ['work'] }
+const cxReviewer = { id: 'agent:claude-code', workspaceId: 'livein', kind: 'agent', capabilities: ['verify'] }
+const cxEvidence = [{ uri: 'artifact:synthetic-v1', version: '1', digest: 'a'.repeat(64) }]
+const cxAssignment = { taskId: 'synthetic-task', caseId: 'synthetic-case', assigneeId: cxWorker.id, summary: 'Synthetic task', nextAction: 'Accept', idempotencyKey: 'assign-key' }
+async function cxReady() { const s = localStore(); await appendOp(s, 'assign', cxAssignment, { actor: cxCeo, now: NOW }); await appendOp(s, 'accept', { taskId: cxAssignment.taskId, summary: 'Accepted', nextAction: 'Prepare result' }, { actor: cxWorker, now: NOW }); return s }
+
+test('REGRESSION (Codex F1): same idempotency key with changed assignee must be a collision', async () => {
+  const s = localStore(); await appendOp(s, 'assign', cxAssignment, { actor: cxCeo, now: NOW })
+  await assert.rejects(appendOp(s, 'assign', { ...cxAssignment, assigneeId: 'agent:other' }, { actor: cxCeo, now: NOW }), (e) => e.code === 'collision')
+})
+test('REGRESSION (Codex F1): same result key with changed artifact digest must be a collision', async () => {
+  const s = await cxReady(); const p = { taskId: cxAssignment.taskId, summary: 'Result', nextAction: 'Review', idempotencyKey: 'result-key', evidence: cxEvidence }
+  await appendOp(s, 'result', p, { actor: cxWorker, now: NOW })
+  await assert.rejects(appendOp(s, 'result', { ...p, evidence: [{ ...cxEvidence[0], digest: 'b'.repeat(64) }] }, { actor: cxWorker, now: NOW }), (e) => e.code === 'collision')
+})
+test('REGRESSION (Codex F1): a verify retry with changed checked digest must not return success', async () => {
+  const s = await cxReady(); await appendOp(s, 'result', { taskId: cxAssignment.taskId, summary: 'Result', nextAction: 'Review', evidence: cxEvidence }, { actor: cxWorker, now: NOW })
+  const t = await getTask(s, cxAssignment.taskId)
+  const p = { taskId: cxAssignment.taskId, summary: 'Checked', nextAction: 'Decide', idempotencyKey: 'verify-key', checkedEventId: t.result.eventId, checkedDigests: [cxEvidence[0].digest] }
+  await appendOp(s, 'verify', p, { actor: cxReviewer, now: NOW })
+  await assert.rejects(appendOp(s, 'verify', { ...p, checkedDigests: ['b'.repeat(64)] }, { actor: cxReviewer, now: NOW }), (e) => e.code === 'collision' || e.code === 'verification')
+})
+test('F1 doplnené: líšiaci sa prípad, verzia dôkazu, overovaná udalosť, potvrdenie alebo odkazy sú kolízia; úplná zhoda ostáva duplicitou', async () => {
+  const s = await cxReady()
+  const refs = [{ kind: 'slack', id: 'C0TEST/1.1', url: 'https://example.test/a' }]
+  const res = { taskId: cxAssignment.taskId, summary: 'Result', nextAction: 'Review', idempotencyKey: 'r1', evidence: cxEvidence, refs }
+  const first = await appendOp(s, 'result', res, { actor: cxWorker, now: NOW })
+  // úplná zhoda (aj v inom poradí kľúčov a s medzerami okolo textu) je duplicita
+  const again = await appendOp(s, 'result', { refs, evidence: [{ digest: 'a'.repeat(64), version: '1', uri: 'artifact:synthetic-v1' }], idempotencyKey: 'r1', nextAction: ' Review ', summary: 'Result', taskId: cxAssignment.taskId }, { actor: cxWorker, now: at(3) })
+  assert.equal(again.duplicate, true); assert.equal(again.eventId, first.eventId)
+  const bad = (patch) => assert.rejects(appendOp(s, 'result', { ...res, ...patch }, { actor: cxWorker, now: at(4) }), (e) => e.code === 'collision' && e.status === 409)
+  await bad({ evidence: [{ ...cxEvidence[0], version: '2' }] }); await bad({ evidence: [{ ...cxEvidence[0], uri: 'artifact:other' }] }); await bad({ evidence: [...cxEvidence, { uri: 'artifact:extra', version: '1', digest: 'c'.repeat(64) }] })
+  await bad({ refs: [{ ...refs[0], url: 'https://example.test/changed' }] }); await bad({ refs: undefined }); await bad({ summary: 'Iný' })
+  await assert.rejects(appendOp(s, 'assign', { ...cxAssignment, caseId: 'other-case' }, { actor: cxCeo, now: NOW }), (e) => e.code === 'collision')
+  const ver = { taskId: cxAssignment.taskId, summary: 'Checked', nextAction: 'Decide', idempotencyKey: 'v1', checkedEventId: first.eventId, checkedDigests: [cxEvidence[0].digest] }
+  const v = await appendOp(s, 'verify', ver, { actor: cxReviewer, now: at(5) })
+  assert.equal((await appendOp(s, 'verify', ver, { actor: cxReviewer, now: at(6) })).duplicate, true)
+  await assert.rejects(appendOp(s, 'verify', { ...ver, checkedEventId: 'evt_other' }, { actor: cxReviewer, now: at(6) }), (e) => e.code === 'collision')
+  const asana = { id: 'integration:asana', workspaceId: WORKSPACE, capabilities: ['apply'], kind: 'integration' }
+  const app = { taskId: cxAssignment.taskId, summary: 'Applied', nextAction: 'Done', idempotencyKey: 'a1', receipt: { id: 'rcpt-1', target: 'asana' } }
+  await appendOp(s, 'apply', app, { actor: asana, now: at(7) })
+  assert.equal((await appendOp(s, 'apply', app, { actor: asana, now: at(8) })).duplicate, true)
+  await assert.rejects(appendOp(s, 'apply', { ...app, receipt: { id: 'rcpt-2', target: 'asana' } }, { actor: asana, now: at(8) }), (e) => e.code === 'collision')
+  await assert.rejects(appendOp(s, 'apply', { ...app, receipt: { id: 'rcpt-1', target: 'asana', verifiedEventId: 'evt_other' } }, { actor: asana, now: at(8) }), (e) => e.code === 'collision')
+  assert.equal((await getTask(s, cxAssignment.taskId)).history.length, 5)   // žiadna z odmietnutých požiadaviek nič nezapísala
+  assert.equal(v.status, 'verified')
+  // opakovanie neobchádza práva: po odobratí schopnosti sa nevráti ani „duplicita“
+  await assert.rejects(appendOp(s, 'result', res, { actor: { ...cxWorker, capabilities: [] }, now: at(9) }), (e) => e.code === 'forbidden' && e.status === 403)
+})
+// F2: register vykonávateľov je autoritatívny aj pre zabudovaných agentov (rovnaké zloženie, aké používa lib/hq-server.js: actorFromToken + mergeActors).
+test('Codex F2: deaktivácia alebo zúženie práv zabudovaného agenta v registri platí pri overení tokenu', () => {
+  const token = 'synthetic-test-token-not-a-real-credential', tokens = { 'agent:codex': token }
+  const viaRegister = (rows) => actorFromToken(token, tokens, mergeActors(rows, ACTORS))
+  assert.deepEqual(viaRegister([]).capabilities, ['assign', 'work', 'verify'])                                   // bez riadku platí zabudovaný základ
+  assert.equal(viaRegister([{ id: 'agent:codex', kind: 'agent', name: 'Codex', active: false, capabilities: [] }]), null)
+  assert.deepEqual(viaRegister([{ id: 'agent:codex', kind: 'agent', name: 'Codex', active: true, capabilities: ['work'] }]).capabilities, ['work'])
+  assert.deepEqual(viaRegister([{ id: 'agent:codex', kind: 'agent', name: 'Codex', active: true }]).capabilities, [])   // riadok bez práv práva nepridáva
+  assert.deepEqual(actorFromToken(token, { 'agent:claude-code': token }, mergeActors([{ id: 'agent:codex', active: false }], ACTORS)).id, 'agent:claude-code')   // obmedzenie sa týka len danej identity
+})

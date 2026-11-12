@@ -30,6 +30,8 @@ export default function HqApp({ data, canWrite = false, readOnlyNote = '' }) {
   const [form, setForm] = useState({ summary: '', nextAction: '', assigneeId: '', key: '' })   // stav formulárov drží rodič, aby ich prekreslenie nevymazalo
   const [note, setNote] = useState('')
   const { tasks, names, now } = data
+  const live = data.live
+  const signals = (live && live.signals) || []
   const byId = useMemo(() => Object.fromEntries(tasks.map((t) => [t.taskId, t])), [tasks])
   const attention = data.attention.map((id) => byId[id]).filter(Boolean)
   const name = (id) => names[id] || String(id || '').replace(/^(person|agent|integration):/, '')
@@ -65,6 +67,17 @@ export default function HqApp({ data, canWrite = false, readOnlyNote = '' }) {
       <span className={'li-dot ' + a.tone} aria-label={a.state} title={a.state}></span>
     </button>
   )
+  const liveRow = (r, i, icon = 'upright') => {
+    const inner = <><span className={'li-avatar ' + (r.tone === 'red' || r.tone === 'orange' ? 'orange' : '')}><Icon name={icon} /></span><span className="li-body"><strong>{r.title}</strong>{r.sub && <small>{r.sub}</small>}</span>{r.badge ? <Badge tone={r.tone || ''}>{r.badge}</Badge> : <Icon name="chevron" size={14} />}</>
+    return r.href ? <a key={i} className="li-row" href={r.href} {...(r.external ? { target: '_blank', rel: 'noreferrer' } : {})}>{inner}</a> : <div key={i} className="li-row">{inner}</div>
+  }
+  const signalRow = (r, i) => (
+    <a key={'s' + i} className="li-priority" href={r.href}>
+      <span className="li-avatar orange"><Icon name="alert" /></span>
+      <div><Badge tone={r.tone}>{r.badge}</Badge><h3>{r.title}</h3><p>{r.sub}</p></div>
+      <Icon name="chevron" size={14} />
+    </a>
+  )
   const emptyRegister = <p className="li-empty">V registri zatiaľ nie je žiadna úloha.{canWrite ? ' Zadaj prvú tlačidlom „Zadať úlohu“.' : ''}</p>
 
   function Overview() {
@@ -73,7 +86,7 @@ export default function HqApp({ data, canWrite = false, readOnlyNote = '' }) {
         <div>
           <p className="li-eyebrow">TVOJ DEŇ V SKRATKE</p>
           <h2>Firma má smer.<br />Ty máš prehľad.</h2>
-          <p>{!data.ready ? 'Register práce ešte nie je v databáze založený.' : attention.length ? `${attention.length} ${attention.length === 1 ? 'vec čaká' : attention.length < 5 ? 'veci čakajú' : 'vecí čaká'} na tvoju pozornosť.` : tasks.length ? 'Nič nečaká na tvoje rozhodnutie.' : 'Register práce je pripravený a zatiaľ prázdny.'}</p>
+          <p>{(() => { const n = attention.length + signals.length; const head = !data.ready ? 'Register práce ešte nie je v databáze založený.' : n ? `${n} ${n === 1 ? 'vec čaká' : n < 5 ? 'veci čakajú' : 'vecí čaká'} na tvoju pozornosť.` : 'Nič nečaká na tvoje rozhodnutie.'; return head + (live && live.overview.operations ? ` Dnes: ${live.overview.operations}.` : '') })()}</p>
           <button className="li-button" onClick={() => nav('attention')}><Icon name="list" size={14} />Prejsť priority <Icon name="right" size={14} /></button>
         </div>
         <div className="li-mic-card">
@@ -82,14 +95,14 @@ export default function HqApp({ data, canWrite = false, readOnlyNote = '' }) {
         </div>
       </section>
       <section className="li-metrics" aria-label="Prehľad dňa">
-        <button className="li-glass li-metric" onClick={() => nav('attention')}><span className="li-label"><Icon name="dot" size={12} />Moja pozornosť</span><div className="li-number">{attention.length}</div><small>Blokovania, kontroly, neprevzaté</small></button>
+        <button className="li-glass li-metric" onClick={() => nav('attention')}><span className="li-label"><Icon name="dot" size={12} />Moja pozornosť</span><div className="li-number">{attention.length + signals.length}</div><small>Úlohy z registra a signály z appky</small></button>
         <button className="li-glass li-metric" onClick={() => nav('agents')}><span className="li-label"><Icon name="users" size={12} />Rozpracované úlohy</span><div className="li-number">{data.openCount || 0}</div><small>Ľudia a AI · z registra práce</small></button>
-        <button className="li-glass li-metric" onClick={() => nav('visits')}><span className="li-label"><Icon name="calendar" size={12} />Dnešný kalendár</span><div className="li-number">–</div><small>Kalendár nie je pripojený</small></button>
+        <button className="li-glass li-metric" onClick={() => nav('visits')}><span className="li-label"><Icon name="calendar" size={12} />Obhliadky</span><div className="li-number">{live && live.overview.calendarCount != null ? live.overview.calendarCount : '–'}</div><small>{live && live.overview.calendarCount != null ? 'Obhliadky z CRM · 7 dní' : 'Kalendár nie je pripojený'}</small></button>
         <button className="li-glass li-metric" onClick={() => nav('connections')}><span className="li-label"><Icon name="unplug" size={12} />Zdroje naživo</span><div className="li-number">{liveSources}<span className="li-mini"> / {data.sources.length}</span></div><small>Ostatné čakajú na pripojenie</small></button>
       </section>
       <div className="li-columns">
         <div className="li-stack">
-          <Panel title="Potrebuje tvoju pozornosť" link="Všetky" onLink={() => nav('attention')}>{attention.length ? attention.slice(0, 3).map(taskRow) : <p className="li-empty">{tasks.length ? 'Žiadne blokovanie ani výsledok na kontrolu.' : 'V registri zatiaľ nie je žiadna úloha.'}</p>}</Panel>
+          <Panel title="Potrebuje tvoju pozornosť" link="Všetky" onLink={() => nav('attention')}>{attention.slice(0, 3).map(taskRow)}{signals.slice(0, 4).map(signalRow)}{!attention.length && !signals.length && <p className="li-empty">Žiadne blokovanie, výsledok na kontrolu ani signál z appky.</p>}</Panel>
           <Panel title="Kto na čom pracuje" link="Celý tím" onLink={() => nav('agents')}>{data.board.length ? data.board.slice(0, 4).map(actorRow) : <p className="li-empty">Zatiaľ žiadni vykonávatelia.</p>}</Panel>
           <Panel title="Spoločné aktualizácie" link="Detail" onLink={() => nav('agents')}>
             {data.updates.length ? data.updates.slice(0, 5).map((u) => (
@@ -98,8 +111,8 @@ export default function HqApp({ data, canWrite = false, readOnlyNote = '' }) {
           </Panel>
         </div>
         <div className="li-stack">
-          <Panel title="Dnes v kalendári" link="Obhliadky" onLink={() => nav('visits')}><p className="li-empty">Kalendár tímu zatiaľ nie je pripojený, preto tu nie sú termíny.</p></Panel>
-          <Panel title="Marketing v pohybe" link="Marketing" onLink={() => nav('marketing')}><p className="li-empty">Marketingové účty zatiaľ nie sú pripojené, preto tu nie sú čísla.</p></Panel>
+          <Panel title={(live && live.overview.calendarTitle) || 'Dnes v kalendári'} link="Obhliadky" onLink={() => nav('visits')}>{live && live.overview.calendar.length ? live.overview.calendar.map((r, i) => <div key={i} className="li-agenda"><span className="li-clock">{r.clock}</span><a className={r.tone === 'orange' ? 'attention' : ''} href={r.href}><strong>{r.title}</strong><small>{r.sub}</small></a></div>) : <p className="li-empty">{live ? 'V CRM nie je na najbližších 7 dní naplánovaná obhliadka.' : 'Termíny sa nepodarilo načítať.'}</p>}</Panel>
+          <Panel title="Marketing v pohybe" link="Marketing" onLink={() => nav('marketing')}>{live && live.overview.marketing.length ? live.overview.marketing.map((r, i) => liveRow(r, i, 'play')) : <p className="li-empty">Údaje o obsahu sa nepodarilo načítať.</p>}</Panel>
           <Panel title="Odkiaľ údaje prichádzajú" link="Prepojenia" onLink={() => nav('connections')}>
             {data.sources.filter((s) => s.status !== 'off').slice(0, 5).map((s) => <div key={s.key} className="li-connection"><div>{s.name}<small>{s.lastOkAt ? 'Posledný úspech ' + ago(s.lastOkAt, now) : s.note || s.scope}</small></div><Badge tone={SOURCE_STATUS[s.status].tone}>{SOURCE_STATUS[s.status].label}</Badge></div>)}
             {!data.sources.some((s) => s.status !== 'off') && <p className="li-empty">Žiadny zdroj zatiaľ neposlal údaje.</p>}
@@ -154,15 +167,19 @@ export default function HqApp({ data, canWrite = false, readOnlyNote = '' }) {
 
   function Pending() {
     const src = data.sources.filter((s) => (area.sources || []).includes(s.key))
+    const L = live && live.areas[area.id]
+    const hasLive = !!(L && (L.metrics.length || L.lists.length))
     return (<>
-      <Panel title="Táto oblasť zatiaľ nie je pripojená">
-        <p className="li-sub" style={{ marginBottom: 14 }}>Oblasť zostáva v ústredni, ale nezobrazuje žiadne čísla ani prípady, kým jej zdroje neposielajú overené údaje.</p>
-        {src.map((s) => <div key={s.key} className="li-connection"><div>{s.name}<small>{s.note || s.scope}</small></div><Badge tone={SOURCE_STATUS[s.status].tone}>{SOURCE_STATUS[s.status].label}</Badge></div>)}
+      {hasLive && L.metrics.length > 0 && <section className="li-metrics" aria-label="Živé údaje oblasti">{L.metrics.map((m, i) => <a key={i} className="li-glass li-metric" href={m.href || '#'}><span className="li-label">{m.label}</span><div className="li-number">{m.value}</div><small>{m.note}</small></a>)}</section>}
+      {hasLive && L.lists.map((l, i) => <div key={i} style={{ marginBottom: 15 }}><section className="li-glass"><div className="li-panel-head"><h2>{l.title}</h2>{l.link && <a className="li-button ghost" href={l.link[1]}>{l.link[0]} <Icon name="upright" size={14} /></a>}</div>{l.rows.length ? l.rows.map((r, j) => liveRow(r, j)) : <p className="li-empty">{l.empty || 'Nič na zobrazenie.'}</p>}</section></div>)}
+      {L && L.notes.map((n, i) => <p key={i} className="li-sub" style={{ margin: '0 0 12px' }}>{n}</p>)}
+      <Panel title={hasLive ? 'Odkiaľ tieto údaje sú' : 'Táto oblasť zatiaľ nie je pripojená'}>
+        {!hasLive && <p className="li-sub" style={{ marginBottom: 14 }}>Oblasť zostáva v ústredni, ale nezobrazuje žiadne čísla ani prípady, kým jej zdroje neposielajú overené údaje.</p>}
+        {src.map((s) => <div key={s.key} className="li-connection"><div>{s.name}<small>{s.note || s.scope}</small>{s.lastOkAt && <small>Posledný úspech: {fmt(s.lastOkAt)}</small>}{s.lastError && <small className="li-error">{s.lastError}</small>}</div><Badge tone={SOURCE_STATUS[s.status].tone}>{SOURCE_STATUS[s.status].label}</Badge></div>)}
       </Panel>
-      {area.links && <div style={{ marginTop: 15 }}><Panel title="Dnes to nájdeš v appke">{area.links.map(([label, href]) => <a key={href} className="li-row" href={href}><span className="li-avatar"><Icon name="upright" /></span><span className="li-body"><strong>{label}</strong><small>Existujúci modul LIVE-IN appky</small></span><Icon name="chevron" size={14} /></a>)}</Panel></div>}
+      {area.links && <div style={{ marginTop: 15 }}><Panel title="Otvoriť v appke">{area.links.map(([label, href]) => <a key={href} className="li-row" href={href}><span className="li-avatar"><Icon name="upright" /></span><span className="li-body"><strong>{label}</strong><small>Existujúci modul LIVE-IN appky</small></span><Icon name="chevron" size={14} /></a>)}</Panel></div>}
     </>)
   }
-
   function Search() {
     const q = query.toLocaleLowerCase('sk')
     const hit = tasks.filter((t) => JSON.stringify([t.title, t.summary, t.nextAction, t.taskId, t.caseId, name(t.assigneeId)]).toLocaleLowerCase('sk').includes(q))
@@ -222,7 +239,7 @@ export default function HqApp({ data, canWrite = false, readOnlyNote = '' }) {
     </>)
   }
 
-  const renders = { overview: Overview, agents: Agents, connections: Connections, attention: () => <Panel title="Rozhodnutia a otvorené kroky">{attention.length ? attention.map(taskRow) : <p className="li-empty">{tasks.length ? 'Nič nečaká na tvoje rozhodnutie.' : 'V registri zatiaľ nie je žiadna úloha.'}</p>}</Panel> }
+  const renders = { overview: Overview, agents: Agents, connections: Connections, attention: () => <><Panel title="Rozhodnutia a otvorené kroky">{attention.length ? attention.map(taskRow) : <p className="li-empty">{tasks.length ? 'V registri práce nič nečaká na tvoje rozhodnutie.' : 'V registri práce zatiaľ nie je žiadna úloha.'}</p>}</Panel>{signals.length > 0 && <div style={{ marginTop: 15 }}><Panel title="Signály z appky">{signals.map(signalRow)}</Panel></div>}</> }
   const Content = query.trim() ? Search : (renders[page] || Pending)
   const dTask = detail && detail.kind === 'task' ? byId[detail.id] : null
   const dActor = detail && detail.kind === 'actor' ? data.board.find((a) => a.id === detail.id) : null
@@ -233,7 +250,7 @@ export default function HqApp({ data, canWrite = false, readOnlyNote = '' }) {
         <aside className="li-side">
           <div className="li-brand"><Logo /><small>FIREMNÁ ÚSTREDŇA</small><a className="li-home" href="/">← Späť do appky</a></div>
           <nav className="li-nav" aria-label="Hlavná navigácia ústredne">
-            {AREAS.filter((a) => !a.extra).map((a) => <button key={a.id} className={page === a.id && !query.trim() ? 'active' : ''} aria-current={page === a.id ? 'page' : undefined} onClick={() => nav(a.id)}><Icon name={a.icon} />{a.nav}{a.id === 'attention' && <span className="li-count">{attention.length}</span>}</button>)}
+            {AREAS.filter((a) => !a.extra).map((a) => <button key={a.id} className={page === a.id && !query.trim() ? 'active' : ''} aria-current={page === a.id ? 'page' : undefined} onClick={() => nav(a.id)}><Icon name={a.icon} />{a.nav}{a.id === 'attention' && <span className="li-count">{attention.length + signals.length}</span>}</button>)}
             <div className="li-side-label">ĎALŠIE OBLASTI</div>
             {AREAS.filter((a) => a.extra).map((a) => <button key={a.id} className={'extra' + (page === a.id && !query.trim() ? ' active' : '')} aria-current={page === a.id ? 'page' : undefined} onClick={() => nav(a.id)}><Icon name={a.icon} />{a.nav}</button>)}
           </nav>

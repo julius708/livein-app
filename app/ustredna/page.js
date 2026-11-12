@@ -6,6 +6,7 @@ import HqApp from '@/components/ustredna/HqApp'
 import { actorFromViewer } from '@/lib/hq-core'
 import { storeForViewer, localMode } from '@/lib/hq-server'
 import { hqDashboard } from '@/lib/hq-data'
+import { hqLive } from '@/lib/hq-live'
 import './ustredna.css'
 
 export const dynamic = 'force-dynamic'
@@ -18,6 +19,8 @@ export default async function HqPage() {
   if (v.blocked) return <NoAccess email={v.user.email} />
   const actor = actorFromViewer(v)
   if (!actor) return <main className="wrap"><section className="card"><h2>Ústredňa je zatiaľ len pre vedenie</h2><p>Ak ju potrebuješ, napíš Júliusovi.</p><p><Link href="/">Späť na domov</Link></p></section></main>
-  const data = await hqDashboard(storeForViewer(v), { actor, local: localMode() })
+  // Živé údaje z existujúcich modulov appky sa vždy čítajú cez prihláseného používateľa (jeho práva v databáze), aj keď register beží lokálne.
+  const live = await hqLive(v.s).catch((e) => { console.error('[hq] live', String(e && e.message).slice(0, 160)); return null })
+  const data = await hqDashboard(storeForViewer(v), { actor, local: localMode(), live })
   return <HqApp data={data} canWrite />
 }

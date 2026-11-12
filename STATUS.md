@@ -1,3 +1,8 @@
+## 12. 11. 2026 (noc) – Ústredňa: živé údaje z existujúcich modulov a opravy po kontrole Codexu (vetva `claude/ustredna-zdroje`)
+- Ústredňa číta rezervácie a obsadenosť, údržbu, Asanu (škody), CRM a obhliadky, stav synchronizácie HubSpotu, investície, obsah, newsletter a vyúčtovanie z existujúcich tabuliek a funkcií appky (`lib/hq-live.js`). Len čítanie; žiadne nové prepojenia ani premenné.
+- Opravené dva nálezy nezávislej kontroly Codexu: opakovanie s rovnakým kľúčom je duplicita len pri úplnej zhode obsahu (F1) a register `hq_actors` platí aj pre zabudovaných agentov (F2).
+- Stále nepripojené: čítanie pošty, WhatsApp, Google Calendar, výkon videí, vlastné prepojenie PriceLabs.
+
 ## 12. 11. 2026 (noc) – Doladenie vzhľadu hlavnej appky (vetva `claude/vzhlad-appky`)
 - Nový `app/polish.css` (načítaný ako posledný): skupiny nástrojov na domove v dvoch vyrovnaných radoch, popis nástroja na dva riadky, záložky Správy ako pilulky, pásik nad plávajúcou hlavičkou už nepresvitá, kotvy neskáču pod hlavičku. Len CSS, žiadna zmena funkcií.
 
