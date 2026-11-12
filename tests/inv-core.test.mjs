@@ -58,8 +58,10 @@ test('odporúčať sa dajú len aktuálne dostupné stavy; stiahnuté, predané 
   for (const s of ['new', 'review', 'active', 'confirmed', 'unknown']) assert.equal(isRecommendable(s), true)
   for (const s of ['reserved', 'sold', 'withdrawn']) assert.equal(isRecommendable(s), false)
 })
-test('prístup: len rola crm a aktívny používateľ', () => {
+test('prístup: rola crm alebo admin a aktívny používateľ', () => {
   assert.equal(canInv({ roles: ['crm'], active: true }), true)
+  assert.equal(canInv({ roles: ['admin', 'marketing'], active: true }), true)   // admin bez roly CRM (napr. Martina) sa dnu dostane
+  assert.equal(canInv({ roles: ['admin'], active: false }), false)
   assert.equal(canInv({ roles: ['cleaning'], active: true }), false)
   assert.equal(canInv({ roles: ['crm'], active: false }), false)
   assert.equal(canInv(null), false)

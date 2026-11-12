@@ -51,6 +51,6 @@ test('celý tok: agent nájde ponuky, Zuzka vytvorí dopyt na 200 000 € (celko
   void notifyDigest
 })
 test('neoprávnený používateľ: bez roly CRM nemá prístup (server kontroluje rolu pri každej akcii a stránke; RLS v databáze overené na lokálnom Postgrese)', () => {
-  for (const roles of [['cleaning'], ['customer_service'], ['operations'], ['marketing'], []]) assert.equal(canInv({ roles, active: true }), false, roles.join())
+  for (const roles of [['cleaning'], ['customer_service'], ['operations'], ['marketing'], ['assistant'], []]) assert.equal(canInv({ roles, active: true }), false, roles.join())
   assert.equal(canInv({ roles: ['crm'], active: true }), true)
 })
