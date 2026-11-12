@@ -1,0 +1,15 @@
+{
+  "name": "LIVE-IN Ústredňa",
+  "short_name": "Ústredňa",
+  "description": "Ústredňa vedenia LIVE-IN: kto na čom pracuje, čo je zadané, blokované a hotové",
+  "start_url": "/ustredna",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#E9ECE2",
+  "theme_color": "#173E2C",
+  "lang": "sk",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

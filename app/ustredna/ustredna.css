@@ -29,3 +29,5 @@ body:has(#livein-hq){background:#e9ece2}
 #livein-hq .li-nav button{justify-content:flex-start}
 @media(min-width:821px){#livein-hq .li-nav button{width:100%}}
 #livein-hq button{letter-spacing:normal;text-transform:none}
+/* appka na ploche telefónu: obsah nezalieza pod stavový riadok a spodnú lištu */
+@media (display-mode:standalone){body:has(#livein-hq){padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}}

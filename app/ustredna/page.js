@@ -9,7 +9,8 @@ import { hqDashboard } from '@/lib/hq-data'
 import './ustredna.css'
 
 export const dynamic = 'force-dynamic'
-export const metadata = { title: 'Ústredňa' }
+// Vlastný manifest: po „Pridať na plochu“ na telefóne vznikne samostatná ikona Ústredňa, ktorá sa otvára priamo tu.
+export const metadata = { title: 'Ústredňa', manifest: '/ustredna.webmanifest', appleWebApp: { capable: true, title: 'Ústredňa', statusBarStyle: 'black-translucent' } }
 
 export default async function HqPage() {
   const v = await getViewer()
