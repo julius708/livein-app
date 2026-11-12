@@ -6,11 +6,12 @@ import { useRouter } from 'next/navigation'
 import Icon from './Icon'
 import Logo from './Logo'
 import Graph from './Graph'
-import { Num, Clock, Since, WeekBars, Ring, Split, HBars, Palette, Briefing, useVoice, Rain, Decode, Ticker, Boot, Console } from './Widgets'
+import { Num, Clock, Since, WeekBars, Ring, Split, HBars, Palette, Briefing, useVoice, Ticker, Console, MonthBars, GoalBar } from './Widgets'
 import { AREAS, SOURCE_STATUS, OP_LABEL, statusOf, ago, plural } from '@/lib/hq-labels'
 import { parseCommand, fold } from '@/lib/hq-voice'
 import { companyGraph, mergeGraphs } from '@/lib/hq-graph'
 import { unpackIndex, vaultGraph, obsidianUrl } from '@/lib/hq-vault'
+import { AGENT_STATE } from '@/lib/hq-agents'
 import { assignTaskAction, verifyResultAction } from '@/app/ustredna/actions'
 
 const OP_OF = { prepared: 'assign', accepted: 'accept', working: 'step', blocked: 'block', result_ready: 'result', verified: 'verify', applied: 'apply' }
@@ -20,6 +21,7 @@ const KIND_LABEL = { hub: 'Ústredňa', area: 'Oblasť', source: 'Zdroj', actor:
 const BOARD = [['prepared', 'Čaká na prevzatie', ['prepared']], ['doing', 'V práci', ['accepted', 'working']], ['blocked', 'Blokované', ['blocked']], ['review', 'Na kontrolu', ['result_ready']], ['done', 'Overené', ['verified', 'applied']]]
 const TZ = 'Europe/Bratislava'
 const fmt = (iso) => { const d = new Date(iso); return Number.isFinite(d.getTime()) ? d.toLocaleString('sk-SK', { day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: TZ }) : '' }
+const fmtShort = (iso) => { const d = new Date(iso); return Number.isFinite(d.getTime()) ? d.toLocaleDateString('sk-SK', { day: 'numeric', month: 'numeric', timeZone: TZ }) : '–' }
 const fmtDay = (iso) => { const d = new Date(iso); return Number.isFinite(d.getTime()) ? d.toLocaleDateString('sk-SK', { day: 'numeric', month: 'numeric', year: 'numeric', timeZone: TZ }) : '–' }
 
 function Badge({ tone = '', children }) { return <span className={'li-state ' + tone}>{children}</span> }
@@ -27,10 +29,10 @@ function Panel({ title, link, onLink, href, children, className = '' }) {
   return <section className={'li-glass ' + className}><div className="li-panel-head"><h2>{title}</h2>{link && (href ? <a className="li-button ghost" href={href}>{link} <Icon name="upright" size={14} /></a> : <button className="li-button ghost" onClick={onLink}>{link} <Icon name="upright" size={14} /></button>)}</div>{children}</section>
 }
 
-export default function HqApp({ data, canWrite = false, readOnlyNote = '', vaultUrl = '/api/hq/vault' }) {
+export default function HqApp({ data, canWrite = false, readOnlyNote = '', vaultUrl = '/api/hq/vault', initialPage = '' }) {
   const router = useRouter()
   const root = useRef(null)
-  const [page, setPage] = useState('overview')
+  const [page, setPage] = useState(AREAS.some((x) => x.id === initialPage) ? initialPage : 'overview')   // priamy odkaz: /ustredna?o=agents alebo /ustredna#agents
   const [filter, setFilter] = useState('all')
   const [detail, setDetail] = useState(null)   // { kind: 'task', id } | { kind: 'assign', to } | { kind: 'actor', id }
   const [toast, setToast] = useState('')
@@ -38,8 +40,8 @@ export default function HqApp({ data, canWrite = false, readOnlyNote = '', vault
   const [busy, start] = useTransition()
   const [form, setForm] = useState({ summary: '', nextAction: '', assigneeId: '', key: '' })   // stav formulárov drží rodič, aby ich prekreslenie nevymazalo
   const [note, setNote] = useState('')
-  const [theme, setTheme] = useState('night')   // predvolený je tmavý „Matrix“ režim; denný si prehliadač zapamätá
-  const [boot, setBoot] = useState('off')   // 'run' = štartovacia sekvencia (raz za reláciu prehliadača)
+  const [theme, setTheme] = useState('night')   // predvolený je tmavý režim; denný si prehliadač zapamätá
+  const [roleFilter, setRoleFilter] = useState('all')
   const [palette, setPalette] = useState({ open: false, initial: '' })
   const [brief, setBrief] = useState(false)
   const [voiceOpen, setVoiceOpen] = useState(false)
@@ -52,11 +54,12 @@ export default function HqApp({ data, canWrite = false, readOnlyNote = '', vault
 
   const { tasks, names, now } = data
   const live = data.live, V = data.vault
+  const AG = data.agents || null, asks = (AG && AG.asks) || []
   const signals = (live && live.signals) || []
   const kpis = (live && live.kpis) || {}, charts = (live && live.charts) || {}
   const byId = useMemo(() => Object.fromEntries(tasks.map((t) => [t.taskId, t])), [tasks])
   const attention = data.attention.map((id) => byId[id]).filter(Boolean)
-  const nAttention = attention.length + signals.length
+  const nAttention = attention.length + signals.length + asks.length
   const name = (id) => names[id] || String(id || '').replace(/^(person|agent|integration):/, '')
   const area = AREAS.find((a) => a.id === page) || AREAS[0]
   const liveSources = data.sources.filter((s) => s.status === 'live').length
@@ -65,9 +68,9 @@ export default function HqApp({ data, canWrite = false, readOnlyNote = '', vault
   const firstName = data.me ? String(data.me.name).split(/[\s@]/)[0] : ''
   const greeting = (hour < 10 ? 'Dobré ráno' : hour < 18 ? 'Dobrý deň' : 'Dobrý večer') + (firstName ? ', ' + firstName : '') + '.'
 
-  const nav = useCallback((p) => { setPage(p); setFilter('all'); setDetail(null); setError(''); if (root.current && window.scrollY > root.current.offsetTop + 200) window.scrollTo({ top: root.current.offsetTop, behavior: 'smooth' }) }, [])
+  const nav = useCallback((p) => { setPage(p); setFilter('all'); setDetail(null); setError(''); try { history.replaceState(null, '', location.pathname + (p === 'overview' ? '' : '#' + p)) } catch {} if (root.current && window.scrollY > root.current.offsetTop + 200) window.scrollTo({ top: root.current.offsetTop, behavior: 'smooth' }) }, [])
   const open = useCallback((d) => {
-    if (d.kind === 'assign') setForm({ summary: d.summary || '', nextAction: '', assigneeId: d.to || (data.assignable[0] || {}).id || '', key: 'ui-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8) })
+    if (d.kind === 'assign') setForm({ summary: d.summary || '', nextAction: '', assigneeId: d.to || ((data.assignable || [])[0] || {}).id || '', key: 'ui-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8) })
     if (d.kind === 'task') setNote('')
     setDetail(d); setError('')
   }, [data.assignable])
@@ -82,12 +85,12 @@ export default function HqApp({ data, canWrite = false, readOnlyNote = '', vault
   // režim (denný/nočný) si pamätá prehliadač
   useEffect(() => {
     try { const t = localStorage.getItem('hq-theme'); if (t === 'night' || t === 'day') setTheme(t) } catch {}
-    // štartovacia sekvencia raz za reláciu prehliadača, nikdy pri obmedzenom pohybe
-    let run = false
-    try { if (!sessionStorage.getItem('hq-boot') && !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) { sessionStorage.setItem('hq-boot', '1'); run = true } } catch {}
-    if (run) setBoot('run')
   }, [])
-  const bootDone = useCallback(() => setBoot('off'), [])
+  // priamy odkaz na oblasť: /ustredna#agents, /ustredna#attention (hodí sa do správ a na plochu telefónu)
+  useEffect(() => {
+    const fromHash = () => { const id = decodeURIComponent(String(location.hash || '').slice(1)); if (AREAS.some((x) => x.id === id)) { setPage(id); setDetail(null) } }
+    fromHash(); window.addEventListener('hashchange', fromHash); return () => window.removeEventListener('hashchange', fromHash)
+  }, [])
   const applyTheme = useCallback((t) => { setTheme(t); try { localStorage.setItem('hq-theme', t) } catch {} }, [])
   // živé obnovovanie: každú minútu, len keď je karta viditeľná a človek práve nepíše
   useEffect(() => { setLoadedAt(Date.now()) }, [data.now])
@@ -165,10 +168,11 @@ export default function HqApp({ data, canWrite = false, readOnlyNote = '', vault
       { id: 'x:brief', group: 'Akcie', title: 'Brífing priorít', sub: `${nAttention} vecí na tvoju pozornosť`, icon: 'list', rank: 2, keys: 'priority pozornost co treba', run: () => setBrief(true) },
       { id: 'x:voice', group: 'Akcie', title: 'Hlasový príkaz', sub: 'Povedz, čo potrebuješ', icon: 'mic', rank: 3, keys: 'mikrofon hovorit', run: talk },
       { id: 'x:refresh', group: 'Akcie', title: 'Obnoviť údaje', sub: 'Načítať všetko znova', icon: 'refresh', rank: 4, keys: 'aktualizovat nacitat', run: refresh },
-      { id: 'x:theme', group: 'Akcie', title: theme === 'night' ? 'Prepnúť na denný režim' : 'Prepnúť na Matrix režim', icon: theme === 'night' ? 'sun' : 'moon', rank: 5, keys: 'tmavy svetly rezim tema', run: () => applyTheme(theme === 'night' ? 'day' : 'night') },
+      { id: 'x:theme', group: 'Akcie', title: theme === 'night' ? 'Prepnúť na denný režim' : 'Prepnúť na nočný režim', icon: theme === 'night' ? 'sun' : 'moon', rank: 5, keys: 'tmavy svetly rezim tema', run: () => applyTheme(theme === 'night' ? 'day' : 'night') },
       ...AREAS.map((a, i) => ({ id: 'a:' + a.id, group: 'Oblasti', title: a.nav, sub: a.sub, icon: a.icon, rank: 10 + i, run: () => nav(a.id) })),
       ...signals.map((s, i) => ({ id: 'g:' + i, group: 'Signály', title: s.title, sub: s.sub, icon: 'alert', rank: 20, run: go(s.href) })),
       ...tasks.map((t) => ({ id: 't:' + t.taskId, group: 'Úlohy', title: t.title, sub: `${statusOf(t.status).label} · ${name(t.assigneeId)}`, icon: UPDATE_ICON[t.status] || 'dot', rank: 30, keys: t.taskId + ' ' + t.caseId + ' ' + t.nextAction, run: () => open({ kind: 'task', id: t.taskId }) })),
+      ...(AG ? AG.roles.map((r) => ({ id: 'r:' + r.id, group: 'Agenti', title: r.id + (r.name ? ' · ' + r.name : ''), sub: [AGENT_STATE[r.state].label, r.func].filter(Boolean).join(' · '), icon: 'bolt', rank: 41, keys: 'agent rola', run: () => open({ kind: 'role', id: r.id }) })) : []),
       ...data.board.map((a) => ({ id: 'p:' + a.id, group: 'Ľudia a agenti', title: a.name, sub: [a.runtime, a.state].filter(Boolean).join(' · '), icon: 'users', rank: 40, run: () => open(a.current ? { kind: 'task', id: a.current.taskId } : { kind: 'actor', id: a.id }) })),
     ]
     const seen = new Set()
@@ -180,12 +184,13 @@ export default function HqApp({ data, canWrite = false, readOnlyNote = '', vault
       for (const n of notes) { if (dup.has(n.path)) continue; dup.add(n.path); out.push({ id: 'n:' + n.path, group: 'Obsidian', title: n.title, sub: n.path, icon: 'gem', rank: 70, keys: (n.tags || []).join(' '), run: go(obsidianUrl(V.name, n.path)) }) }
     }
     return out
-  }, [tasks, data.board, signals, V, vault.ix, theme, canWrite, nAttention])   // eslint-disable-line react-hooks/exhaustive-deps
+  }, [tasks, data.board, signals, V, vault.ix, theme, canWrite, nAttention, AG])   // eslint-disable-line react-hooks/exhaustive-deps
 
   const briefCards = useMemo(() => [
+    ...asks.map((a) => ({ badge: 'Agent čaká na teba', tone: 'orange', title: a.text, sub: `${a.role}${a.name ? ' ' + a.name : ''} · ${a.context || 'hlásenie v Slacku'}`, action: 'Rozhodnúť', run: () => decide(a) })),
     ...attention.map((t) => ({ badge: statusOf(t.status).label, tone: statusOf(t.status).tone, title: t.title, sub: `${name(t.assigneeId)} · ${t.summary}`, next: t.nextAction, action: 'Otvoriť úlohu', run: () => open({ kind: 'task', id: t.taskId }) })),
     ...signals.map((s) => ({ badge: s.badge, tone: s.tone, title: s.title, sub: s.sub, action: 'Otvoriť v appke', href: s.href })),
-  ], [attention, signals])   // eslint-disable-line react-hooks/exhaustive-deps
+  ], [attention, signals, asks])   // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ---------- páska, log a štart: len skutočné hodnoty ---------- */
   const nf = (v) => new Intl.NumberFormat('sk-SK').format(v)
@@ -195,10 +200,11 @@ export default function HqApp({ data, canWrite = false, readOnlyNote = '', vault
     add('OBSADENOSŤ', kpis.occupancy != null ? kpis.occupancy + ' %' : null); add('NAJBLIŽŠÍCH 7 DNÍ', kpis.next7 != null ? nf(kpis.next7) + ' príchodov' : null)
     add('NOCI TENTO MESIAC', kpis.monthNights != null ? nf(kpis.monthNights) : null); add('POBYTY TENTO ROK', kpis.staysYtd != null ? nf(kpis.staysYtd) : null)
     add('LEADY PO LEHOTE', kpis.overdueLeads != null ? nf(kpis.overdueLeads) : null, kpis.overdueLeads ? 'hot' : ''); add('OTVORENÉ OPRAVY', kpis.openRepairs != null ? nf(kpis.openRepairs) : null, kpis.openRepairs ? 'hot' : '')
+    if (AG) add('AGENTI DODÁVAJÚ', AG.totals.delivering + ' / ' + AG.totals.roles, AG.totals.idle ? 'hot' : '')
     add('ÚLOHY V REGISTRI', nf(tasks.length)); add('ZDROJE NAŽIVO', liveSources + ' / ' + data.sources.length)
     if (V) add('OBSIDIAN', nf(V.notes) + ' poznámok · ' + nf(V.links) + ' prepojení')
     return t
-  }, [kpis, tasks.length, liveSources, data.sources.length, V])   // eslint-disable-line react-hooks/exhaustive-deps
+  }, [kpis, tasks.length, liveSources, data.sources.length, V, AG])   // eslint-disable-line react-hooks/exhaustive-deps
   const logLines = useMemo(() => {
     const tm = (iso) => new Date(iso).toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit', timeZone: TZ }), L = []
     for (const s of data.sources) {
@@ -209,14 +215,6 @@ export default function HqApp({ data, canWrite = false, readOnlyNote = '', vault
     for (const g of signals) L.push({ at: new Date(now).toISOString(), time: tm(now), tag: g.badge, text: '! ' + g.title, tone: 'warn' })
     return L.sort((a, b) => String(b.at).localeCompare(String(a.at))).slice(0, 10)
   }, [data.sources, data.updates, signals, now])   // eslint-disable-line react-hooks/exhaustive-deps
-  const bootLines = useMemo(() => {
-    const dots = (label) => ({ label })
-    const L = [{ ...dots('identita'), value: data.me ? data.me.name : 'neprihlásený', tone: 'ok' }, { ...dots('register práce'), value: !data.ready ? 'NIE JE ZALOŽENÝ' : `${tasks.length} úloh`, tone: data.ready ? 'ok' : 'bad' }]
-    for (const s of data.sources.filter((x) => ['guesty', 'crm', 'hubspot', 'asana', 'maintenance', 'finance', 'obsidian'].includes(x.key))) L.push({ ...dots(s.name.toLowerCase()), value: SOURCE_STATUS[s.status].label.toUpperCase(), tone: s.status === 'live' ? 'ok' : s.status === 'error' ? 'bad' : 'warn' })
-    L.push({ ...dots('zdroje naživo'), value: `${liveSources} / ${data.sources.length}`, tone: 'ok' }, { ...dots('čaká na teba'), value: String(nAttention), tone: nAttention ? 'warn' : 'ok' })
-    return L
-  }, [])   // eslint-disable-line react-hooks/exhaustive-deps
-
   /* ---------- spoločné riadky ---------- */
   const taskRow = (t) => (
     <button key={t.taskId} className="li-priority" onClick={() => open({ kind: 'task', id: t.taskId })}>
@@ -237,12 +235,40 @@ export default function HqApp({ data, canWrite = false, readOnlyNote = '', vault
     return r.href ? <a key={i} className="li-row" href={r.href} {...(r.external ? { target: '_blank', rel: 'noreferrer' } : {})}>{inner}</a> : <div key={i} className="li-row">{inner}</div>
   }
   const signalRow = (r, i) => (
-    <a key={'s' + i} className="li-priority" href={r.href}>
+    <div key={'s' + i} className="li-priority hq-ask">
       <span className="li-avatar orange"><Icon name="alert" /></span>
-      <div><Badge tone={r.tone}>{r.badge}</Badge><h3>{r.title}</h3><p>{r.sub}</p></div>
-      <Icon name="chevron" size={14} />
-    </a>
+      <a href={r.href} className="hq-ask-main"><Badge tone={r.tone}>{r.badge}</Badge><h3>{r.title}</h3><p>{r.sub}</p></a>
+      <span className="hq-ask-act">{canWrite && <button className="li-button" onClick={() => open({ kind: 'assign', summary: r.title + (r.sub ? ' (' + r.sub + ')' : '') + ': ' })}>Zadať</button>}<a className="li-button ghost" href={r.href}>Otvoriť</a></span>
+    </div>
   )
+  /* ---------- agenti: roly z dôkazov, otázky na vedenie ---------- */
+  const roleById = (id) => (AG ? AG.roles.find((r) => r.id === id) : null)
+  const roleActor = (r) => { const want = r && r.gpt && r.gpt.active && !(r.claude && r.claude.last) ? 'GPT' : 'Claude'; const a = (data.assignable || []).find((x) => x.runtime === want) || (data.assignable || [])[0]; return a ? a.id : '' }
+  const roleTag = (r) => '[' + r.id + (r.name ? ' ' + r.name : '') + '] '
+  const decide = (a) => { if (!canWrite) { setToast('Rozhodovať sa dá až po prihlásení.'); return } open({ kind: 'assign', to: roleActor(roleById(a.role)), summary: `[${a.role}${a.name ? ' ' + a.name : ''}] Rozhodnutie k otázke „${a.text}“: ` }) }
+  const askRow = (a, i) => (
+    <div key={'q' + i} className="li-priority hq-ask">
+      <span className="li-avatar orange"><Icon name="hand" /></span>
+      <div className="hq-ask-main"><Badge tone="orange">Agent čaká na teba</Badge><h3>{a.text}</h3><p>{a.role}{a.name ? ' ' + a.name : ''} · hlásenie v Slacku {fmt(a.at)}{a.context ? ' · ' + a.context : ''}</p></div>
+      <span className="hq-ask-act"><button className="li-button orange" onClick={() => decide(a)}>Rozhodnúť</button><button className="li-button ghost" onClick={() => open({ kind: 'role', id: a.role })}>Rola</button></span>
+    </div>
+  )
+  // bodka pri prostredí: zelená = výstup za 3 dni, oranžová = rozvrh beží bez výstupu, sivá = len starší výstup
+  const rtShown = (x) => !!x && (x.schedules > 0 || x.recent)
+  const rtChip = (label, x) => (rtShown(x) ? <span className={'hq-rt ' + (x.fresh ? 'on' : x.active ? 'warn' : '')} title={(x.active ? 'Rozvrh zapnutý: ' + x.every : x.schedules ? 'Rozvrh vypnutý' : 'Rozvrh v prehľade nie je') + (x.last ? ' · posledný výstup ' + fmt(x.last) : ' · výstup nevidno')}><i />{label}{x.active && x.every ? ' · ' + x.every : ''}</span> : null)
+  const roleCard = (r) => { const st = AGENT_STATE[r.state]; return (
+    <button key={r.id} className={'li-glass hq-role ' + r.state} onClick={() => open({ kind: 'role', id: r.id })}>
+      <div className="hd"><span className="id">{r.id}</span><Badge tone={st.tone}>{st.label}</Badge></div>
+      <h3>{r.name || r.func || 'Rola ' + r.id}</h3>
+      {r.name && r.func ? <p>{r.func}</p> : null}
+      <div className="rts">{rtChip('GPT', r.gpt)}{rtChip('Claude', r.claude)}{r.brain ? <span className="hq-rt brain" title="Poznámky roly v Braine (Obsidian)"><i />Brain · {r.brain.notes}</span> : null}</div>
+      <small>{r.last ? 'Posledný výstup ' + (r.state === 'delivering' ? fmt(r.last) : fmtDay(r.last)) : 'Žiadny výstup'}</small>
+    </button>) }
+  const copySlack = (t) => {
+    const text = [`*${OP_LABEL[OP_OF[t.status]] || 'Úloha'} z ústredne* · ${name(t.lastActorId)} → ${name(t.assigneeId)}`, t.summary, `Ďalší krok: ${t.nextAction}`, '`hq:' + t.taskId + '#' + (t.sequence || t.history.length) + '`'].filter(Boolean).join('\n')
+    const fail = () => setToast('Kopírovanie sa nepodarilo. Text správy: ' + text)
+    try { navigator.clipboard.writeText(text).then(() => setToast('Správa je skopírovaná. Vlož ju do #ai-tim.'), fail) } catch { fail() }
+  }
   const noteRow = (n, extra) => <a key={n.path} className="li-row" href={obsidianUrl(V.name, n.path)} title="Otvoriť v Obsidiane"><span className="li-avatar"><Icon name="gem" /></span><span className="li-body"><strong>{n.title}</strong><small>{n.path}</small></span>{extra ? <Badge tone="gray">{extra}</Badge> : <Icon name="upright" size={14} />}</a>
   const emptyRegister = <p className="li-empty">V registri zatiaľ nie je žiadna úloha.{canWrite ? ' Zadaj prvú tlačidlom „Zadať úlohu“ alebo klávesom ⌘K.' : ''}</p>
   const sourcesOf = (a) => data.sources.filter((s) => (a.sources || []).includes(s.key))
@@ -254,13 +280,18 @@ export default function HqApp({ data, canWrite = false, readOnlyNote = '', vault
   /* ---------- oblasti ---------- */
   function Overview() {
     const hasDay = kpis.arrivals != null
+    const C = (live && live.ceo) || {}, ops = C.ops || {}
+    const eur = (v) => (v == null ? '–' : new Intl.NumberFormat('sk-SK', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v))
+    const delta = (v, what) => (v == null ? null : <span className={'hq-delta ' + (v >= 0 ? 'up' : 'down')}>{v >= 0 ? '▲' : '▼'} {nf(Math.abs(v))} % {what}</span>)
+    const fact = (label, value, note, tone) => (value == null ? null : <div className={'hq-fact ' + (tone || '')} key={label}><strong>{value}</strong><span>{label}</span>{note && <small>{note}</small>}</div>)
+    const A = data.agents
     return (<>
       <section className="li-hero hq-hero">
         <i className="hq-sun" aria-hidden="true" />
         <div>
           <p className="li-eyebrow">{today.toLocaleUpperCase('sk')} · <Clock /></p>
           <h2>{hasDay ? <>Dnes <em><Num value={kpis.arrivals} /></em> {plural(kpis.arrivals, 'príchod', 'príchody', 'príchodov')}<br />a <em><Num value={kpis.departures} /></em> {plural(kpis.departures, 'odchod', 'odchody', 'odchodov')}.</> : <>Firma má smer.<br />Ty máš prehľad.</>}</h2>
-          <p>{!data.ready ? 'Register práce ešte nie je v databáze založený.' : nAttention ? `${nAttention} ${nAttention === 1 ? 'vec čaká' : nAttention < 5 ? 'veci čakajú' : 'vecí čaká'} na tvoju pozornosť.` : 'Nič nečaká na tvoje rozhodnutie.'}{kpis.next7 != null ? ` Najbližších 7 dní: ${kpis.next7} ${plural(kpis.next7, 'príchod', 'príchody', 'príchodov')}.` : ''}</p>
+          <p>{!data.ready ? 'Register práce ešte nie je v databáze založený.' : nAttention ? `${nAttention} ${nAttention === 1 ? 'vec čaká' : nAttention < 5 ? 'veci čakajú' : 'vecí čaká'} na tvoje rozhodnutie.` : 'Nič nečaká na tvoje rozhodnutie.'}{ops.tomorrowArrivals != null ? ` Zajtra ${ops.tomorrowArrivals} ${plural(ops.tomorrowArrivals, 'príchod', 'príchody', 'príchodov')}, najbližších 7 dní ${kpis.next7 != null ? kpis.next7 : '–'}.` : ''}</p>
           <div className="hq-hero-act">
             <button className="li-button orange" onClick={() => setBrief(true)}><Icon name="list" size={14} />Prejsť priority{nAttention ? ` (${nAttention})` : ''}</button>
             <button className="li-button" onClick={() => nav('map')}><Icon name="graph" size={14} />Mapa firmy</button>
@@ -270,61 +301,115 @@ export default function HqApp({ data, canWrite = false, readOnlyNote = '', vault
         <div className="hq-kpis">
           <Ring value={kpis.occupancy} label="obsadenosť" />
           <div className="k"><strong><Num value={kpis.guests} /></strong><small>hostí v bytoch</small></div>
-          <div className="k"><strong><Num value={kpis.listings} /></strong><small>nehnuteľností</small></div>
-          <div className="k"><strong><Num value={kpis.avgStay} decimals={1} /></strong><small>nocí priemerný pobyt</small></div>
+          <div className="k"><strong><Num value={ops.sameDay} /></strong><small>otočiek v ten istý deň</small></div>
+          <div className="k"><strong><Num value={ops.tomorrowArrivals} /></strong><small>príchodov zajtra</small></div>
         </div>
       </section>
-      <section className="li-metrics" aria-label="Prehľad dňa">
-        <button className="li-glass li-metric" onClick={() => nav('attention')}><span className="li-label"><Icon name="dot" size={12} />Moja pozornosť</span><div className="li-number"><Num value={nAttention} /></div><small>Úlohy z registra a signály z appky</small></button>
-        <button className="li-glass li-metric" onClick={() => nav('agents')}><span className="li-label"><Icon name="users" size={12} />Rozpracované úlohy</span><div className="li-number"><Num value={data.openCount || 0} /></div><small>Ľudia a AI · z registra práce</small></button>
-        <button className="li-glass li-metric" onClick={() => nav('visits')}><span className="li-label"><Icon name="calendar" size={12} />Obhliadky</span><div className="li-number"><Num value={live && live.overview.calendarCount != null ? live.overview.calendarCount : null} /></div><small>{live && live.overview.calendarCount != null ? 'Obhliadky z CRM · 7 dní' : 'Kalendár nie je pripojený'}</small></button>
-        <button className="li-glass li-metric" onClick={() => nav('connections')}><span className="li-label"><Icon name="unplug" size={12} />Zdroje naživo</span><div className="li-number"><Num value={liveSources} /><span className="li-mini"> / {data.sources.length}</span></div><small>Ostatné čakajú na pripojenie</small></button>
+
+      <section className="li-metrics hq-ceo" aria-label="Hlavné čísla firmy">
+        {C.money ? (
+          <a className="li-glass li-metric" href="/ekonomika"><span className="li-label"><Icon name="wallet" size={12} />Výnosy · {C.money.label}</span><div className="li-number">{eur(C.money.revenue)}</div><small>doteraz {eur(C.money.toDate)} {delta(C.money.vsPrev, 'oproti minulému mesiacu')}</small></a>
+        ) : (
+          <a className="li-glass li-metric" href="/ekonomika"><span className="li-label"><Icon name="wallet" size={12} />Výnosy</span><div className="li-number hq-small">v Ekonomike ↗</div><small>Súhrn výnosov tento účet v ústredni nevidí.</small></a>
+        )}
+        <button className="li-glass li-metric" onClick={() => nav('operations')}><span className="li-label"><Icon name="chart" size={12} />Noci tento mesiac</span><div className="li-number"><Num value={C.nights ? C.nights.month : null} /></div><small>{C.nights ? <>vlani {nf(C.nights.lastYear || 0)} {delta(C.nights.change, 'medziročne')}</> : 'nenačítané'}</small></button>
+        <button className="li-glass li-metric" onClick={() => nav('properties')}><span className="li-label"><Icon name="building" size={12} />Portfólio</span><div className="li-number"><Num value={C.portfolio ? C.portfolio.now : kpis.listings} />{C.portfolio && C.portfolio.target ? <span className="li-mini"> / {C.portfolio.target}</span> : null}</div><small>{C.portfolio && C.portfolio.target ? `cieľ ${C.portfolio.end2026} do konca 2026 · chýba ${Math.max(0, C.portfolio.target - C.portfolio.now)}` : 'nehnuteľností v prevádzke'}</small>{C.portfolio && C.portfolio.target ? <i className="hq-bar"><i style={{ width: Math.min(100, Math.max(0, ((C.portfolio.now - C.portfolio.start) / Math.max(1, C.portfolio.target - C.portfolio.start)) * 100)) + '%' }} /></i> : null}</button>
+        <a className="li-glass li-metric" href="/crm"><span className="li-label"><Icon name="users" size={12} />Nové leady · 7 dní</span><div className="li-number"><Num value={C.leads ? C.leads.new7 : null} /></div><small>{C.leads ? <>{C.leads.overdue != null ? <b className={C.leads.overdue ? 'hq-warn' : ''}>{C.leads.overdue} po lehote</b> : null} {delta(C.leads.change, 'oproti predošlému týždňu')}</> : 'CRM nenačítané'}</small></a>
       </section>
+
       <div className="li-columns">
         <div className="li-stack">
-          <Panel title="Potrebuje tvoju pozornosť" link="Všetky" onLink={() => nav('attention')}>{attention.slice(0, 3).map(taskRow)}{signals.slice(0, 4).map(signalRow)}{!nAttention && <p className="li-empty">Žiadne blokovanie, výsledok na kontrolu ani signál z appky.</p>}</Panel>
-          <Panel title="Kto na čom pracuje" link="Celý tím" onLink={() => nav('agents')}>{data.board.length ? data.board.slice(0, 4).map(actorRow) : <p className="li-empty">Zatiaľ žiadni vykonávatelia.</p>}</Panel>
-          <Panel title="Spoločné aktualizácie" link="Detail" onLink={() => nav('agents')}>
-            {data.updates.length ? data.updates.slice(0, 5).map((u) => (
-              <div key={u.eventId} className="li-update"><Icon name={UPDATE_ICON[u.status] || 'dot'} size={14} /><div><p><strong>{name(u.actorId)}</strong> · {OP_LABEL[OP_OF[u.status]]}: {u.summary}</p><small>{ago(u.at, now)} · <button className="li-button ghost" style={{ minHeight: 0, padding: 0, fontSize: 9 }} onClick={() => open({ kind: 'task', id: u.taskId })}>{u.title}</button></small></div></div>
-            )) : <p className="li-empty">Žiadne udalosti v registri.</p>}
+          <Panel title="Čo potrebuje tvoje rozhodnutie" link={nAttention > 8 ? `Všetkých ${nAttention}` : 'Brífing'} onLink={() => (nAttention > 8 ? nav('attention') : setBrief(true))}>{asks.slice(0, 3).map(askRow)}{attention.slice(0, 3).map(taskRow)}{signals.slice(0, 4).map(signalRow)}{!nAttention && <p className="li-empty">Nič. Žiadne blokovanie, výsledok na kontrolu ani signál z appky.</p>}</Panel>
+          <Panel title="Dnes v prevádzke" link="Prevádzka" onLink={() => nav('operations')}>
+            <div className="hq-facts">
+              {fact('otočiek v ten istý deň', ops.sameDay, 'odchod aj príchod dnes')}
+              {fact('skorých príchodov', ops.early)}
+              {fact('tašiek zabalených', ops.packed, ops.todo != null ? `ešte treba ${ops.todo}` : null, ops.todo ? 'warn' : '')}
+              {fact('tašiek na zajtra', ops.tomorrowBags)}
+              {fact('škôd v Asane', ops.damagesOpen, ops.damagesOverdue ? `${ops.damagesOverdue} po termíne` : 'žiadna po termíne', ops.damagesOverdue ? 'bad' : '')}
+              {fact('prípadov údržby', ops.repairsOpen)}
+            </div>
+            {charts.week && <WeekBars data={charts.week} />}
+          </Panel>
+          <Panel title="Obchod" link="CRM" href="/crm">
+            {C.leads && <div className="hq-facts">{fact('nových leadov za 7 dní', C.leads.new7, C.leads.prev7 != null ? `predošlý týždeň ${C.leads.prev7}` : null)}{fact('po lehote', C.leads.overdue, 'nové bez prvého kontaktu', C.leads.overdue ? 'bad' : '')}{fact('klientov spolu', C.leads.clients)}</div>}
+            {charts.funnel ? <HBars rows={charts.funnel} href="/crm" /> : <p className="li-empty">CRM sa nepodarilo načítať.</p>}
+            {live && live.overview.calendar.length > 0 && <><h3 className="hq-h3">{live.overview.calendarTitle}</h3>{live.overview.calendar.map((r, i) => <div key={i} className="li-agenda"><span className="li-clock">{r.clock}</span><a className={r.tone === 'orange' ? 'attention' : ''} href={r.href}><strong>{r.title}</strong><small>{r.sub}</small></a></div>)}</>}
           </Panel>
         </div>
         <div className="li-stack">
-          {charts.week && <Panel title="Príchody a odchody · 7 dní" link="Prevádzka" onLink={() => nav('operations')}><WeekBars data={charts.week} /></Panel>}
-          <Panel title={(live && live.overview.calendarTitle) || 'Dnes v kalendári'} link="Obhliadky" onLink={() => nav('visits')}>{live && live.overview.calendar.length ? live.overview.calendar.map((r, i) => <div key={i} className="li-agenda"><span className="li-clock">{r.clock}</span><a className={r.tone === 'orange' ? 'attention' : ''} href={r.href}><strong>{r.title}</strong><small>{r.sub}</small></a></div>) : <p className="li-empty">{live ? 'V CRM nie je na najbližších 7 dní naplánovaná obhliadka.' : 'Termíny sa nepodarilo načítať.'}</p>}</Panel>
-          <Panel title="Obsidian" link="Mapa" onLink={() => nav('map')}>
+          <Panel title="Peniaze" link="Ekonomika" href="/ekonomika">
+            {C.money ? (<>
+              <div className="hq-facts">{fact('priemerná cena noci', eur(C.money.adr))}{fact('obsadenosť mesiaca', C.money.occupancy != null ? String(C.money.occupancy).replace('.', ',') + ' %' : null)}{C.money.next ? fact('už rezervované · ' + C.money.next.label, eur(C.money.next.revenue)) : null}</div>
+              <MonthBars months={C.money.months} fmt={eur} />
+              <p className="li-mini">Rezervované výnosy z pobytov podľa modulu Ekonomika, {C.money.units} aktívnych bytov, stav k {fmtDay(C.money.asOf)}.</p>
+            </>) : <p className="li-empty">Súhrn výnosov je len pre vedenie s prístupom do Ekonomiky.</p>}
+            {live && live.areas.finance && <div className="hq-facts" style={{ marginTop: 10 }}>{live.areas.finance.metrics.slice(0, 2).map((m) => fact(m.label.toLowerCase(), m.value, m.note))}</div>}
+          </Panel>
+          <Panel title="Rast" link="Nehnuteľnosti" onLink={() => nav('properties')}>
+            {C.portfolio && C.portfolio.goal2027 ? <GoalBar start={C.portfolio.start} now={C.portfolio.now} target={C.portfolio.goal2027} labelStart={C.portfolio.startLabel} labelTarget="koniec 2027" /> : null}
+            {C.growth ? <div className="hq-facts">{fact('pobytov tento rok', nf(C.growth.staysYtd), C.growth.staysChange != null ? `▲ ${nf(C.growth.staysChange)} % medziročne` : null)}{fact('nocí tento rok', nf(C.growth.nightsYtd), C.growth.nightsChange != null ? `▲ ${nf(C.growth.nightsChange)} % medziročne` : null)}{fact('hostí od roku 2025', C.growth.guestsSince2025 != null ? nf(C.growth.guestsSince2025) : null)}</div> : <p className="li-empty">Čísla rastu sa nepodarilo načítať.</p>}
+            {C.portfolio && C.portfolio.goal ? <p className="li-mini">Tempo podľa plánu: {C.portfolio.pace} nových bytov mesačne · cieľ {nf(C.portfolio.goal)} do roku {C.portfolio.goalYear}.</p> : null}
+          </Panel>
+          <Panel title="AI tím" link="Všetci agenti" onLink={() => nav('agents')}>
+            {A ? (<>
+              <div className="hq-facts">
+                {fact('rolí dodáva', `${A.totals.delivering} / ${A.totals.roles}`, 'výstup za 3 dni')}
+                {fact('GPT · Codex', A.totals.gpt.active, `automatizácií · ${A.totals.gpt.delivering} z ${A.totals.gpt.roleSchedules} rolí dodáva`, A.totals.gpt.roleSchedules && A.totals.gpt.delivering < A.totals.gpt.roleSchedules ? 'warn' : '')}
+                {fact('Claude', A.totals.claude.active, `rutín · ${A.totals.claude.delivering} rolí dodáva`)}
+                {fact('rozvrh bez výstupu', A.totals.idle, 'beží, ale nič neodovzdáva', A.totals.idle ? 'bad' : '')}
+              </div>
+              <p className="li-mini">{A.hasSnapshot ? `Stav k ${fmt(A.asOf)}${A.stale ? ' (starší ako 36 hodín)' : ''}.` : 'Zatiaľ len zo zápisov v Braine.'} {A.totals.brainLast ? `Posledný zápis roly do Brainu ${fmtDay(A.totals.brainLast)}.` : 'V Braine nie je zápis roly.'}</p>
+            </>) : <p className="li-empty">Agentov ukáže ústredňa po načítaní Brainu alebo prehľadu zo zberného skriptu.</p>}
+            {data.updates.length > 0 && data.updates.slice(0, 3).map((u) => <div key={u.eventId} className="li-update"><Icon name={UPDATE_ICON[u.status] || 'dot'} size={14} /><div><p><strong>{name(u.actorId)}</strong> · {OP_LABEL[OP_OF[u.status]]}: {u.summary}</p><small>{ago(u.at, now)}</small></div></div>)}
+          </Panel>
+          <Panel title="Brain · Obsidian" link="Mapa" onLink={() => nav('map')}>
             {V ? (<><div className="hq-mini-stats"><div><strong><Num value={V.notes} /></strong><small>poznámok</small></div><div><strong><Num value={V.links} /></strong><small>prepojení</small></div><div><strong>{V.lastChange ? fmtDay(V.lastChange) : '–'}</strong><small>posledná zmena</small></div></div>{V.recent.slice(0, 3).map((n) => noteRow(n))}</>) : <p className="li-empty">Index trezoru ešte nebol odoslaný do ústredne.</p>}
           </Panel>
-          <Panel title="Živý log" link="Prepojenia" onLink={() => nav('connections')} className="hq-console-panel"><Console lines={logLines} /></Panel>
-          <Panel title="Marketing v pohybe" link="Marketing" onLink={() => nav('marketing')}>{live && live.overview.marketing.length ? live.overview.marketing.map((r, i) => liveRow(r, i, 'play')) : <p className="li-empty">Údaje o obsahu sa nepodarilo načítať.</p>}</Panel>
+          {C.team && <Panel title="Tím v appke" link="Aktivita" href="/admin/activity"><div className="hq-facts">{fact('aktívnych ľudí', C.team.activeUsers)}</div><HBars rows={C.team.apps} /></Panel>}
         </div>
       </div>
     </>)
   }
 
   function Agents() {
-    const list = data.board.filter((a) => filter === 'all' || a.runtime === filter || (filter === 'blocked' && (a.blocked || a.waiting)))
+    const T = AG && AG.totals
+    const FILTERS = [['all', 'Všetky roly'], ['delivering', 'Dodáva'], ['idle', 'Rozvrh bez výstupu'], ['off', 'Ticho'], ['GPT', 'GPT'], ['Claude', 'Claude']]
+    const match = (r) => roleFilter === 'all' || r.state === roleFilter || (roleFilter === 'off' && (r.state === 'quiet' || r.state === 'registered')) || (roleFilter === 'GPT' && rtShown(r.gpt)) || (roleFilter === 'Claude' && rtShown(r.claude))
+    const list = AG ? AG.roles.filter(match) : []
+    const sched = (x, i) => <div key={i} className="li-row"><span className={'li-avatar ' + (x.active ? '' : 'orange')}><Icon name={x.runtime === 'GPT' ? 'bolt' : 'play'} /></span><span className="li-body"><strong>{x.name}</strong><small>{x.runtime === 'GPT' ? 'GPT · Codex' : 'Claude'} · {x.every}{x.lastRun ? ' · posledný beh ' + fmt(x.lastRun) : ''}{x.ok === false ? ' · posledný beh zlyhal' : ''}</small></span><Badge tone={x.active ? '' : 'gray'}>{x.active ? 'Zapnutý' : 'Vypnutý'}</Badge></div>
     return (<>
-      <div className="li-flex li-between" style={{ marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
-        <div className="li-tabs" style={{ margin: 0 }} aria-label="Filter tímu">{[['all', 'Celý tím'], ['GPT', 'GPT'], ['Claude', 'Claude'], ['Človek', 'Ľudia'], ['blocked', 'Čakajú na vstup']].map(([v, l]) => <button key={v} className={filter === v ? 'active' : ''} aria-pressed={filter === v} onClick={() => setFilter(v)}>{l}</button>)}</div>
-        <div className="li-flex" style={{ gap: 8 }}>
-          <div className="li-tabs" style={{ margin: 0 }} aria-label="Zobrazenie úloh"><button className={agentsView === 'list' ? 'active' : ''} aria-pressed={agentsView === 'list'} onClick={() => setAgentsView('list')}><Icon name="rows" size={13} /> Zoznam</button><button className={agentsView === 'board' ? 'active' : ''} aria-pressed={agentsView === 'board'} onClick={() => setAgentsView('board')}><Icon name="board" size={13} /> Tabuľa</button></div>
+      {AG ? (<>
+        <section className="li-metrics hq-ceo" aria-label="Stav AI tímu">
+          <button className="li-glass li-metric" onClick={() => setRoleFilter('delivering')}><span className="li-label"><Icon name="check" size={12} />Dodáva</span><div className="li-number"><Num value={T.delivering} /><span className="li-mini"> / {T.roles}</span></div><small>rolí s výstupom za posledné 3 dni{T.idle ? <> · <b className="hq-warn">{T.idle} s rozvrhom bez výstupu</b></> : null}</small></button>
+          <button className="li-glass li-metric" onClick={() => setRoleFilter('GPT')}><span className="li-label"><Icon name="bolt" size={12} />GPT · Codex</span><div className="li-number"><Num value={T.gpt.active} /></div><small>zapnutých automatizácií · {T.gpt.roleSchedules} {plural(T.gpt.roleSchedules, 'rola', 'roly', 'rolí')} s rozvrhom, <b className={T.gpt.roleSchedules && T.gpt.delivering < T.gpt.roleSchedules ? 'hq-warn' : ''}>{T.gpt.delivering} dodáva</b></small></button>
+          <button className="li-glass li-metric" onClick={() => setRoleFilter('Claude')}><span className="li-label"><Icon name="play" size={12} />Claude</span><div className="li-number"><Num value={T.claude.active} /></div><small>zapnutých rutín v cloude · {T.claude.delivering} {plural(T.claude.delivering, 'rola dodáva', 'roly dodávajú', 'rolí dodáva')}</small></button>
+          <button className="li-glass li-metric" onClick={() => nav('knowledge')}><span className="li-label"><Icon name="gem" size={12} />Zápisy do Brainu</span><div className="li-number">{T.brainLast ? fmtShort(T.brainLast) : '–'}</div><small>posledný zápis roly do Brainu · GPT {T.brainLastGpt ? fmtShort(T.brainLastGpt) : '–'} · Claude {T.brainLastClaude ? fmtShort(T.brainLastClaude) : '–'}{T.brainLast && now - Date.parse(T.brainLast) > 7 * 86400e3 ? <b className="hq-warn"> · viac ako týždeň nič</b> : null}</small></button>
+        </section>
+        <p className="li-sub" style={{ margin: '0 0 14px' }}>{AG.hasSnapshot ? <>Stav k {fmt(AG.asOf)}{AG.stale ? <b className="hq-warn"> · prehľad je starší ako 36 hodín</b> : null}. </> : 'Zatiaľ len zápisy rolí v Braine; rozvrhy a výstupy doplní prehľad zo zberného skriptu. '}Zapnutý rozvrh nie je dôkaz práce. „Dodáva“ je rola, ktorá za posledné 3 dni zanechala súbor, hlásenie v Slacku alebo zápis v Braine.</p>
+        <div className="li-flex li-between" style={{ marginBottom: 14, flexWrap: 'wrap', gap: 10 }}>
+          <div className="li-tabs" style={{ margin: 0 }} aria-label="Filter rolí">{FILTERS.map(([v, l]) => <button key={v} className={roleFilter === v ? 'active' : ''} aria-pressed={roleFilter === v} onClick={() => setRoleFilter(v)}>{l}</button>)}</div>
           {canWrite && <button className="li-button primary" onClick={() => open({ kind: 'assign' })}><Icon name="plus" size={14} />Zadať úlohu</button>}
         </div>
+        <div className="hq-roles">{list.map(roleCard)}</div>
+        {!list.length && <p className="li-empty">V tomto filtri nie je žiadna rola.</p>}
+        {AG.other.length > 0 && <div style={{ marginTop: 15 }}><Panel title="Ďalšie rozvrhy mimo rolí">{AG.other.map(sched)}</Panel></div>}
+        {AG.coverage.length > 0 && <div style={{ marginTop: 15 }}><Panel title="Odkiaľ to ústredňa vie a čo nevidí">{AG.coverage.map((c, i) => <p key={i} className="li-sub" style={{ margin: '0 0 8px' }}>{c}</p>)}</Panel></div>}
+      </>) : <Panel title="Agenti zatiaľ nie sú v ústredni"><p className="li-sub">Zoznam rolí sa skladá zo zápisov v Braine a z prehľadu, ktorý posiela skript <code>tools/ustredna/agents-sync.mjs</code> (rozvrhy GPT a Claude, výstupy na disku, hlásenia v Slacku). Zatiaľ neprišlo ani jedno.</p></Panel>}
+      <h2 className="hq-section">Register práce</h2>
+      <p className="li-sub" style={{ margin: '0 0 12px' }}>Zadania, ktoré si dal z ústredne, a to, čo k nim vykonávateľ sám ohlásil. Do registra dnes vedia zapisovať Claude Code a Codex; ostatné roly dostanú zadanie cez Slack.</p>
+      <div className="li-flex li-between" style={{ marginBottom: 12, flexWrap: 'wrap', gap: 10 }}>
+        <div className="li-tabs" style={{ margin: 0 }} aria-label="Zobrazenie úloh"><button className={agentsView === 'list' ? 'active' : ''} aria-pressed={agentsView === 'list'} onClick={() => setAgentsView('list')}><Icon name="rows" size={13} /> Zoznam</button><button className={agentsView === 'board' ? 'active' : ''} aria-pressed={agentsView === 'board'} onClick={() => setAgentsView('board')}><Icon name="board" size={13} /> Tabuľa</button></div>
       </div>
       <div className="li-agents-grid">
-        {list.map((a) => (
+        {data.board.map((a) => (
           <button key={a.id} className="li-glass li-agent" onClick={() => open(a.current ? { kind: 'task', id: a.current.taskId } : { kind: 'actor', id: a.id })}>
             <div className="li-flex li-between"><div className="li-flex"><span className={'li-avatar ' + (a.tone === 'orange' || a.tone === 'red' ? 'orange' : '')}>{a.initials}</span><div><h3>{a.name}</h3><span className="li-mini">{a.role}</span></div></div><Badge tone="gray">{a.runtime || 'Tím'}</Badge></div>
-            <Badge tone={a.tone}>{a.state}</Badge>
             <h3>{a.current ? a.current.title : 'Bez úlohy v registri'}</h3>
-            <p>{a.current ? 'Ďalší krok: ' + a.current.nextAction : 'Stav sa odvodzuje len z udalostí, ktoré vykonávateľ sám ohlásil.'}</p>
-            <div className="li-agent-foot"><span>{a.lastAt ? 'Posledný signál ' + ago(a.lastAt, now) : 'Zatiaľ žiadny signál'}</span><span>{a.open ? `Otvorené: ${a.open}` : 'Otvoriť detail'} ↗</span></div>
+            <div className="li-agent-foot"><span>{a.lastAt ? 'Posledná udalosť ' + ago(a.lastAt, now) : 'Zatiaľ žiadna udalosť v registri'}</span><span>{a.open ? `Otvorené: ${a.open}` : 'Detail'} ↗</span></div>
           </button>
         ))}
       </div>
-      {!list.length && <p className="li-empty">V tomto filtri nikto nie je.</p>}
       <div style={{ marginTop: 15 }}>
         {agentsView === 'board' ? (
           <div className="hq-board" aria-label="Úlohy podľa stavu">
@@ -336,7 +421,6 @@ export default function HqApp({ data, canWrite = false, readOnlyNote = '', vault
           </div>
         ) : <Panel title="Všetky úlohy v registri">{tasks.length ? tasks.map(taskRow) : emptyRegister}</Panel>}
       </div>
-      <p className="li-sub" style={{ marginTop: 12 }}>Stav „Pracuje“ znamená, že vykonávateľ ohlásil krok za posledných 6 hodín. Register nevie, či jeho runtime práve beží. Stav úlohy mení len jej vykonávateľ vlastnou udalosťou, preto sa karty na tabuli nedajú presúvať.</p>
     </>)
   }
 
@@ -355,6 +439,8 @@ export default function HqApp({ data, canWrite = false, readOnlyNote = '', vault
           </div>
         ))}
         {data.quarantine > 0 && <p className="li-sub" style={{ marginTop: 12 }}>Odmietnuté alebo oneskorené udalosti v karanténe: {data.quarantine}. Neovplyvnili stav úloh.</p>}
+        <h3 className="hq-h3">Živý log</h3>
+        <Console lines={logLines} />
       </Panel>
     )
   }
@@ -442,6 +528,11 @@ export default function HqApp({ data, canWrite = false, readOnlyNote = '', vault
         <p className="li-detail-note">Potvrdzuješ presne verziu a odtlačky zobrazené vyššie, pod svojím prihlásením.</p>
       </>)}
       {t.status === 'result_ready' && !canVerify && canWrite && <p className="li-detail-note">Vlastný výsledok nemôže overiť jeho autor.</p>}
+      {!['verified', 'applied'].includes(t.status) && (<>
+        <h3>Poslať agentom</h3>
+        <div className="li-detail-footer"><button className="li-button" onClick={() => copySlack(t)}>Skopírovať správu pre Slack</button><a className="li-button ghost" href="https://live-ininternational.slack.com/archives/C0C9HG8B42C" target="_blank" rel="noreferrer">Otvoriť #ai-tim ↗</a></div>
+        <p className="li-detail-note">{data.slackAuto ? 'Ústredňa posiela udalosti do #ai-tim sama; kopírovať netreba.' : 'Ústredňa zatiaľ nemá vlastného Slack bota, preto správu vložíš ty. Značka hq:… na konci spáruje odpoveď agenta s touto úlohou.'}</p>
+      </>)}
     </>)
   }
 
@@ -462,16 +553,16 @@ export default function HqApp({ data, canWrite = false, readOnlyNote = '', vault
     </>)
   }
 
-  const renders = { overview: Overview, agents: Agents, connections: Connections, knowledge: Knowledge, map: MapPage, attention: () => <><Panel title="Rozhodnutia a otvorené kroky" link="Brífing" onLink={() => setBrief(true)}>{attention.length ? attention.map(taskRow) : <p className="li-empty">{tasks.length ? 'V registri práce nič nečaká na tvoje rozhodnutie.' : 'V registri práce zatiaľ nie je žiadna úloha.'}</p>}</Panel>{signals.length > 0 && <div style={{ marginTop: 15 }}><Panel title="Signály z appky">{signals.map(signalRow)}</Panel></div>}</> }
+  const renders = { overview: Overview, agents: Agents, connections: Connections, knowledge: Knowledge, map: MapPage, attention: () => <>{asks.length > 0 && <div style={{ marginBottom: 15 }}><Panel title="Agenti čakajú na tvoje rozhodnutie" link="Agenti" onLink={() => nav('agents')}>{asks.map(askRow)}<p className="li-mini" style={{ marginTop: 10 }}>Otázky sú z hlásení rolí v Slacku #ai-tim (stav k {AG && AG.asOf ? fmt(AG.asOf) : '–'}). Je to tvrdenie roly, nie overený fakt. „Rozhodnúť“ zapíše tvoju odpoveď do registra ako zadanie.</p></Panel></div>}<Panel title="Rozhodnutia a otvorené kroky v registri" link="Brífing" onLink={() => setBrief(true)}>{attention.length ? attention.map(taskRow) : <p className="li-empty">{tasks.length ? 'V registri práce nič nečaká na tvoje rozhodnutie.' : 'V registri práce zatiaľ nie je žiadna úloha.'}</p>}</Panel>{signals.length > 0 && <div style={{ marginTop: 15 }}><Panel title="Signály z appky">{signals.map(signalRow)}</Panel></div>}</> }
   const Content = renders[page] || AreaPage
   const dTask = detail && detail.kind === 'task' ? byId[detail.id] : null
   const dActor = detail && detail.kind === 'actor' ? data.board.find((a) => a.id === detail.id) : null
+  const dRole = detail && detail.kind === 'role' ? roleById(detail.id) : null
+  const rtLine = (x, label) => (x ? <><dt>{label}</dt><dd>{x.active ? `Rozvrh zapnutý (${x.every})` : x.schedules ? 'Rozvrh vypnutý' : 'Bez rozvrhu v prehľade'}{x.lastRun ? ` · posledný beh ${fmt(x.lastRun)}` : ''}{x.runOk === false ? ' · zlyhal' : ''}<br />{x.last ? `Posledný výstup ${fmt(x.last)} · ${x.lastWhere}` : 'Výstup nevidno'}</dd></> : null)
 
   return (
     <div id="livein-hq" ref={root} data-theme={theme} data-page={page} aria-label="LIVE-IN firemná ústredňa" onPointerMove={glow}>
       <div className="hq-aurora" aria-hidden="true"><i /><i /><i /></div>
-      <Rain active={theme === 'night'} />
-      <div className="hq-scan" aria-hidden="true" />
       <div className="li-shell">
         <aside className="li-side">
           <div className="li-brand"><Logo /><small>FIREMNÁ ÚSTREDŇA</small><a className="li-home" href="/">← Späť do appky</a></div>
@@ -486,12 +577,12 @@ export default function HqApp({ data, canWrite = false, readOnlyNote = '', vault
           <header className="li-top hq-top">
             <button type="button" className="li-search hq-cmd" onClick={() => setPalette({ open: true, initial: '' })} aria-label="Otvoriť paletu príkazov"><Icon name="search" size={14} /><span>Hľadaj alebo zadaj príkaz…</span><kbd>⌘ K</kbd></button>
             <button type="button" className={'hq-live' + (busy ? ' busy' : '')} onClick={refresh} title="Obnoviť teraz. Údaje sa obnovujú samy každú minútu."><i /><b>{!data.ready ? 'REGISTER NIE JE ZALOŽENÝ' : data.local ? 'LOKÁLNE' : 'NAŽIVO'}</b><Since at={loadedAt} /></button>
-            <button type="button" className="hq-icon" onClick={() => applyTheme(theme === 'night' ? 'day' : 'night')} aria-label={theme === 'night' ? 'Prepnúť na denný režim' : 'Prepnúť na nočný režim'} title={theme === 'night' ? 'Denný režim' : 'Matrix režim'}><Icon name={theme === 'night' ? 'sun' : 'moon'} size={15} /></button>
+            <button type="button" className="hq-icon" onClick={() => applyTheme(theme === 'night' ? 'day' : 'night')} aria-label={theme === 'night' ? 'Prepnúť na denný režim' : 'Prepnúť na nočný režim'} title={theme === 'night' ? 'Denný režim' : 'Nočný režim'}><Icon name={theme === 'night' ? 'sun' : 'moon'} size={15} /></button>
             <button type="button" className="hq-icon mic" onClick={talk} aria-label="Hlasový príkaz" title="Hlasový príkaz"><Icon name="mic" size={15} /></button>
           </header>
           <Ticker items={tape} />
           <div className="li-page-head">
-            <div><p className="li-eyebrow">LIVE-IN / {area.nav.toLocaleUpperCase('sk')}</p><h1><Decode text={page === 'overview' ? greeting : area.title} /></h1><p className="li-sub">{area.sub}</p></div>
+            <div><p className="li-eyebrow">LIVE-IN / {area.nav.toLocaleUpperCase('sk')}</p><h1>{page === 'overview' ? greeting : area.title}</h1><p className="li-sub">{area.sub}</p></div>
             {canWrite ? <button className="li-button" onClick={() => open({ kind: 'assign' })}><Icon name="plus" size={14} />Zadať úlohu</button> : null}
           </div>
           {readOnlyNote && <div className="li-toast" role="status"><span>{readOnlyNote}</span></div>}
@@ -504,6 +595,7 @@ export default function HqApp({ data, canWrite = false, readOnlyNote = '', vault
               {detail.kind === 'task' && !dTask && <p style={{ marginTop: 14 }}>Úloha sa načítava…</p>}
               {detail.kind === 'assign' && AssignForm()}
               {dActor && <><Badge tone={dActor.tone}>{dActor.state}</Badge><h2>{dActor.name}</h2><p>{dActor.role}</p><dl><dt>Pracuje cez</dt><dd>{dActor.runtime || 'Tím'}</dd><dt>Posledný signál</dt><dd>{dActor.lastAt ? ago(dActor.lastAt, now) : 'zatiaľ žiadny'}</dd><dt>Otvorené úlohy</dt><dd>{dActor.open}</dd></dl>{canWrite && dActor.kind !== 'integration' && <div className="li-detail-footer"><button className="li-button primary" onClick={() => open({ kind: 'assign', to: dActor.id })}>Zadať úlohu</button></div>}</>}
+              {dRole && <><Badge tone={AGENT_STATE[dRole.state].tone}>{AGENT_STATE[dRole.state].label}</Badge><h2>{dRole.id}{dRole.name ? ' · ' + dRole.name : ''}</h2><p>{dRole.func || 'Náplň roly v prehľade nie je.'}</p><p className="li-detail-note">{AGENT_STATE[dRole.state].hint}</p><dl>{rtLine(dRole.gpt, 'GPT · Codex')}{rtLine(dRole.claude, 'Claude')}{dRole.brain && <><dt>Brain</dt><dd>{dRole.brain.notes} {plural(dRole.brain.notes, 'poznámka', 'poznámky', 'poznámok')} ({dRole.brain.claudeNotes} od Claude){dRole.brain.last ? ' · posledný zápis ' + fmtDay(dRole.brain.last) : ''}</dd></>}</dl>{V && dRole.brain && <p><a href={obsidianUrl(V.name, 'Agenti/' + dRole.id + '/00_Index.md')}>Otvoriť priečinok roly v Obsidiane ↗</a></p>}{canWrite && <div className="li-detail-footer"><button className="li-button primary" onClick={() => open({ kind: 'assign', to: roleActor(dRole), summary: roleTag(dRole) })}>Zadať úlohu tejto roli</button></div>}<p className="li-detail-note">Zadanie sa zapíše do registra s menom roly. Rola ho dostane cez Slack #ai-tim: správu skopíruješ jedným tlačidlom z detailu úlohy.</p></>}
               {error && <p className="li-detail-note li-error" role="alert">{error}</p>}
             </section>
           )}
@@ -513,7 +605,6 @@ export default function HqApp({ data, canWrite = false, readOnlyNote = '', vault
       </div>
       <Palette open={palette.open} initial={palette.initial} items={items} onClose={() => setPalette({ open: false, initial: '' })} onUnknown={command} />
       <Briefing open={brief} onClose={() => setBrief(false)} cards={briefCards} />
-      {boot === 'run' && <Boot lines={bootLines} onDone={bootDone} />}
       {voiceOpen && (
         <div className="hq-voice" role="dialog" aria-label="Hlasový príkaz">
           <button type="button" className={'orb' + (voice.listening ? ' on' : '')} onClick={() => (voice.listening ? voice.stop() : voice.start())} aria-label={voice.listening ? 'Zastaviť počúvanie' : 'Počúvať znova'}><Icon name="mic" size={22} /></button>

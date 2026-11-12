@@ -196,84 +196,11 @@ export function Briefing({ open, onClose, cards }) {
 
 /* ---------- „Matrix“ vrstva v štýle LIVE-IN ---------- */
 
-/** Digitálny dážď na pozadí (len nočný režim): znaky v zelenej LIVE-IN, občas oranžová hlava. Šetrí výkon: ~18 snímok/s, stojí pri skrytej karte. */
-export function Rain({ active }) {
-  const ref = useRef(null)
-  useEffect(() => {
-    if (!active || !ref.current) return
-    const cv = ref.current, ctx = cv.getContext('2d'), size = 17
-    const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    const glyphs = 'LIVEIN0123456789⌂∙:+=<>/|ŽŠČ'.split('')
-    const pick = () => glyphs[(Math.random() * glyphs.length) | 0]
-    let cols = [], w = 0, h = 0, raf = 0, last = 0, alive = true
-    const resize = () => {
-      const d = Math.min(1.5, window.devicePixelRatio || 1); w = window.innerWidth; h = window.innerHeight
-      cv.width = Math.round(w * d); cv.height = Math.round(h * d); ctx.setTransform(d, 0, 0, d, 0, 0)
-      cols = Array.from({ length: Math.ceil(w / size) }, () => ({ y: Math.random() * -(h / size), v: 0.3 + Math.random() * 0.85, hot: Math.random() < 0.07 }))
-      ctx.clearRect(0, 0, w, h)
-    }
-    const step = () => {
-      ctx.globalCompositeOperation = 'destination-out'; ctx.fillStyle = 'rgba(0,0,0,0.085)'; ctx.fillRect(0, 0, w, h)   // stopa pomaly mizne do priehľadna
-      ctx.globalCompositeOperation = 'source-over'; ctx.font = `600 ${size - 4}px ui-monospace,SFMono-Regular,Menlo,monospace`; ctx.textAlign = 'center'
-      for (let i = 0; i < cols.length; i++) {
-        const c = cols[i], x = i * size + size / 2, y = c.y * size
-        ctx.fillStyle = c.hot ? 'rgba(244,109,22,0.75)' : 'rgba(72,214,134,0.6)'; ctx.fillText(pick(), x, y - size)
-        ctx.fillStyle = c.hot ? '#ffd1ab' : '#e3ffee'; ctx.fillText(pick(), x, y)
-        c.y += c.v
-        if (y > h + 60 && Math.random() > 0.97) { c.y = Math.random() * -18; c.v = 0.3 + Math.random() * 0.85; c.hot = Math.random() < 0.07 }
-      }
-    }
-    const frame = (t) => { if (!alive) return; raf = requestAnimationFrame(frame); if (t - last < 55 || document.hidden) return; last = t; step() }
-    resize(); window.addEventListener('resize', resize)
-    if (reduce) { for (let i = 0; i < 40; i++) step() } else raf = requestAnimationFrame(frame)
-    return () => { alive = false; cancelAnimationFrame(raf); window.removeEventListener('resize', resize) }
-  }, [active])
-  if (!active) return null
-  return <canvas className="hq-rain" ref={ref} aria-hidden="true" />
-}
-
-/** Text, ktorý sa pri zmene „dešifruje“ zo znakov. Čítačky obrazovky dostanú hneď hotový text. */
-export function Decode({ text }) {
-  const [out, setOut] = useState(text)
-  const first = useRef(true)
-  useEffect(() => {
-    if (first.current) { first.current = false; return }
-    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) { setOut(text); return }
-    const chars = '01<>/|=+∙⌂', n = text.length
-    let i = 0
-    const id = setInterval(() => { i += Math.max(1, Math.ceil(n / 12)); if (i >= n) { clearInterval(id); setOut(text); return } setOut(text.split('').map((c, k) => (k < i || c === ' ' ? c : chars[(Math.random() * chars.length) | 0])).join('')) }, 30)
-    return () => { clearInterval(id); setOut(text) }
-  }, [text])
-  return <span aria-label={text}><span aria-hidden="true">{out}</span></span>
-}
-
 /** Bežiaca páska so živými číslami. Pri prejdení myšou sa zastaví; čítačky dostanú zoznam raz. */
 export function Ticker({ items }) {
   if (!items.length) return null
   const row = (hidden) => <div className="hq-tape-row" aria-hidden={hidden || undefined}>{items.map((it, i) => <span key={i} className={it.tone || ''}><b>{it.label}</b>{it.value}</span>)}</div>
   return <div className="hq-tape" role="list" aria-label="Živé čísla">{row(false)}{row(true)}</div>
-}
-
-/** Úvodná „štartovacia“ obrazovka: vypíše skutočný stav zdrojov a zmizne. Preskočí sa kliknutím alebo klávesom. */
-export function Boot({ lines, onDone }) {
-  const [n, setN] = useState(0)
-  useEffect(() => {
-    const done = () => onDone()
-    const id = setInterval(() => setN((x) => x + 1), 135)
-    const end = setTimeout(done, 135 * (lines.length + 1) + 650)
-    window.addEventListener('keydown', done)
-    return () => { clearInterval(id); clearTimeout(end); window.removeEventListener('keydown', done) }
-  }, [lines.length, onDone])
-  return (
-    <div className="hq-boot" role="status" aria-label="Ústredňa sa načítava" onClick={onDone}>
-      <div className="hq-boot-box">
-        <p className="hd">LIVE-IN <i>//</i> ÚSTREDŇA</p>
-        {lines.slice(0, n).map((l, i) => <p key={i} className={l.tone || ''}><span>&gt; {l.label}</span><em />{l.value}</p>)}
-        {n > lines.length && <p className="ok">VITAJ SPÄŤ<i className="cur" /></p>}
-        <small>klik alebo kláves preskočí</small>
-      </div>
-    </div>
-  )
 }
 
 /** Živý log: posledné udalosti registra a kontroly zdrojov ako riadky konzoly. Len skutočné záznamy. */
@@ -283,6 +210,37 @@ export function Console({ lines }) {
       {lines.map((l, i) => <p key={i} className={l.tone || ''}><time>{l.time}</time><b>{l.tag}</b><span>{l.text}</span></p>)}
       {!lines.length && <p><span>Zatiaľ žiadny záznam.</span></p>}
       <p className="end"><i className="cur" /></p>
+    </div>
+  )
+}
+
+/** Mesačné stĺpce výnosov: minulé mesiace, aktuálny (zvýraznený) a už rezervovaný ďalší (obrys). */
+export function MonthBars({ months, fmt }) {
+  const [tip, setTip] = useState(null)
+  const max = Math.max(1, ...months.map((m) => m.revenue)), W = 320, H = 120, pad = 6, bw = (W - pad * 2) / months.length
+  const cur = tip != null ? months[tip] : months.find((m) => m.kind === 'current') || months[months.length - 1]
+  return (
+    <div className="hq-chart hq-months" onMouseLeave={() => setTip(null)}>
+      <svg viewBox={`0 0 ${W} ${H + 20}`} role="img" aria-label={'Výnosy po mesiacoch: ' + months.map((m) => `${m.label} ${fmt(m.revenue)}`).join('; ')}>
+        {months.map((m, i) => { const h = Math.max(2, (m.revenue / max) * (H - 10)), x = pad + i * bw, w = Math.min(34, bw * 0.62); return (
+          <g key={m.key} className={'col ' + m.kind + (tip === i ? ' on' : '')} onMouseEnter={() => setTip(i)} onClick={() => setTip(i)}>
+            <rect x={x} y={0} width={bw} height={H + 20} fill="transparent" />
+            <rect className="mbar" x={x + (bw - w) / 2} y={H - h} width={w} height={h} rx="5" style={{ animationDelay: i * 50 + 'ms' }} />
+            <text x={x + bw / 2} y={H + 14} textAnchor="middle">{m.label}</text>
+          </g>) })}
+      </svg>
+      <div className="hq-chart-foot"><span><i className="m-past" />uzavreté</span><span><i className="m-cur" />tento mesiac</span><span><i className="m-next" />už rezervované</span>{cur && <b>{cur.label}: {fmt(cur.revenue)}</b>}</div>
+    </div>
+  )
+}
+
+/** Postup k cieľu: začiatok → dnes → cieľ, s popisom. */
+export function GoalBar({ start, now, target, labelStart, labelTarget }) {
+  const span = Math.max(1, target - start), done = Math.max(0, Math.min(100, ((now - start) / span) * 100))
+  return (
+    <div className="hq-goal" role="img" aria-label={`Postup k cieľu: ${now} z ${target}`}>
+      <div className="track"><i style={{ width: done + '%' }} /><b style={{ left: done + '%' }}>{now}</b></div>
+      <div className="ends"><span>{start} · {labelStart}</span><span>{target} · {labelTarget}</span></div>
     </div>
   )
 }

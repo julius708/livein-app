@@ -8,6 +8,7 @@ import { storeForViewer, localMode } from '@/lib/hq-server'
 import { hqDashboard } from '@/lib/hq-data'
 import { hqLive } from '@/lib/hq-live'
 import { loadVault } from '@/lib/hq-vault-server'
+import { loadAgents } from '@/lib/hq-agents-server'
 import './ustredna.css'
 import './ustredna-plus.css'
 
@@ -15,7 +16,8 @@ export const dynamic = 'force-dynamic'
 // Vlastný manifest: po „Pridať na plochu“ na telefóne vznikne samostatná ikona Ústredňa, ktorá sa otvára priamo tu.
 export const metadata = { title: 'Ústredňa', manifest: '/ustredna.webmanifest', appleWebApp: { capable: true, title: 'Ústredňa', statusBarStyle: 'black-translucent' } }
 
-export default async function HqPage() {
+export default async function HqPage({ searchParams }) {
+  const sp = (await searchParams) || {}
   const v = await getViewer()
   if (!v.user) redirect('/login?next=/ustredna')
   if (v.blocked) return <NoAccess email={v.user.email} />
@@ -24,6 +26,7 @@ export default async function HqPage() {
   // Živé údaje z existujúcich modulov appky sa vždy čítajú cez prihláseného používateľa (jeho práva v databáze), aj keď register beží lokálne.
   const live = await hqLive(v.s).catch((e) => { console.error('[hq] live', String(e && e.message).slice(0, 160)); return null })
   const vault = await loadVault(v.s).catch((e) => ({ index: null, source: 'sync', error: String(e && e.message).slice(0, 160) }))
-  const data = await hqDashboard(storeForViewer(v), { actor, local: localMode(), live, vault })
-  return <HqApp data={data} canWrite />
+  const agents = await loadAgents(v.s).catch((e) => ({ snapshot: null, error: String(e && e.message).slice(0, 160) }))
+  const data = await hqDashboard(storeForViewer(v), { actor, local: localMode(), live, vault, agents })
+  return <HqApp data={data} canWrite initialPage={typeof sp.o === 'string' ? sp.o : ''} />
 }
