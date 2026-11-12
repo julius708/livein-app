@@ -1,5 +1,6 @@
 -- Ústredňa: index Obsidian trezoru pre mapu a vyhľadávanie. Len nová tabuľka hq_vault; nič existujúce sa nemení.
 -- Ukladá sa len index (názvy, cesty, štítky, prepojenia poznámok), nie ich text. Jeden riadok na trezor, pri synchronizácii sa nahrádza.
+-- Aplikované v produkcii (LIVE-IN Core) 13. 11. 2026 ako migrácia `ustredna_vault` (verzia 20261112220712).
 -- Návrat: drop table hq_vault;
 create table if not exists hq_vault (
   key text primary key,                       -- 'team' = tímový trezor Live-in International

@@ -68,7 +68,7 @@ Tímový trezor **Live-in International** je v ústredni ako mapa a vyhľadávan
 Osobná pamäť (`Pamat/`) a súkromné priečinky sa neindexujú (`VAULT_SKIP` v `lib/hq-vault.js`).
 
 - **Lokálne** (mimo produkcie, `HQ_VAULT_PATH=<cesta k trezoru>`): server číta trezor priamo z disku, mapa je vždy aktuálna.
-- **V produkcii** server k súborom na počítači nevidí. Index posiela skript z počítača s trezorom do tabuľky `hq_vault` (migrácia `20261115_ustredna_vault`):
+- **V produkcii** server k súborom na počítači nevidí. Index posiela skript z počítača s trezorom do tabuľky `hq_vault` (migrácia `20261115_ustredna_vault`, aplikovaná 13. 11. 2026). Skript potrebuje token agenta (`HQ_AGENT_TOKENS` na serveri); prihlásený admin môže index poslať aj zo svojho prehliadača:
 
 ```sh
 node tools/ustredna/vault-sync.mjs --vault "<cesta k trezoru>" --name "Live-in International" --env <súbor s HQ_URL a HQ_TOKEN>
