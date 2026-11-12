@@ -39,3 +39,5 @@ body:has(#livein-hq){background:#e9ece2}
 #livein-hq .li-agenda a small{display:block;font-size:10px;color:var(--li-muted);margin-top:3px}
 #livein-hq .li-agenda a.attention{background:#fbefdf;border-left-color:var(--li-orange)}
 #livein-hq #li-content>.li-metrics:first-child{margin-top:0}
+/* navigácia ústredne ostáva hore aj pri stredných šírkach (globálne pravidlo appky pre .li-nav jej dávalo order:3, takže skončila pod obsahom bočného panela) */
+#livein-hq .li-nav{order:0;flex-basis:auto;overflow:visible;padding-bottom:0}
