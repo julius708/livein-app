@@ -54,7 +54,7 @@ export default function HqApp({ data, canWrite = false, readOnlyNote = '' }) {
   const taskRow = (t) => (
     <button key={t.taskId} className="li-priority" onClick={() => open({ kind: 'task', id: t.taskId })}>
       <span className={'li-avatar ' + (['blocked', 'result_ready', 'prepared'].includes(t.status) ? 'orange' : '')}><Icon name={UPDATE_ICON[t.status] || 'dot'} /></span>
-      <div><Badge tone={statusOf(t.status).tone}>{statusOf(t.status).label}</Badge><h3>{t.title}</h3><p>{name(t.assigneeId)} · {ago(t.lastAt, now)} · ďalší krok: {t.nextAction}</p></div>
+      <div><Badge tone={statusOf(t.status).tone}>{statusOf(t.status).label}</Badge><h3>{t.title}</h3><p>Zodpovedá {name(t.assigneeId)} · posledná zmena {ago(t.lastAt, now)} ({name(t.lastActorId)}) · ďalší krok: {t.nextAction}</p></div>
       <Icon name="chevron" size={14} />
     </button>
   )

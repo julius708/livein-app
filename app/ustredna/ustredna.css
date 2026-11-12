@@ -26,5 +26,6 @@ body:has(#livein-hq){background:#e9ece2}
 #livein-hq .li-error{color:#9b3c2d!important}
 #livein-hq .li-detail{max-height:calc(100vh - 110px);overflow:auto}
 @media(max-width:560px){#livein-hq{margin:0;border-radius:0}#livein-hq .li-detail{max-height:none}}
-#livein-hq .li-nav button{justify-content:flex-start;width:100%}
+#livein-hq .li-nav button{justify-content:flex-start}
+@media(min-width:821px){#livein-hq .li-nav button{width:100%}}
 #livein-hq button{letter-spacing:normal;text-transform:none}
