@@ -1,6 +1,6 @@
 ## 12. 11. 2026 (noc) – Ústredňa: spoločný register práce ľudí a AI agentov (vetva `claude/ustredna-register`, ešte nenasadené)
 - Nový modul `/ustredna` (admin) v schválenom dizajne: zadanie, prevzatie, krok, blokovanie, výsledok a overenie konkrétnej verzie; API `/api/hq/*` pre Codex a Claude Code s vlastnými tokenmi; nástroj `tools/ustredna/hq.mjs`. Dokumentácia `docs/ustredna/README.md`.
-- Migrácia `20261114_ustredna` zatiaľ NEaplikovaná. Nové premenné `HQ_AGENT_TOKENS`, `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET` nenastavené. Middleware: `/api/hq/*` s Bearer tokenom a `/api/hq/slack` si overuje route sama.
+- Migrácia `20261114_ustredna` aplikovaná 12. 11. 2026 (len nové prázdne tabuľky `hq_*`). Nové premenné `HQ_AGENT_TOKENS`, `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET` nenastavené. Middleware: `/api/hq/*` s Bearer tokenom a `/api/hq/slack` si overuje route sama.
 - Naživo len lokálne (register v súbore). Slack #ai-tim a Asana overené jednou označenou skúškou cez konektory relácie, nie zo servera. Ostatné oblasti ústredne sú v navigácii ako nepripojené.
 
 ## 12. 11. 2026 (večer) – Investície: ukážka, Lazaretská 15, vyhľadávanie na internete

@@ -37,7 +37,7 @@ Pravidlá, ktoré stráži `lib/hq-events.js` (pôvodný modul Codexu, `livein-w
 - `lib/hq-store.js` register nad Supabase; `lib/hq-local.js` lokálny register v súbore (len vývoj); `lib/hq-server.js` identita volajúceho.
 - `lib/hq-connectors.js` Slack a Asana; `lib/hq-data.js` dáta obrazovky.
 - `app/ustredna/` stránka a akcie; `components/ustredna/` obrazovka; `app/api/hq/` API.
-- `supabase/migrations/20261114_ustredna.sql` schéma (návrh, neaplikované); `tools/ustredna/hq.mjs` nástroj pre agentov.
+- `supabase/migrations/20261114_ustredna.sql` schéma (aplikovaná v produkcii 12. 11. 2026); `tools/ustredna/hq.mjs` nástroj pre agentov.
 - Testy: `tests/hq-events.test.mjs`, `tests/hq-store.test.mjs`, `tests/hq-connectors.test.mjs`.
 
 ## API (jeden kontrakt pre UI, Codex, Claude Code a konektory)
@@ -90,16 +90,16 @@ Obrazovka `/ustredna` vyžaduje prihlásenie admina. Lokálny register je súbor
 
 ## Nasadenie a návrat
 
-1. Aplikovať `supabase/migrations/20261114_ustredna.sql` (len nové tabuľky `hq_*`). Návrat: `drop table hq_links, hq_quarantine, hq_sources, hq_actors, hq_events; drop function hq_events_immutable();`
+1. Hotovo 12. 11. 2026: migrácia `20261114_ustredna` je aplikovaná (len nové tabuľky `hq_*`, zatiaľ prázdne). Návrat: `drop table hq_links, hq_quarantine, hq_sources, hq_actors, hq_events; drop function hq_events_immutable();`
 2. Nastaviť `HQ_AGENT_TOKENS` vo Verceli a odovzdať tokeny agentom mimo repozitára a mimo Slacku.
 3. Zlúčiť vetvu do `main` (nasadenie je len commitom do `main`). Návrat: revert commitu; tabuľky `hq_*` nič iné nepoužíva.
 4. Voliteľne nastaviť Slack bota a overiť jednu označenú skúšobnú udalosť.
 
-Kým nie je aplikovaná migrácia, obrazovka ukáže „Register nie je založený“ a žiadne úlohy.
+Register v databáze je založený a prázdny. Skúšobné udalosti z lokálneho behu v ňom nie sú.
 
 ## Čo je naživo a čo čaká (12. 11. 2026)
 
 Naživo, lokálne: register, API, nástroj agentov, obrazovka; jedna skúšobná úloha Claude Code cez celý tok po výsledok.
 Overené cez konektory relácie Claude Code, nie zo servera: jedna označená správa v #ai-tim a jedna skúšobná úloha v Asane.
-Čaká: migrácia v produkcii, tokeny, serverový Slack a Asana, prvá udalosť Codexu, potvrdenie zapracovania cieľovou službou,
+Čaká: zlúčenie do `main`, tokeny, serverový Slack a Asana, prvá udalosť Codexu, potvrdenie zapracovania cieľovou službou,
 adaptér starého súborového registra, všetky ostatné zdroje (pošta, kalendár, HubSpot, Guesty, PriceLabs, WhatsApp, marketing, financie, hlas).

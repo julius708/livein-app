@@ -1,5 +1,5 @@
 -- Ústredňa (modul /ustredna): spoločný register práce ľudí a AI agentov. Len pridáva nové tabuľky hq_*; nič existujúce sa nemení.
--- NÁVRH: v produkcii zatiaľ NEaplikované. Návrat: drop table hq_links, hq_quarantine, hq_sources, hq_actors, hq_events; drop function hq_events_immutable();
+-- Aplikované v produkcii (LIVE-IN Core) 12. 11. 2026 ako migrácia `ustredna` (verzia 20261112202155). Návrat: drop table hq_links, hq_quarantine, hq_sources, hq_actors, hq_events; drop function hq_events_immutable();
 -- Prístup: čítať a pridávať môžu admini (vedenie) a servisný účet `bot` (API agentov). Udalosti sa nedajú meniť ani mazať (len pridávať).
 
 -- udalosti: jediný zdroj stavu úloh; kontrakt `livein-work-event-1` (lib/hq-events.js)
