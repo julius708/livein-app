@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import ChatPanel from './ChatPanel'
 import { saveItemAction, addItemAction, deleteItemAction, setAptFirmAction, newPeriodAction, setPeriodStatusAction, addLinenAction } from '@/app/vyuctovanie/actions'
 import {
   buildGroups, billingStats, matchItem, autoStav, lineCents, counted, missingAmount, eurC, decStr, num, stavyFor, stavClass, isProbable,
@@ -288,6 +289,7 @@ function BoardInner({ periods, period, items: initial, prices, lists, isAdmin })
         </div>
       ))}
       {visible.length === 0 && <section className="card"><p>Nič nezodpovedá filtru.</p></section>}
+      <ChatPanel periodId={period.id} focus={Object.keys(open).filter((k) => open[k]).map((k) => k.split(':').slice(1).join(':')).slice(0, 8)} readOnly={ro} />
       {msg && <div className={`vy-toast ${msg.err ? 'err' : 'ok'}`} role="status" onClick={() => setMsg(null)}>{msg.err || msg.ok}</div>}
     </div>
   )

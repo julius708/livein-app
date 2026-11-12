@@ -29,3 +29,9 @@ Obdobie 2026-10: 239 riadkov z `Vyuctovanie_oktober_2026_zaloha.json` 1:1, kontr
 
 ## Fáza 2 (zatiaľ len návrh)
 Úlohy do Asany od udrzba@live-in.international, onboardingová úloha, sekcia v Účtovníctve, štítky v Gmaile, adresa → byt cez `guru.v_listings` / `guide_cards`, editor cenníka, odoslanie PDF dokladov Simone.
+
+## Chat Pomocník
+Plávajúce tlačidlo „💬 Pomocník“ vo Vyúčtovaní (`components/vyuctovanie/ChatPanel.js`, logika `lib/billing-chat.js`, operácie `lib/billing-ops.js`).
+- Odpovedá o tabuľke (vie v nej hľadať) a **navrhuje** zmeny dát: pridať, upraviť, presunúť, zmazať riadok, firma bytu, cenník. Zmeny sa vykonajú až po potvrdení tlačidlom a znova sa overia na serveri tými istými pravidlami ako úprava v tabuľke (uzavreté obdobie, košické byty, čísla).
+- Zmenu **funkcie** (nový stĺpec, pravidlo, výpočet, vzhľad) chat nespraví okamžite: zapíše ju ako požiadavku do spätnej väzby (`feedback`, strana /vyuctovanie) aj s kontextom rozhovoru a vývojár ju dopracuje.
+- Vyžaduje `ANTHROPIC_API_KEY` vo Verceli. Chat kód aplikácie nemení.
