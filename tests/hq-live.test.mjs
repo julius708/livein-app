@@ -7,10 +7,12 @@ import { mergeSources } from '../lib/hq-core.js'
 const NOW = Date.parse('2026-11-12T10:00:00Z')   // 11:00 v Bratislave
 const d = (x) => ({ data: x })
 const RAW = {
-  facts: d({ arrivals: 3, departures: 2, guests_in_house: 40, tomorrow_arrivals: 5, listings: 12 }),
+  facts: d({ arrivals: 3, departures: 2, guests_in_house: 40, tomorrow_arrivals: 5, listings: 12, facts: { apartments_now: 137, apartments_start: 69, start_label: 'začiatok 2026', end_2026: '160 až 170', goal_2027: 345, goal: 1000, goal_year: 2031, pace_month: 15 } }),
+  leadStats: d({ new7: 15, prev7: 6, recentNew: 14, oldNew: 823, clients: 55 }),
+  activity: d({ active_users: 13, usage_apps: [{ app: 'app', views: 954, people: 13 }, { app: 'cs', views: 65, people: 4 }] }),
   dash: d({ occupancy: 74, booking_pct: 72, airbnb_pct: 25, next7_arrivals: 105, avg_stay: 4.4, month_nights: 2028, week: [{ day: '2026-11-12', arr: 3, dep: 2 }, { day: '2026-11-13', arr: 5, dep: 1 }], cities: [{ city: 'Mesto', guests: 38, staying: 20 }, { city: 'Iné', guests: 2, staying: 1 }], arrivals_list: [{ name: 'Skúšobný byt A', city: 'Mesto', guests: 2, nights: 3, source: 'Booking' }] }),
-  work: d({ today_todo: 1, today_packed: 4, tomorrow_total: 6 }),
-  numbers: d({ updated_at: '2026-11-12T09:20:00Z', stays_ytd: 500, stays_ytd_prev: 100, nights_ytd: 2000, guests_since_2025: 1700 }),
+  work: d({ today_todo: 1, today_packed: 4, tomorrow_total: 6, today_same_day: 14, early_today: 1 }),
+  numbers: d({ updated_at: '2026-11-12T09:20:00Z', stays_ytd: 500, stays_ytd_prev: 100, nights_ytd: 2000, nights_ytd_prev: 400, guests_since_2025: 1700, nights_month: 1860, nights_month_prev_year: 1137 }),
   leadCounts: d({ new: 2, contacted: 0, viewing: 1, offer: 0 }),
   overdue: d({ rows: [{ id: 'l1', name: 'Lead Jeden', city: 'Mesto', assigned_to: 'obchod@example.test', due_at: '2026-11-11T10:00:00Z' }], count: 1 }),
   taskLeads: d([{ id: 'l1', name: 'Lead Jeden', city: 'Mesto' }, { id: 'l2', name: 'Lead Dva', city: 'Mesto' }, { id: 'l3', name: 'Lead Tri', city: 'Mesto' }]),
@@ -23,8 +25,8 @@ const RAW = {
   ]),
   crmSync: d({ last_run: '2026-11-12T09:55:00Z' }), queue: d([{ id: 1, last_error: null }]),
   maint: d([{ id: 'c1', ref: 'U-1', listing_name: 'Skúšobný byt A', category: 'voda', symptoms: 'kvapká', severity: 'critical', status: 'new', assignee_email: null }, { id: 'c2', listing_name: 'Skúšobný byt B', severity: 'low', status: 'in_progress', assignee_email: 'technik@example.test' }]),
-  damages: d([{ gid: '1', name: 'x', listing: 'Skúšobný byt A', problem: 'rozbitý pohár', url: 'https://app.asana.com/0/0/1', section: 'Nové' }]),
-  economy: d({ updated_at: '2026-11-12T06:00:00Z' }),
+  damages: d([{ gid: '1', name: 'x', listing: 'Skúšobný byt A', problem: 'rozbitý pohár', url: 'https://app.asana.com/0/0/1', section: 'Nové', due_on: '2026-11-05' }, { gid: '2', name: 'y', listing: 'Skúšobný byt B', url: 'https://app.asana.com/0/0/2', due_on: '2026-11-20' }]),
+  economy: d({ updated_at: '2026-11-12T06:00:00Z', summary: { asOf: '2026-11-12', units: 100, month: { key: '2026-11', revenue: 250000, nights: 1800, occupancy: 71.5, adr: 139, revpan: 99, whole: true }, toDate: 96000, prev: { key: '2026-10', revenue: 200000 }, lastYear: null, next: { key: '2026-12', revenue: 120000 }, vsPrev: 25, vsLastYear: null, months: [{ key: '2026-10', revenue: 200000, kind: 'past' }, { key: '2026-11', revenue: 250000, kind: 'current' }, { key: '2026-12', revenue: 120000, kind: 'booked' }] } }),
   billing: d({ month: '2026-11', status: 'open', stats: { sumC: 123456, missing: 2, zistit: 1, patrik: 0, apts: 9 } }),
   invProps: d([{ status: 'active' }, { status: 'sold' }, { status: 'new' }]), invInq: d([{ status: 'new' }, { status: 'closed' }]),
   invSources: d([{ key: 'a', name: 'Zdroj A', enabled: true, last_ok_at: '2026-11-12T07:00:00Z' }]),
@@ -96,9 +98,27 @@ test('grafy a živé čísla: len z toho, čo zdroje vrátili; mesiac vyúčtova
   const L = buildLive({ ...RAW, billing: d({ month: '2026-10-01', status: 'open', stats: { sumC: 100, missing: 3, zistit: 0, patrik: 0, apts: 1 } }) }, NOW)
   assert.deepEqual(L.charts.week.map((x) => [x.arr, x.dep, x.today]), [[3, 2, true], [5, 1, false]])
   assert.deepEqual(L.charts.channels.map((c) => c.pct), [72, 25, 3]); assert.deepEqual(L.charts.cities.map((c) => c.value), [38, 2])
-  assert.deepEqual(L.charts.funnel.map((f) => f.value), [2, 0, 1, 0]); assert.equal(L.charts.occupancy, 74)
+  assert.deepEqual(L.charts.funnel.map((f) => f.value), [14, 0, 1, 0]); assert.equal(L.charts.occupancy, 74)   // „Nový“ = len posledných 30 dní
   assert.equal(L.kpis.arrivals, 3); assert.equal(L.kpis.next7, 105); assert.equal(L.kpis.staysYtd, 500); assert.equal(L.kpis.overdueLeads, 1)
   assert.match(L.areas.finance.metrics[0].label, /október 2026/); assert.ok(L.signals.some((s) => /Vyúčtovanie október 2026: 3 riadky/.test(s.title)))
   const empty = buildLive({}, NOW)
   assert.equal(empty.charts.week, null); assert.equal(empty.charts.channels, null); assert.equal(empty.charts.funnel, null); assert.equal(empty.kpis.arrivals, null)
+})
+
+test('prehľad pre vedenie: peniaze, medziročný rast, portfólio voči cieľu, leady, dnešná prevádzka a tím', () => {
+  const c = buildLive(RAW, NOW).ceo
+  assert.deepEqual([c.money.revenue, c.money.toDate, c.money.vsPrev, c.money.vsLastYear, c.money.adr, c.money.next.revenue], [250000, 96000, 25, null, 139, 120000])
+  assert.match(c.money.label, /november 2026/); assert.deepEqual(c.money.months.map((m) => m.kind), ['past', 'current', 'booked'])
+  assert.deepEqual(c.nights, { month: 1860, lastYear: 1137, change: 64 })
+  assert.deepEqual([c.growth.staysChange, c.growth.nightsChange, c.growth.guestsSince2025], [400, 400, 1700])
+  assert.deepEqual([c.portfolio.now, c.portfolio.start, c.portfolio.target, c.portfolio.goal2027, c.portfolio.goal], [137, 69, 170, 345, 1000])
+  assert.deepEqual(c.leads, { new7: 15, prev7: 6, change: 150, overdue: 1, recentNew: 14, oldNew: 823, clients: 55 })
+  assert.deepEqual([c.ops.sameDay, c.ops.early, c.ops.tomorrowArrivals, c.ops.damagesOpen, c.ops.damagesOverdue, c.ops.repairsOpen], [14, 1, 5, 2, 1, 2])
+  assert.equal(c.team.activeUsers, 13); assert.equal(c.team.apps[0].label, 'app')
+  const L = buildLive(RAW, NOW)
+  assert.ok(L.signals.some((s) => /1 škoda v Asane po termíne/.test(s.title)))
+  assert.deepEqual([L.charts.funnel[0].label, L.charts.funnel[0].value], ['Nový (30 dní)', 14])   // staré odložené leady nenafukujú lievik
+  const empty = buildLive({}, NOW).ceo
+  assert.equal(empty.money, null); assert.equal(empty.nights, null); assert.equal(empty.portfolio, null); assert.equal(empty.leads, null); assert.equal(empty.team, null); assert.equal(empty.ops.sameDay, null)
+  assert.equal(buildLive({ ...RAW, economy: d({ updated_at: '2026-11-12T06:00:00Z', summary: null }) }, NOW).ceo.money, null)   // podklad bez súhrnu nedá sumy
 })

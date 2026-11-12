@@ -81,6 +81,32 @@ node tools/ustredna/vault-sync.mjs --vault "<cesta k trezoru>" --stats     # len
 s grafom trezoru (poznámky a ich odkazy, priečinky ako krúžky; `vaultGraph`). Uzly sa dajú ťahať, mapa posúvať a približovať, hľadanie uzol vycentruje,
 skupiny sa dajú skrývať, dvojklik uzol otvorí (úlohu, človeka, oblasť alebo poznámku v Obsidiane).
 
+## Agenti: zoznam rolí z dôkazov
+
+Oblasť **Ľudia a agenti** ukazuje každú rolu (A1…, P1…, serverové a GPT roly) a pri nej, čo sa o nej naozaj vie. Zapnutý rozvrh nie je dôkaz práce.
+
+- Dôkazy: rozvrhy (automatizácie GPT/Codex, cloudové rutiny Claude), výstupy (súbory rolí na disku), hlásenia v Slacku #ai-tim a zápisy v Braine (`Agenti/<ID>/` v trezore; podpriečinok `Claude/` sú zápisy Claude).
+- Stavy (`lib/hq-agents.js`): **Dodáva** = výstup za posledné 3 dni; **Beží podľa rozvrhu** = zapnutý rozvrh a v tom istom prostredí výstup do 14 dní; **Rozvrh beží, výstup nevidno**; **Ticho**; **Len v registri**. Stav sa počíta k času zberu; prehľad starší ako 36 hodín je označený.
+- Zápisy v Braine berie ústredňa z indexu trezoru (už je v databáze). Rozvrhy, výstupy a Slack posiela zberný skript:
+
+```bash
+node tools/ustredna/agents-sync.mjs --outputs "<Disk>/Live-in/Vystupy_agentov" --codex ~/.codex \
+  --codex-out "<priečinok Codexu>" --codex-register "<REGISTER.json>" \
+  --claude "<uložený zoznam rutín Claude>" --slack slack.json --asks asks.json --stats   # alebo --out / --env
+```
+
+  Skript číta len metadáta (názvy a stav rozvrhov, čas posledného behu, počty a časy súborov). Zadania agentov ani obsah súborov nečíta a neposiela.
+  Zoznam rutín Claude, súhrn Slacku (`slack.json`) a otázky rolí (`asks.json`) pripraví relácia Claude cez svoje konektory; skript sám do Slacku ani do cloudu Claude nevidí.
+- Prehľad sa ukladá ako riadok `agents` v tabuľke `hq_vault` (`POST /api/hq/agents`, admin alebo agent so schopnosťou `work`); nová tabuľka netreba. Server ho pred uložením očistí (`sanitizeAgents`).
+- **Otázky rolí na vedenie** (`asks`) sa zobrazia v „Moja pozornosť“ a na prehľade ako „Agent čaká na teba“. Je to tvrdenie roly z jej hlásenia, nie overený fakt. Tlačidlo **Rozhodnúť** predvyplní zadanie s menom roly; odpoveď sa zapíše do registra pod menom prihláseného človeka.
+- **Doručenie agentom**: kým server nemá `SLACK_BOT_TOKEN`, detail úlohy ponúka „Skopírovať správu pre Slack“ (so značkou `hq:<úloha>#<poradie>`) a odkaz na #ai-tim. S tokenom posiela ústredňa udalosti do #ai-tim sama.
+- Register práce (zadania a výsledky) ostáva oddelený: zapisovať doň vedia len vykonávatelia s identitou (Claude Code, Codex, ľudia).
+
+## Prehľad pre vedenie
+
+Úvod ukazuje: výnosy mesiaca (len účtu s prístupom do Ekonomiky), noci oproti vlaňajšku, portfólio oproti cieľu, nové leady za 7 dní, čo čaká na rozhodnutie, dnešnú prevádzku, obchod, rast a AI tím. Čo sa nenačíta, je „–“.
+Priamy odkaz na oblasť: `/ustredna?o=agents` (vykreslí server) alebo `/ustredna#agents`.
+
 ## Ovládanie
 
 - **Paleta príkazov** `⌘K` (alebo `/`): hľadá úlohy, ľudí, oblasti, moduly appky, signály a poznámky z Obsidianu; obsahuje aj akcie (zadať úlohu, brífing, obnoviť, režim).
@@ -89,7 +115,7 @@ skupiny sa dajú skrývať, dvojklik uzol otvorí (úlohu, človeka, oblasť ale
   Príkazy: „Otvor prevádzku“, „Nájdi …“, „Zadaj úlohu Codexu: …“, „Brífing“, „Nočný režim“, „Obnov“. Zadanie úlohy len predvyplní formulár; zápis potvrdzuje človek.
 - **Brífing priorít**: priority jedna po druhej (`←` `→`, `Esc`).
 - **Živé obnovovanie**: údaje sa načítajú znova každú minútu, keď je karta viditeľná a človek práve nepíše; tlačidlo NAŽIVO obnoví hneď.
-- **Matrix a denný režim**: predvolený je tmavý „Matrix“ režim v zelenej a oranžovej LIVE-IN (digitálny dážď na pozadí, rámiky panelov, bežiaca páska so živými číslami, živý log, štartovacia sekvencia so skutočným stavom zdrojov raz za reláciu prehliadača). Denný režim je svetlý; prepínač je v hornej lište a voľbu si pamätá prehliadač. Písmo a veľkosť nadpisov sú zladené s live-in.international (Figtree). Všetky animácie sa vypnú pri nastavení „obmedziť pohyb“.
+- **Nočný a denný režim**: predvolený je tmavý režim v zelenej a oranžovej LIVE-IN (tmavé sklo, slnko s horizontom, veľké písmo, bežiaca páska so živými číslami). Od 13. 11. 2026 bez digitálneho dažďa, riadkovania obrazovky, rohových značiek, blikania a štartovacej sekvencie. Denný režim je svetlý; prepínač je v hlavičke a v palete.
 - **Tabuľa úloh** v oblasti Ľudia a agenti: stĺpce podľa stavu. Karty sa nedajú presúvať, lebo stav mení len vykonávateľ vlastnou udalosťou.
 
 ## Súbory
@@ -98,6 +124,7 @@ skupiny sa dajú skrývať, dvojklik uzol otvorí (úlohu, človeka, oblasť ale
 - `lib/hq-store.js` register nad Supabase; `lib/hq-local.js` lokálny register v súbore (len vývoj); `lib/hq-server.js` identita volajúceho.
 - `lib/hq-connectors.js` Slack a Asana; `lib/hq-data.js` dáta obrazovky; `lib/hq-live.js` a `lib/hq-live-core.js` živé údaje z modulov appky.
 - `lib/hq-vault.js`, `lib/hq-vault-fs.js`, `lib/hq-vault-server.js` Obsidian; `lib/hq-graph.js` mapa; `lib/hq-voice.js` príkazy.
+- `lib/hq-agents.js`, `lib/hq-agents-fs.js`, `lib/hq-agents-server.js` agenti z dôkazov; `tools/ustredna/agents-sync.mjs` zberný skript; `lib/hq-economy.js` súhrn výnosov pre prehľad.
 - `app/ustredna/` stránka a akcie; `components/ustredna/` obrazovka; `app/api/hq/` API.
 - `supabase/migrations/20261114_ustredna.sql` schéma (aplikovaná v produkcii 12. 11. 2026); `tools/ustredna/hq.mjs` nástroj pre agentov.
 - Testy: `tests/hq-events.test.mjs`, `tests/hq-store.test.mjs`, `tests/hq-connectors.test.mjs`.
