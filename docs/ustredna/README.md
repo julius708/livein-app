@@ -7,6 +7,15 @@ s pravdivým stavom „nepripojené“ a odkazom na existujúci modul appky. Uk�
 
 Prístup: zatiaľ len admini. Modul je v `lib/modules.js` ako `ustredna`.
 
+## Na telefóne
+
+Ústredňa sa dá mať ako samostatná ikona na ploche telefónu (nie je to appka z obchodu, je to tá istá stránka v režime na celú obrazovku).
+
+- iPhone: otvor `app.live-in.international/ustredna` v Safari, prihlás sa, potom Zdieľať → Pridať na plochu.
+- Android: otvor to isté v Chrome, potom ponuka ⋮ → Pridať na plochu alebo Inštalovať aplikáciu.
+
+Ikona sa volá „Ústredňa“ a otvára sa priamo na ústredni. Prihlásenie je rovnaké ako v appke.
+
 ## Ako to funguje
 
 Stav každej úlohy je posledná prijatá udalosť. Udalosti sa len pridávajú, nemenia sa ani nemažú.
