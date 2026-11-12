@@ -3,6 +3,7 @@ import './globals.css'
 import './livein-design.css'
 import './workspace.css'
 import './glass.css'
+import './polish.css'
 
 const figtree = Figtree({ subsets: ['latin', 'latin-ext'], weight: ['400', '500', '600', '700', '800'], display: 'swap', variable: '--font-figtree' })
 

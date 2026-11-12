@@ -1,0 +1,18 @@
+/* Doladenie vzhľadu (12. 11. 2026): malé opravy nad existujúcim dizajnom, bez zmeny funkcií. Načítava sa ako posledný štýl. */
+
+/* Domov: šesť skupín nástrojov v dvoch vyrovnaných radoch (predtým 5 + 1 osamotená) */
+@media(min-width:761px){.hg-groups{grid-template-columns:repeat(3,minmax(0,1fr))}}
+/* Domov: popis nástroja na dva riadky namiesto odrezania po pár slovách */
+.hg-panel .tiles.compact .tile p{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.35}
+
+/* Plávajúca hlavička: obsah pri rolovaní nepresvitá v úzkom pásiku nad ňou */
+@media(min-width:821px){html:has(.li-masthead)::before{content:"";position:fixed;left:0;right:0;top:0;height:14px;z-index:29;pointer-events:none;-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);background:linear-gradient(#eef2ebf5,#eef2ebb8)}}
+/* Skok na kotvu neskončí pod hlavičkou */
+:target,.li-main-workspace :is(h1,h2,h3)[id]{scroll-margin-top:112px}
+
+/* Záložky z odkazov (Správa a pod.): rovnaké „pilulky“ ako inde v appke namiesto podčiarknutia */
+.tabs:has(>a){border-bottom:0;padding:5px;gap:4px;border-radius:999px;width:fit-content;max-width:100%}
+.tabs>a{border-bottom:0;margin-bottom:0;padding:9px 16px;border-radius:999px;font-weight:600;transition:background .15s,color .15s}
+.tabs>a:hover{background:#173e2c0f;color:#173E2C}
+.tabs>a.on{background:#173E2C;color:#FFFEFB;box-shadow:inset 0 1px 0 #ffffff40,0 6px 14px -8px #173e2c80}
+@media(prefers-reduced-transparency:reduce),(prefers-contrast:more){html:has(.li-masthead)::before{-webkit-backdrop-filter:none;backdrop-filter:none;background:#eef2eb}}
