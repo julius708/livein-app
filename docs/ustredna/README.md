@@ -61,11 +61,43 @@ Pravidlá: čo sa nepodarí načítať, sa zobrazí ako „–“ a zdroj dostan
 Čo appka nemá, a preto to v ústredni nie je: čítanie firemnej pošty (Gmail, Outlook), WhatsApp, Google Calendar, výkon videí a kampaní, vlastné prepojenie PriceLabs
 (jeho údaje sú len vo vnútri podkladu Ekonomiky z Ringu) a správy hostí z Guesty Inboxu.
 
+## Obsidian a mapa firmy
+
+Tímový trezor **Live-in International** je v ústredni ako mapa a vyhľadávanie. Do ústredne ide len index: názov, cesta, štítky, odkazy medzi poznámkami,
+čas zmeny a počet slov. Text poznámok ostáva v Obsidiane; kliknutie na poznámku ju otvorí cez `obsidian://` na zariadení, kde je trezor.
+Osobná pamäť (`Pamat/`) a súkromné priečinky sa neindexujú (`VAULT_SKIP` v `lib/hq-vault.js`).
+
+- **Lokálne** (mimo produkcie, `HQ_VAULT_PATH=<cesta k trezoru>`): server číta trezor priamo z disku, mapa je vždy aktuálna.
+- **V produkcii** server k súborom na počítači nevidí. Index posiela skript z počítača s trezorom do tabuľky `hq_vault` (migrácia `20261115_ustredna_vault`):
+
+```sh
+node tools/ustredna/vault-sync.mjs --vault "<cesta k trezoru>" --name "Live-in International" --env <súbor s HQ_URL a HQ_TOKEN>
+node tools/ustredna/vault-sync.mjs --vault "<cesta k trezoru>" --stats     # len počty, nič sa neposiela
+```
+
+  Stav zdroja „Obsidian“ ukazuje čas poslednej synchronizácie; po 48 hodinách bez synchronizácie je „neaktuálne“.
+
+**Mapa** (`components/ustredna/Graph.js`, bez knižníc) spája firemnú vrstvu (ústredňa → oblasti → zdroje, ľudia a agenti → úlohy; `lib/hq-graph.js`)
+s grafom trezoru (poznámky a ich odkazy, priečinky ako krúžky; `vaultGraph`). Uzly sa dajú ťahať, mapa posúvať a približovať, hľadanie uzol vycentruje,
+skupiny sa dajú skrývať, dvojklik uzol otvorí (úlohu, človeka, oblasť alebo poznámku v Obsidiane).
+
+## Ovládanie
+
+- **Paleta príkazov** `⌘K` (alebo `/`): hľadá úlohy, ľudí, oblasti, moduly appky, signály a poznámky z Obsidianu; obsahuje aj akcie (zadať úlohu, brífing, obnoviť, režim).
+  Veta, ktorá nie je výsledok hľadania, sa po Enter vyloží ako príkaz (`lib/hq-voice.js`).
+- **Hlas**: tlačidlo mikrofónu. Reč rozpoznáva prehliadač (Web Speech API; Chrome posiela zvuk Googlu), ústredňa dostane len hotový text.
+  Príkazy: „Otvor prevádzku“, „Nájdi …“, „Zadaj úlohu Codexu: …“, „Brífing“, „Nočný režim“, „Obnov“. Zadanie úlohy len predvyplní formulár; zápis potvrdzuje človek.
+- **Brífing priorít**: priority jedna po druhej (`←` `→`, `Esc`).
+- **Živé obnovovanie**: údaje sa načítajú znova každú minútu, keď je karta viditeľná a človek práve nepíše; tlačidlo NAŽIVO obnoví hneď.
+- **Matrix a denný režim**: predvolený je tmavý „Matrix“ režim v zelenej a oranžovej LIVE-IN (digitálny dážď na pozadí, rámiky panelov, bežiaca páska so živými číslami, živý log, štartovacia sekvencia so skutočným stavom zdrojov raz za reláciu prehliadača). Denný režim je svetlý; prepínač je v hornej lište a voľbu si pamätá prehliadač. Písmo a veľkosť nadpisov sú zladené s live-in.international (Figtree). Všetky animácie sa vypnú pri nastavení „obmedziť pohyb“.
+- **Tabuľa úloh** v oblasti Ľudia a agenti: stĺpce podľa stavu. Karty sa nedajú presúvať, lebo stav mení len vykonávateľ vlastnou udalosťou.
+
 ## Súbory
 
 - `lib/hq-events.js` kontrakt a validácia; `lib/hq-core.js` vykonávatelia, operácie, projekcie; `lib/hq-labels.js` popisky a oblasti.
 - `lib/hq-store.js` register nad Supabase; `lib/hq-local.js` lokálny register v súbore (len vývoj); `lib/hq-server.js` identita volajúceho.
-- `lib/hq-connectors.js` Slack a Asana; `lib/hq-data.js` dáta obrazovky.
+- `lib/hq-connectors.js` Slack a Asana; `lib/hq-data.js` dáta obrazovky; `lib/hq-live.js` a `lib/hq-live-core.js` živé údaje z modulov appky.
+- `lib/hq-vault.js`, `lib/hq-vault-fs.js`, `lib/hq-vault-server.js` Obsidian; `lib/hq-graph.js` mapa; `lib/hq-voice.js` príkazy.
 - `app/ustredna/` stránka a akcie; `components/ustredna/` obrazovka; `app/api/hq/` API.
 - `supabase/migrations/20261114_ustredna.sql` schéma (aplikovaná v produkcii 12. 11. 2026); `tools/ustredna/hq.mjs` nástroj pre agentov.
 - Testy: `tests/hq-events.test.mjs`, `tests/hq-store.test.mjs`, `tests/hq-connectors.test.mjs`.

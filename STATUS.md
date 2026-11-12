@@ -1,3 +1,8 @@
+## 13. 11. 2026 – Ústredňa: Obsidian, mapa firmy, paleta príkazov, hlas, živé obnovovanie, nový vzhľad (vetva `claude/ustredna-wow`, ešte nenasadené)
+- Obsidian: index tímového trezoru Live-in International (názvy, štítky, prepojenia; bez textu poznámok) ako interaktívna mapa a vyhľadávanie; poznámky sa otvárajú v Obsidiane. Lokálne sa číta z disku, v produkcii cez `tools/ustredna/vault-sync.mjs` do `hq_vault` (migrácia `20261115_ustredna_vault` zatiaľ NEaplikovaná).
+- Nové ovládanie: paleta príkazov (⌘K), hlasové príkazy v prehliadači, brífing priorít, tabuľa úloh, obnovovanie každú minútu, grafy (príchody a odchody, kanály, mestá, cesta leadu), denný a nočný režim.
+- Guesty je „naživo“ s časom posledného hodinového prepočtu čísel z rezervácií (`home_numbers.updated_at`).
+
 ## 12. 11. 2026 (noc) – Ústredňa: živé údaje z existujúcich modulov a opravy po kontrole Codexu (vetva `claude/ustredna-zdroje`)
 - Ústredňa číta rezervácie a obsadenosť, údržbu, Asanu (škody), CRM a obhliadky, stav synchronizácie HubSpotu, investície, obsah, newsletter a vyúčtovanie z existujúcich tabuliek a funkcií appky (`lib/hq-live.js`). Len čítanie; žiadne nové prepojenia ani premenné.
 - Opravené dva nálezy nezávislej kontroly Codexu: opakovanie s rovnakým kľúčom je duplicita len pri úplnej zhode obsahu (F1) a register `hq_actors` platí aj pre zabudovaných agentov (F2).
