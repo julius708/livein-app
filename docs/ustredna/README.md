@@ -171,6 +171,8 @@ Ak ústredňa neodpovedá, nástroj skončí chybou a výslovne napíše, že ud
 | `ASANA_TOKEN` | vytváranie úloh v Asane (už ho používa Údržba) | pre ústredňu neoverené |
 | `HQ_LOCAL_STORE` | cesta k lokálnemu registru v súbore; funguje len mimo produkcie | len lokálne |
 
+Tokeny pripraví človek jedným príkazom: `node tools/ustredna/token-setup.mjs`. Skript vytvorí token pre Codex a pre Claude Code, uloží ich do `~/.config/livein-ustredna/{codex,claude-code}.env` (čitateľné len pre daného používateľa, formát pre `--env`) a hodnotu pre `HQ_AGENT_TOKENS` dá do schránky. Tokeny nevypisuje a nikam neposiela; do Vercelu ich vkladá človek. Existujúce tokeny bez `--rotate` neprepíše.
+
 Agenti v produkcii zapisujú cez servisný účet (`SUPABASE_SERVICE_ROLE_KEY` alebo `CRM_BOT_EMAIL`/`CRM_BOT_PASSWORD` s rolou `bot`).
 
 ## Lokálny beh
