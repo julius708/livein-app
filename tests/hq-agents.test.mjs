@@ -40,7 +40,7 @@ test('prijatý prehľad sa očistí: neznáme polia, zlé roly a zlé časy vypa
   assert.deepEqual(Object.keys(s).sort(), ['asOf', 'asks', 'coverage', 'outputs', 'roles', 'schedules', 'slack', 'v'])
   assert.deepEqual(s.roles, [{ id: 'A1', name: 'Atlas', func: 'Koordinátor' }])
   assert.deepEqual(s.schedules, [{ runtime: 'GPT', role: 'A15', name: 'LIVE-IN A15', every: 'každú hodinu', active: true, lastRun: h(1), ok: null }])
-  assert.deepEqual(s.outputs, [{ runtime: 'Claude', role: 'A7', where: 'Disk', files: 66, last: h(5) }])
+  assert.deepEqual(s.outputs, [{ runtime: 'Claude', role: 'A7', where: 'Disk', files: 66, last: h(5), learn: 0, learnLast: null }])
   assert.deepEqual(s.slack, [{ runtime: 'Claude', role: 'A19', last: h(3), count: 14 }])
   assert.deepEqual(s.asks, [{ role: 'A19', at: h(3), text: 'Kto je vlastník leadov?', context: 'A19 hlási…' }])
   assert.ok(!JSON.stringify(s).includes('tajné') && !JSON.stringify(s).includes('obsah správy'))
@@ -109,4 +109,54 @@ test('zápisy v Braine: priečinok Claude sú zápisy Claude, meno roly je z nad
 test('otázky rolí na vedenie prejdú s menom roly, najnovšie prvé', () => {
   const v = buildAgents(snap({ roles: [{ id: 'A19', name: 'Orion' }], asks: [{ role: 'A2', at: h(10), text: 'Kto schvaľuje SOP?' }, { role: 'A19', at: h(4), text: 'Ktorí agenti majú bežať?', context: 'A19 hlási…' }] }), null, NOW)
   assert.deepEqual(v.asks.map((a) => [a.role, a.name, a.text]), [['A19', 'Orion', 'Ktorí agenti majú bežať?'], ['A2', '', 'Kto schvaľuje SOP?']])
+})
+
+test('denné učenie medzi výstupmi je zápis poznatkov, aj keď priečinok roly v trezore mlčí', () => {
+  const ix = { syncedAt: h(0), notes: [{ path: 'Agenti/A19/2026-10-19_Poznamka.md', title: 'Poznámka', mtime: h(25 * 24) }, { path: 'Agenti/A11/Claude/Poznatok.md', title: 'Poznatok', mtime: h(30 * 24) }] }
+  const v = buildAgents(snap({
+    outputs: [
+      { runtime: 'Claude', role: 'A11', where: 'Disk · Zrkadlo_Obsidian/Vystupy_agentov', files: 97, last: h(5), learn: 12, learnLast: h(5) },
+      { runtime: 'Claude', role: 'A11', where: 'Disk · Live-in/Vystupy_agentov', files: 13, last: h(4 * 24), learn: 3, learnLast: h(4 * 24) },
+      { runtime: 'Claude', role: 'A27', where: 'Disk · Live-in/Vystupy_agentov', files: 24, last: h(2) },
+      { runtime: 'GPT', role: 'A6b', where: 'Codex · pracovný priečinok', files: 40, last: h(3), learn: 1, learnLast: h(32 * 24) },
+      { runtime: 'Claude', role: 'A5', where: 'Disk', files: 3, last: h(1), learn: -4, learnLast: 'včera' },
+    ],
+  }), ix, NOW)
+  const by = Object.fromEntries(v.roles.map((r) => [r.id, r]))
+  assert.deepEqual(by.A11.learn, { notes: 15, last: h(5) })     // oba priečinky výstupov spolu, čas najnovšieho
+  assert.equal(by.A11.claude.files, 110)
+  assert.equal(by.A27.learn, null)                              // výstup áno, učenie nie
+  assert.equal(by.A5.learn, null)                               // nezmyselný počet a čas vypadnú
+  assert.equal(by.A19.learn, null)
+  assert.equal(by.A19.brain.last, h(25 * 24))
+  const t = v.totals
+  assert.deepEqual([t.learnRoles, t.learnFresh], [2, 1])        // A11 a A6b; čerstvé len A11
+  assert.equal(t.brainLast, h(25 * 24))                         // priečinky rolí v trezore: staré
+  assert.equal(t.knowLast, h(5))                                // posledný zápis poznatkov: dnešné učenie
+  assert.deepEqual([t.knowLastClaude, t.knowLastGpt], [h(5), h(25 * 24)])
+  assert.equal(t.learnLastGpt, h(32 * 24))
+})
+
+test('prehľad bez učenia (staršia verzia zberu) sa číta ďalej', () => {
+  const v = buildAgents(snap({ outputs: [{ runtime: 'Claude', role: 'A7', where: 'Disk', files: 5, last: h(2) }] }), null, NOW)
+  assert.equal(v.roles[0].learn, null)
+  assert.deepEqual([v.totals.learnRoles, v.totals.learnLast, v.totals.knowLast], [0, null, null])
+})
+
+test('zber výstupov spočíta súbory učenia zvlášť a spojí priečinky tej istej roly', async () => {
+  const fs = await import('node:fs'), os = await import('node:os'), path = await import('node:path')
+  const { scanOutputs } = await import('../lib/hq-agents-fs.js')
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'hq-out-'))
+  const put = (rel, when) => { const f = path.join(root, rel); fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, 'x'); fs.utimesSync(f, when, when) }
+  const d = (n) => new Date(NOW - n * 86400e3)
+  put('A11/2026-11-13_A11.md', d(0)); put('A11/2026-11-12_A11_UCENIE.md', d(1)); put('A11/2026-11-09_A11_ucenie.md', d(4)); put('A11_sensitive/poznamka.md', d(2))
+  put('A27/latest.md', d(0)); put('Poznamky/UCENIE.md', d(0)); put('A3/.skryte/2026_UCENIE.md', d(0))
+  try {
+    const out = Object.fromEntries(scanOutputs(root, { runtime: 'Claude', where: 'Disk' }).map((o) => [o.role, o]))
+    assert.deepEqual(Object.keys(out).sort(), ['A11', 'A27'])   // priečinok bez ID roly a skryté súbory sa nepočítajú
+    assert.deepEqual([out.A11.files, out.A11.learn], [4, 2])
+    assert.equal(out.A11.last, d(0).toISOString())
+    assert.equal(out.A11.learnLast, d(1).toISOString())
+    assert.deepEqual([out.A27.learn, out.A27.learnLast], [0, null])
+  } finally { fs.rmSync(root, { recursive: true, force: true }) }
 })

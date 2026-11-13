@@ -87,10 +87,12 @@ Oblasť **Ľudia a agenti** ukazuje každú rolu (A1…, P1…, serverové a GPT
 
 - Dôkazy: rozvrhy (automatizácie GPT/Codex, cloudové rutiny Claude), výstupy (súbory rolí na disku), hlásenia v Slacku #ai-tim a zápisy v Braine (`Agenti/<ID>/` v trezore; podpriečinok `Claude/` sú zápisy Claude).
 - Stavy (`lib/hq-agents.js`): **Dodáva** = výstup za posledné 3 dni; **Beží podľa rozvrhu** = zapnutý rozvrh a v tom istom prostredí výstup do 14 dní; **Rozvrh beží, výstup nevidno**; **Ticho**; **Len v registri**. Stav sa počíta k času zberu; prehľad starší ako 36 hodín je označený.
-- Zápisy v Braine berie ústredňa z indexu trezoru (už je v databáze). Rozvrhy, výstupy a Slack posiela zberný skript:
+- **Zápis poznatkov roly** sa počíta z dvoch miest: poznámka v priečinku roly v trezore (`Agenti/<ID>/`) a denný súbor učenia medzi výstupmi roly (názov obsahuje `UCENIE`, napr. `2026-11-13_A11_UCENIE.md`). Cloudové roly Claude píšu učenie do výstupov, nie do priečinka roly v trezore; dlaždica „Zápisy do Brainu“ preto ukazuje novší z oboch časov a priečinky rolí v trezore uvádza zvlášť.
+- Výstupy rolí sú na disku v dvoch priečinkoch (`Live-in/Vystupy_agentov` a `…/Zrkadlo_Obsidian/Vystupy_agentov`); tá istá rola píše raz do jedného, raz do druhého. Zberný skript preto berie `--outputs` viackrát.
+- Zápisy v Braine berie ústredňa z indexu trezoru (už je v databáze). Rozvrhy, výstupy, učenie a Slack posiela zberný skript:
 
 ```bash
-node tools/ustredna/agents-sync.mjs --outputs "<Disk>/Live-in/Vystupy_agentov" --codex ~/.codex \
+node tools/ustredna/agents-sync.mjs --outputs "<Disk>/Live-in/Vystupy_agentov" --outputs "<Disk>/…/Zrkadlo_Obsidian/Vystupy_agentov" --codex ~/.codex \
   --codex-out "<priečinok Codexu>" --codex-register "<REGISTER.json>" \
   --claude "<uložený zoznam rutín Claude>" --slack slack.json --asks asks.json --stats   # alebo --out / --env
 ```
@@ -104,6 +106,7 @@ node tools/ustredna/agents-sync.mjs --outputs "<Disk>/Live-in/Vystupy_agentov" -
 
 Stav 13. 11. 2026: nasadené v produkcii (`main` `b43993d`), prvý prehľad agentov nahraný cez prihlásený prehliadač (33 rolí v prehľade, 29 rozvrhov; so zápismi v Braine 48 rolí). Prehľad sa sám neobnovuje, kým server nemá `HQ_AGENT_TOKENS`; po 36 hodinách ho obrazovka označí ako starý.
 Meno roly sa berie z Brainu (nadpis `Agenti/<ID>/00_Index.md`); meno z prehľadu sa použije len tam, kde ho Brain nemá.
+Zistenie 13. 11. 2026: priečinky rolí v trezore (`Agenti/<ID>/`) nikto nemenil od 19. 10. Roly Claude si denne píšu učenie do výstupov (11 rolí, 9 za posledné 3 dni). Zadania automatizácií Codexu odkazujú na súbory v `/Users/…/Live-in/Pracovna`, `Knowledge_base` a `Databaza_vedomosti`, ktoré po presune na zdieľaný disk na tej ceste nie sú; priečinky rolí Codexu sa nemenili od 22.–24. 10.
 
 ## Prehľad pre vedenie
 

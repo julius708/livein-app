@@ -3,7 +3,7 @@
 // Číta len metadáta (názvy, stav, časy, počty súborov). Zadania agentov ani obsah súborov nečíta a neposiela. Bez závislostí.
 //
 //   node tools/ustredna/agents-sync.mjs \
-//     --outputs "<Disk>/Live-in/Vystupy_agentov"      výstupy rolí na zdieľanom disku (Claude)
+//     --outputs "<Disk>/Live-in/Vystupy_agentov"      výstupy rolí na zdieľanom disku (Claude); dá sa opakovať, roly píšu do viacerých priečinkov
 //     --codex ~/.codex                                automatizácie Codexu (GPT): názov, stav, rozvrh, posledný beh
 //     --codex-out "<priečinok výstupov Codexu>"       pracovné priečinky rolí Codexu (GPT); dá sa opakovať
 //     --codex-register "<REGISTER.json>"              náplň rolí
@@ -14,11 +14,12 @@
 //     --stats | --out prehlad.json | --env <súbor s HQ_URL a HQ_TOKEN>
 import fs from 'node:fs'
 import os from 'node:os'
+import path from 'node:path'
 import { scanOutputs, scanCodex, readClaudeRoutines, readCodexRegister } from '../../lib/hq-agents-fs.js'
 import { sanitizeAgents, buildAgents, AGENTS_VERSION } from '../../lib/hq-agents.js'
 
-const args = process.argv.slice(2), opt = {}, notes = [], codexOut = []
-for (let i = 0; i < args.length; i++) if (args[i].startsWith('--')) { const k = args[i].slice(2), v = args[i + 1] && !args[i + 1].startsWith('--') ? args[++i] : 'true'; if (k === 'note') notes.push(v); else if (k === 'codex-out') codexOut.push(v); else opt[k] = v }
+const args = process.argv.slice(2), opt = {}, notes = [], codexOut = [], outDirs = []
+for (let i = 0; i < args.length; i++) if (args[i].startsWith('--')) { const k = args[i].slice(2), v = args[i + 1] && !args[i + 1].startsWith('--') ? args[++i] : 'true'; if (k === 'note') notes.push(v); else if (k === 'codex-out') codexOut.push(v); else if (k === 'outputs') outDirs.push(v); else opt[k] = v }
 const die = (m) => { console.error(m); process.exit(1) }
 const home = (p) => String(p).replace(/^~(?=\/|$)/, os.homedir())
 if (opt.env) for (const line of fs.readFileSync(opt.env, 'utf8').split('\n')) { const m = /^\s*(HQ_[A-Z_]+)\s*=\s*(.*)\s*$/.exec(line); if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^['"]|['"]$/g, '') }
@@ -27,7 +28,14 @@ const schedules = [], outputs = [], coverage = []
 let roles = [], slack = [], asks = []
 if (opt.codex) { const s = scanCodex(home(opt.codex)); schedules.push(...s); coverage.push(`GPT: ${s.length} automatizácií Codexu na tomto počítači (${s.filter((x) => x.active).length} zapnutých). Naplánované úlohy v cloude ChatGPT odtiaľto nevidno.`) }
 if (opt.claude) { const c = readClaudeRoutines(home(opt.claude)); schedules.push(...c.schedules); coverage.push(`Claude: ${c.schedules.length} cloudových rutín (${c.schedules.filter((x) => x.active).length} zapnutých)${c.more ? '. Zoznam je orezaný na najnovšie; staršie rutiny existujú, ale v prehľade chýbajú' : ''}.`) }
-if (opt.outputs) { const o = scanOutputs(home(opt.outputs), { runtime: 'Claude', where: 'Disk · Vystupy_agentov' }); outputs.push(...o); coverage.push(`Výstupy na zdieľanom disku (Vystupy_agentov): ${o.length} rolí.`) }
+if (outDirs.length) {
+  // dva priečinky s rovnakým menom (Vystupy_agentov a jeho zrkadlo) sa odlíšia nadradeným priečinkom
+  const clean = (d) => home(d).replace(/\/+$/, ''), base = (d) => path.basename(clean(d))
+  const label = (d) => ('Disk · ' + (outDirs.filter((x) => base(x) === base(d)).length > 1 ? path.basename(path.dirname(clean(d))) + '/' : '') + base(d)).slice(0, 60)
+  const o = outDirs.flatMap((d) => scanOutputs(clean(d), { runtime: 'Claude', where: label(d) }))
+  outputs.push(...o)
+  coverage.push(`Výstupy na zdieľanom disku (${outDirs.map(label).join(', ').replace(/Disk · /g, '')}): ${new Set(o.map((x) => x.role)).size} rolí. Denné učenie (súbory …UCENIE…) má ${new Set(o.filter((x) => x.learn).map((x) => x.role)).size} rolí.`)
+}
 if (codexOut.length) { const o = codexOut.flatMap((d) => scanOutputs(home(d), { runtime: 'GPT', where: 'Codex · pracovný priečinok' })); outputs.push(...o); coverage.push(`Pracovné priečinky Codexu podľa roly: ${new Set(o.map((x) => x.role)).size}. Výstupy Codexu mimo priečinkov rolí sa nepočítajú.`) }
 if (opt['codex-register']) roles = readCodexRegister(home(opt['codex-register']))
 if (opt.slack) { const j = JSON.parse(fs.readFileSync(home(opt.slack), 'utf8')); slack = Array.isArray(j) ? j : j.roles || []; if (j.coverage) coverage.push(String(j.coverage)) }
@@ -45,7 +53,8 @@ const view = buildAgents(snap, null)
 const t = view.totals
 console.log(`Roly: ${t.roles} · dodáva ${t.delivering} · podľa rozvrhu ${t.scheduled} · rozvrh bez výstupu ${t.idle} · ticho ${t.quiet} · len v registri ${t.registered}`)
 console.log(`GPT: ${t.gpt.active}/${t.gpt.schedules} zapnutých automatizácií, ${t.gpt.roleSchedules} rolí s rozvrhom, ${t.gpt.delivering} dodáva · Claude: ${t.claude.active}/${t.claude.schedules} zapnutých rutín, ${t.claude.delivering} rolí dodáva`)
-if (opt.stats) { for (const r of view.roles) console.log([r.id.padEnd(8), (r.state).padEnd(11), (r.last || '–').slice(0, 16), r.gpt ? 'GPT' + (r.gpt.active ? '*' : '') : '   ', r.claude ? 'Claude' + (r.claude.active ? '*' : '') : ''].join(' ')); process.exit(0) }
+console.log(`Denné učenie: ${t.learnRoles} rolí, z toho ${t.learnFresh} za posledné 3 dni · posledné ${(t.learnLast || '–').slice(0, 16)} (GPT ${(t.learnLastGpt || '–').slice(0, 10)}, Claude ${(t.learnLastClaude || '–').slice(0, 10)})`)
+if (opt.stats) { for (const r of view.roles) console.log([r.id.padEnd(8), (r.state).padEnd(11), (r.last || '–').slice(0, 16), r.gpt ? 'GPT' + (r.gpt.active ? '*' : '') : '   ', (r.claude ? 'Claude' + (r.claude.active ? '*' : '') : '').padEnd(7), r.learn ? 'učenie ' + (r.learn.last || '').slice(0, 10) : ''].join(' ')); process.exit(0) }
 if (opt.out) { fs.writeFileSync(home(opt.out), JSON.stringify(snap)); console.log('Prehľad uložený do ' + opt.out); process.exit(0) }
 const url = (process.env.HQ_URL || '').replace(/\/+$/, ''), token = process.env.HQ_TOKEN || ''
 if (!url || !token) die('Chýba HQ_URL alebo HQ_TOKEN. Prehľad NEBOL odoslaný.')

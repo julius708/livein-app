@@ -476,6 +476,7 @@ body:has(#livein-hq[data-theme="night"]){background:#030705}
 #livein-hq .hq-rt.on{color:var(--li-ink)}#livein-hq .hq-rt.on i{background:#35b56a;box-shadow:0 0 8px #35b56a}
 #livein-hq .hq-rt.warn{color:var(--li-ink)}#livein-hq .hq-rt.warn i{background:#f46d16;box-shadow:0 0 8px #f46d16}
 #livein-hq .hq-rt.brain i{background:#8c6fd1}
+#livein-hq .hq-rt.brain.on i{background:#35b56a;box-shadow:0 0 8px #35b56a}
 #livein-hq[data-theme="night"] .hq-role .id{background:#fff9f1;color:#0d2a1c}
 #livein-hq[data-theme="night"] .hq-rt{background:#ffffff0f}
 #livein-hq[data-theme="night"] .hq-role.quiet::after,#livein-hq[data-theme="night"] .hq-role.registered::after{background:#4c5f54}
