@@ -35,3 +35,12 @@ Plávajúce tlačidlo „💬 Pomocník“ vo Vyúčtovaní (`components/vyuctov
 - Odpovedá o tabuľke (vie v nej hľadať) a **navrhuje** zmeny dát: pridať, upraviť, presunúť, zmazať riadok, firma bytu, cenník. Zmeny sa vykonajú až po potvrdení tlačidlom a znova sa overia na serveri tými istými pravidlami ako úprava v tabuľke (uzavreté obdobie, košické byty, čísla).
 - Zmenu **funkcie** (nový stĺpec, pravidlo, výpočet, vzhľad) chat nespraví okamžite: zapíše ju ako požiadavku do spätnej väzby (`feedback`, strana /vyuctovanie) aj s kontextom rozhovoru a vývojár ju dopracuje.
 - Vyžaduje `ANTHROPIC_API_KEY` vo Verceli. Chat kód aplikácie nemení.
+
+## Návrhy zmien kódu z chatu (schválenie jedným klikom)
+Pri požiadavke na zmenu funkcie v chate je tlačidlo „Pripraviť návrh zmeny kódu“. Postup (`lib/code-change.js`, záložka „Zmeny kódu“ v okne Pomocníka):
+1. AI v obmedzenom okruhu súborov modulu Vyúčtovanie (`isAllowedPath`: `lib/billing-*`, `components/vyuctovanie/*` okrem chatu, `app/vyuctovanie/*`, testy, dokumentácia) pripraví zmenu a otvorí **pull request** na GitHube. Autentifikácia, middleware, databáza, iné moduly a samotný chat sú mimo okruhu. Zmena databázy sa neimplementuje (AI to len ohlási).
+2. GitHub Actions (`.github/workflows/ci.yml`) spustia testy a build, Vercel pripraví náhľad.
+3. Schvaľovateľ (admin s rolou „Schvaľovateľ zmien kódu“) vidí zhrnutie, zoznam súborov (citlivé zvýraznené), riziká, stav testov a náhľadu. Tlačidlo **Schváliť a nasadiť** sa odomkne až pri zelených testoch aj náhľade. Pri schválení server znova overí oprávnenie, že PR obsahuje len povolené súbory a že commit je ten, ktorý schvaľovateľ videl; potom zlúči (squash) a Vercel nasadí.
+4. **Vrátiť späť** pripraví revert PR, ktorý prejde rovnakým schvaľovaním. **Zamietnuť** zatvorí PR a zmaže vetvu.
+
+Zapnutie: vo Verceli `GH_CHANGES_TOKEN` (fine-grained token na repozitár `julius708/livein-app`: Contents a Pull requests = Read and write; Metadata, Commit statuses a Checks = Read) a `ANTHROPIC_API_KEY`; migrácia `supabase/migrations/20261117_billing_changes.sql`; v Správe appky pridať schvaľovateľovi rolu „Schvaľovateľ zmien kódu“. Bez tokenu je funkcia vypnutá a požiadavky idú len ako spätná väzba. Cron `/api/cron/billing-changes` (5 min) dokončí čakajúce návrhy a obnovuje stav.

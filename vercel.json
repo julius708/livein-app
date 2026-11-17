@@ -23,6 +23,10 @@
     {
       "path": "/api/cron/invest-run",
       "schedule": "*/30 * * * *"
+    },
+    {
+      "path": "/api/cron/billing-changes",
+      "schedule": "*/5 * * * *"
     }
   ],
   "regions": [

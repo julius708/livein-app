@@ -4,10 +4,12 @@ import Shell from '@/components/Shell'
 import NoAccess from '@/components/NoAccess'
 import Board from '@/components/vyuctovanie/Board'
 import { canBilling } from '@/lib/billing-core'
+import { canApprove } from '@/lib/code-change'
 import { billingPeriods, billingItems, priceList, billingListings } from '@/lib/billing-server'
 import './vyuctovanie.css'
 
 export const dynamic = 'force-dynamic'
+export const maxDuration = 300   // príprava návrhu zmeny kódu z chatu beží na pozadí tejto požiadavky
 export const metadata = { title: 'Vyúčtovanie majiteľom' }
 
 export default async function VyuctovaniePage({ searchParams }) {
@@ -29,7 +31,7 @@ export default async function VyuctovaniePage({ searchParams }) {
   return (
     <Shell me={me} user={user} isAdmin={isAdmin} active="vyuctovanie" hideFooter>
       <div className="vy">
-        <Board periods={periods} period={period} items={items} prices={prices} lists={lists} isAdmin={isAdmin} />
+        <Board periods={periods} period={period} items={items} prices={prices} lists={lists} isAdmin={isAdmin} codeChanges={{ enabled: !!(process.env.GH_CHANGES_TOKEN && process.env.ANTHROPIC_API_KEY), approver: canApprove(me) }} />
       </div>
     </Shell>
   )
