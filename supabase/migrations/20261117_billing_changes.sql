@@ -17,3 +17,4 @@ revoke all on billing_changes from anon;
 grant select, insert on billing_changes to authenticated;
 create policy billing_changes_team_select on billing_changes for select to authenticated using (billing_team());
 create policy billing_changes_team_insert on billing_changes for insert to authenticated with check (billing_team() and requested_by = lower(coalesce(auth.jwt() ->> 'email', '')));
+create trigger billing_changes_touch before update on billing_changes for each row execute function inv_touch();
