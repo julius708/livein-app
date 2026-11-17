@@ -172,7 +172,7 @@ export default function Board(props) {
   return props.period ? <BoardInner key={props.period.id} {...props} /> : <Empty />
 }
 
-function BoardInner({ periods, period, items: initial, prices, lists, isAdmin }) {
+function BoardInner({ periods, period, items: initial, prices, lists, isAdmin, codeChanges }) {
   const router = useRouter()
   const [pending, start] = useTransition()
   const [items, setItems] = useState(initial)
@@ -289,7 +289,7 @@ function BoardInner({ periods, period, items: initial, prices, lists, isAdmin })
         </div>
       ))}
       {visible.length === 0 && <section className="card"><p>Nič nezodpovedá filtru.</p></section>}
-      <ChatPanel periodId={period.id} focus={Object.keys(open).filter((k) => open[k]).map((k) => k.split(':').slice(1).join(':')).slice(0, 8)} readOnly={ro} />
+      <ChatPanel codeChanges={codeChanges} periodId={period.id} focus={Object.keys(open).filter((k) => open[k]).map((k) => k.split(':').slice(1).join(':')).slice(0, 8)} readOnly={ro} />
       {msg && <div className={`vy-toast ${msg.err ? 'err' : 'ok'}`} role="status" onClick={() => setMsg(null)}>{msg.err || msg.ok}</div>}
     </div>
   )

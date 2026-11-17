@@ -1,12 +1,15 @@
 'use client'
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { billingChatAction, applyChatActionsAction } from '@/app/vyuctovanie/actions'
+import { billingChatAction, applyChatActionsAction, queueCodeChangeAction } from '@/app/vyuctovanie/actions'
+import ChangesTab from './ChangesTab'
 
 const HINTS = ['Koľko riadkov nemá sumu?', 'Pridaj k bytu … položku … za … €', 'Presuň riadok … k bytu …', 'Zmeň firmu bytu … na Management', 'Chcem nový stĺpec „Dátum faktúry“']
 
 /** Chat Pomocník: odpovedá o tabuľke a navrhuje zmeny dát; zmeny sa vykonajú až po tvojom potvrdení. Zmeny funkcií ide ako požiadavka na vývoj. */
-export default function ChatPanel({ periodId, focus = [], readOnly = false }) {
+export default function ChatPanel({ periodId, focus = [], readOnly = false, codeChanges = { enabled: false, approver: false } }) {
+  const [tab, setTab] = useState('chat')
+  const [chgKey, setChgKey] = useState(0)
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [msgs, setMsgs] = useState([])           // { role, content, proposals?, checked?, applied? }
@@ -27,6 +30,7 @@ export default function ChatPanel({ periodId, focus = [], readOnly = false }) {
       else setErr((r && r.error) || 'Nepodarilo sa.')
     })
   }
+  const queueCode = (a) => start(async () => { const r = await queueCodeChangeAction({ title: a.title, description: a.description, transcript: a.transcript }); if (r && r.ok) { setTab('zmeny'); setChgKey((k) => k + 1) } else setErr((r && r.error) || 'Nepodarilo sa.') })
   const toggle = (mi, id) => setMsgs((m) => m.map((x, i) => (i === mi ? { ...x, checked: { ...x.checked, [id]: !x.checked[id] } } : x)))
   const apply = (mi) => {
     const m = msgs[mi]; const chosen = (m.proposals || []).filter((p) => m.checked[p.id])
@@ -45,7 +49,9 @@ export default function ChatPanel({ periodId, focus = [], readOnly = false }) {
       <button type="button" className="vy-chat-fab" aria-label="Otvoriť Pomocníka" onClick={() => setOpen(!open)}>{open ? '✕' : '💬 Pomocník'}</button>
       {open && (
         <div className="vy-chat" role="dialog" aria-label="Pomocník vyúčtovania">
-          <header><b>Pomocník</b><small>Opýtaj sa, nechaj si navrhnúť zmeny v tabuľke. Zmeny dát potvrdzuješ ty; zmeny funkcií idú ako požiadavka na vývoj.</small></header>
+          <header><b>Pomocník</b><small>Opýtaj sa, nechaj si navrhnúť zmeny v tabuľke. Zmeny dát potvrdzuješ ty; zmeny funkcií idú ako požiadavka na vývoj{codeChanges.enabled ? ' alebo ako návrh zmeny kódu na schválenie' : ''}.</small>
+            <div className="vy-chat-tabs"><button type="button" className={tab === 'chat' ? 'on' : ''} onClick={() => setTab('chat')}>Rozhovor</button><button type="button" className={tab === 'zmeny' ? 'on' : ''} onClick={() => setTab('zmeny')}>Zmeny kódu</button></div></header>
+          {tab === 'zmeny' ? <ChangesTab enabled={codeChanges.enabled} approver={codeChanges.approver} refreshKey={chgKey} /> : <>
           <div className="vy-chat-log">
             {!msgs.length && <div className="vy-chat-hints">{HINTS.map((h) => <button key={h} type="button" onClick={() => setText(h)}>{h}</button>)}</div>}
             {msgs.map((m, i) => (
@@ -56,6 +62,7 @@ export default function ChatPanel({ periodId, focus = [], readOnly = false }) {
                     {m.proposals.map((p) => (
                       <label key={p.id} className={p.type === 'request_feature' ? 'feat' : ''}><input type="checkbox" disabled={!!m.applied || readOnly} checked={!!(m.checked && m.checked[p.id])} onChange={() => toggle(i, p.id)} /> <span>{p.label}</span></label>
                     ))}
+                    {codeChanges.enabled && !m.applied && m.proposals.filter((p) => p.type === 'request_feature').map((p) => <button key={'c' + p.id} type="button" className="btn line" disabled={busy || readOnly} onClick={() => queueCode(p.action)}>Pripraviť návrh zmeny kódu</button>)}
                     {m.applied ? <pre className="vy-chat-done">{m.applied}</pre> : <div className="vy-chat-btns"><button type="button" className="btn" disabled={busy || readOnly} onClick={() => apply(i)}>Použiť vybrané</button><button type="button" className="btn line" disabled={busy} onClick={() => setMsgs((all) => all.map((x, j) => (j === i ? { ...x, proposals: [], applied: null } : x)))}>Zahodiť</button></div>}
                     {readOnly && !m.applied && <small>Obdobie je uzavreté, zmeny nie sú možné.</small>}
                   </div>
@@ -69,7 +76,7 @@ export default function ChatPanel({ periodId, focus = [], readOnly = false }) {
           <form className="vy-chat-form" onSubmit={(e) => { e.preventDefault(); send() }}>
             <textarea rows={2} value={text} onChange={(e) => setText(e.target.value)} placeholder="Napíš, čo potrebuješ…" onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }} />
             <button type="submit" className="btn" disabled={busy || !text.trim()}>Poslať</button>
-          </form>
+          </form></>}
         </div>
       )}
     </>

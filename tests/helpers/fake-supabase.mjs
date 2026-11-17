@@ -2,7 +2,7 @@
 // Emuluje unikátne kľúče (23505), predvolené hodnoty z migrácie, auto-id a rpc zámku. Nikdy sa nepoužíva v produkcii.
 import { randomUUID } from 'node:crypto'
 
-const UUID_TABLES = new Set(['inv_properties', 'inv_listings', 'inv_calcs', 'inv_merge_candidates', 'inv_inquiries', 'inv_matches', 'inv_tasks', 'inv_offers', 'leads'])
+const UUID_TABLES = new Set(['inv_properties', 'inv_listings', 'inv_calcs', 'inv_merge_candidates', 'inv_inquiries', 'inv_matches', 'inv_tasks', 'inv_offers', 'leads', 'billing_changes'])
 const SERIAL = new Set(['inv_events', 'inv_runs', 'inv_price_history', 'notifications', 'crm_sync_queue', 'lead_events'])
 const UNIQUE = {
   inv_listings: [['source_key', 'external_id']], inv_matches: [['inquiry_id', 'property_id']], inv_calcs: [['property_id', 'input_hash'], ['property_id', 'version']],
@@ -19,6 +19,7 @@ const DEFAULTS = {
   inv_runs: () => ({ status: 'running', attempt: 1, started_at: nowIso(), heartbeat_at: nowIso(), stats: {}, source_results: [], cursor: {} }),
   inv_sources: () => ({ enabled: true, blocked: false, mode: 'both', config: {}, consecutive_failures: 0, created_at: nowIso(), updated_at: nowIso() }),
   inv_merge_candidates: () => ({ status: 'pending', reasons: [], created_at: nowIso() }),
+  billing_changes: () => ({ status: 'queued', files: [], checks: {}, kind: 'change', created_at: nowIso(), updated_at: nowIso() }),
   inv_events: () => ({ payload: {}, at: nowIso() }), inv_price_history: () => ({ at: nowIso() }), inv_calcs: () => ({ created_at: nowIso() }),
   notifications: () => ({ created_at: nowIso(), read_at: null }),
 }

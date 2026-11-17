@@ -2,6 +2,9 @@
 import { revalidatePath } from 'next/cache'
 import { getViewer } from '@/lib/auth'
 import { canBilling, cleanPatch, carryOver, priceRows, nextMonth, monthLabel, linenRows, linenNote, LINEN_PRESETS, isKosice } from '@/lib/billing-core'
+import { after } from 'next/server'
+import { adminClientAsync } from '@/lib/supabase-admin'
+import { ghClient, queueChange, processChange, refreshChange, approveChange, rejectChange, revertChange, canApprove } from '@/lib/code-change'
 import { chatTurn, applyActions, loadItems, loadPrices } from '@/lib/billing-chat'
 import { opSaveItem, opAddItem, opDeleteItem, opSetAptFirm, openPeriod, uuid } from '@/lib/billing-ops'
 
@@ -116,4 +119,47 @@ export async function applyChatActionsAction({ period_id, actions }) {
     refresh()
     return { ok: true, results, done: results.filter((r) => r.ok).length, failed: results.filter((r) => !r.ok).length }
   } catch (e) { console.error('vyuctovanie chat apply', String(e && e.message).slice(0, 160)); return { ok: false, error: 'Zmeny sa nepodarilo vykonať.' } }
+}
+
+/* ---------- návrhy zmien kódu z chatu (schvaľovanie jedným klikom) ---------- */
+const codeOn = () => !!(process.env.GH_CHANGES_TOKEN && process.env.ANTHROPIC_API_KEY)
+const gh = () => ghClient({ token: process.env.GH_CHANGES_TOKEN, repo: process.env.GH_CHANGES_REPO || undefined })
+export async function queueCodeChangeAction({ title, description, transcript }) {
+  const v = await viewer(); if (v.error) return { ok: false, error: v.error }
+  if (!codeOn()) return { ok: false, error: 'Schvaľovanie zmien kódu nie je zapnuté (chýba GH_CHANGES_TOKEN alebo ANTHROPIC_API_KEY vo Verceli).' }
+  try {
+    const r = await queueChange(v.s, { who: who(v), name: v.me && v.me.name, title, request: description, transcript })
+    if (!r.ok) return r
+    const id = r.change.id
+    after(async () => { try { await processChange(await adminClientAsync(), id, { gh: gh(), key: process.env.ANTHROPIC_API_KEY }) } catch (e) { console.error('zmena kodu', String(e && e.message).slice(0, 160)) } })
+    return { ok: true, id }
+  } catch (e) { console.error('zmena kodu queue', String(e && e.message).slice(0, 160)); return { ok: false, error: 'Nepodarilo sa zaradiť zmenu.' } }
+}
+export async function listCodeChangesAction() {
+  const v = await viewer(); if (v.error) return { ok: false, error: v.error }
+  const { data, error } = await v.s.from('billing_changes').select('id,requested_name,title,summary,risks,status,files,checks,pr_url,error,kind,created_at,decided_at').order('created_at', { ascending: false }).limit(15)
+  if (error) return { ok: false, error: /does not exist|schema cache/i.test(error.message) ? 'Tabuľka zmien ešte nie je pripravená (migrácia).' : error.message }
+  let rows = data || []
+  if (codeOn()) {   // stav kontrol sa obnovuje pri otvorení zoznamu (najviac raz za 15 s na zmenu)
+    try {
+      const admin = await adminClientAsync(), g = gh()
+      rows = await Promise.all(rows.map(async (r) => (r.status === 'ready' && (!r.checks || !r.checks.at || Date.now() - Date.parse(r.checks.at) > 15000) ? (async () => { const { data: full } = await admin.from('billing_changes').select('*').eq('id', r.id).maybeSingle(); const f = full ? await refreshChange(admin, full, { gh: g }) : r; return { ...r, status: f.status, checks: f.checks || r.checks } })().catch(() => r) : r)))
+    } catch (e) { console.error('zmeny refresh', String(e && e.message).slice(0, 100)) }
+  }
+  return { ok: true, rows, enabled: codeOn(), approver: canApprove(v.me) }
+}
+export async function approveCodeChangeAction({ id, sha }) {
+  const v = await viewer(); if (v.error) return { ok: false, error: v.error }
+  if (!uuid(id) || !codeOn()) return { ok: false, error: 'Neplatná požiadavka.' }
+  try { return await approveChange(await adminClientAsync(), id, { who: who(v), approver: canApprove(v.me), expectedSha: sha, gh: gh() }) } catch (e) { console.error('schvalenie', String(e && e.message).slice(0, 160)); return { ok: false, error: 'Schválenie sa nepodarilo. Skús znova.' } }
+}
+export async function rejectCodeChangeAction({ id }) {
+  const v = await viewer(); if (v.error) return { ok: false, error: v.error }
+  if (!uuid(id) || !codeOn()) return { ok: false, error: 'Neplatná požiadavka.' }
+  try { return await rejectChange(await adminClientAsync(), id, { who: who(v), approver: canApprove(v.me), gh: gh() }) } catch (e) { return { ok: false, error: 'Zamietnutie sa nepodarilo.' } }
+}
+export async function revertCodeChangeAction({ id }) {
+  const v = await viewer(); if (v.error) return { ok: false, error: v.error }
+  if (!uuid(id) || !codeOn()) return { ok: false, error: 'Neplatná požiadavka.' }
+  try { return await revertChange(await adminClientAsync(), id, { who: who(v), approver: canApprove(v.me), gh: gh() }) } catch (e) { return { ok: false, error: 'Vrátenie sa nepodarilo: ' + String(e && e.message).slice(0, 120) } }
 }

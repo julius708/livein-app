@@ -1,3 +1,7 @@
+## 17. 11. 2026 – Vyúčtovanie: návrhy zmien kódu z chatu so schválením jedným klikom
+- Chat Pomocník vie pripraviť pull request s úpravou kódu v okruhu modulu Vyúčtovanie; nasadenie schvaľuje admin s rolou „Schvaľovateľ zmien kódu“ po zelených testoch a náhľade. Dokumentácia `docs/vyuctovanie/README.md`.
+- Funkcia je vypnutá, kým nie je vo Verceli `GH_CHANGES_TOKEN`. Migrácia `20261117_billing_changes`. Nový CI workflow `.github/workflows/ci.yml`.
+
 ## 13. 11. 2026 – Ústredňa: Obsidian, mapa firmy, paleta príkazov, hlas, živé obnovovanie, nový vzhľad (vetva `claude/ustredna-wow`)
 - Obsidian: index tímového trezoru Live-in International (názvy, štítky, prepojenia; bez textu poznámok) ako interaktívna mapa a vyhľadávanie; poznámky sa otvárajú v Obsidiane. Lokálne sa číta z disku, v produkcii cez `tools/ustredna/vault-sync.mjs` do `hq_vault` (migrácia `20261115_ustredna_vault` aplikovaná 13. 11. 2026).
 - Nové ovládanie: paleta príkazov (⌘K), hlasové príkazy v prehliadači, brífing priorít, tabuľa úloh, obnovovanie každú minútu, grafy (príchody a odchody, kanály, mestá, cesta leadu), denný a nočný režim.
