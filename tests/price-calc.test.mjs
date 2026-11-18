@@ -197,3 +197,48 @@ test('formátovanie a text ponuky pre hosťa (bez údajov o majiteľovi)', () =>
   assert.match(P.guestOffer(q, 'mid', '2026-12-11', '2026-12-14', 'en'), /3 nights, 2 guests/)
   assert.equal(P.guestOffer({ ok: false }, 'mid', 'a', 'b'), '')
 })
+
+test('Guesty ID: každý byt ho má, je jedinečné a má 24 hex znakov', () => {
+  const ids = APARTMENTS.map((a) => a.guestyId)
+  assert.ok(ids.every((id) => /^[0-9a-f]{24}$/.test(id)))
+  assert.equal(new Set(ids).size, 138)
+  assert.equal(byName('Antolská').guestyId, '6ad9eddc12036300315cbcd3')
+})
+
+test('odkaz na rezerváciu v CS: ubytovanie + upratovanie = cena bez dane z kalkulačky, daň navrch', () => {
+  const a = byName('Antolská')
+  const q = P.quote(base(a, { checkOut: '2026-12-14' }))
+  for (const key of ['strong', 'mid', 'weak']) {
+    const href = P.reservationLink(q, key, '2026-12-11', '2026-12-14')
+    const u = new URL(href, 'https://x')
+    assert.equal(u.pathname, '/cs/rezervacia')
+    assert.equal(u.searchParams.get('listing'), a.guestyId)
+    assert.equal(u.searchParams.get('od'), '2026-12-11')
+    assert.equal(u.searchParams.get('do'), '2026-12-14')
+    assert.equal(u.searchParams.get('hostia'), '2')
+    const t = q.tiers.find((x) => x.key === key)
+    assert.equal(Number(u.searchParams.get('cena')) + Number(u.searchParams.get('upratovanie')), t.gross)
+    assert.equal(Number(u.searchParams.get('upratovanie')), a.cleaning)
+    assert.equal(Number(u.searchParams.get('dan')), q.tax)
+  }
+  assert.equal(new URL(P.reservationLink(q, 'mid', '2026-12-11', '2026-12-14'), 'https://x').searchParams.get('ponuka'), 'Stredná')
+  assert.equal(P.reservationLink({ ok: false }, 'mid', 'a', 'b'), null)
+  assert.equal(P.reservationLink(q, 'nope', '2026-12-11', '2026-12-14'), null)
+  // bez ID bytu alebo keď po odpočítaní upratovania nezostane kladné ubytovanie, tlačidlo sa nenabíja
+  assert.equal(P.reservationLink({ ...q, apt: { ...a, guestyId: null } }, 'mid', 'a', 'b'), null)
+  assert.equal(P.reservationLink({ ...q, apt: { ...a, cleaning: 9999 } }, 'mid', '2026-12-11', '2026-12-14'), null)
+})
+
+test('odkaz na dostupnosť a počiatočný výber z adresy', () => {
+  assert.equal(P.availabilityLink('2026-12-11', '2026-12-14', 3), '/cs/volne?od=2026-12-11&do=2026-12-14&hostia=3')
+  assert.equal(P.availabilityLink('x', '2026-12-14', 3), null)
+  const a = byName('Antolská')
+  const i = APARTMENTS.indexOf(a)
+  const today = '2026-11-18'
+  assert.deepEqual(P.parseInitial(APARTMENTS, { byt: a.guestyId, od: '2026-12-01', do: '2026-12-05', hostia: '3' }, today), { aptIdx: i, checkIn: '2026-12-01', checkOut: '2026-12-05', guests: 3 })
+  assert.equal(P.parseInitial(APARTMENTS, { byt: a.name }, today).aptIdx, i)
+  // neplatné alebo minulé vstupy sa ticho zahodia (kalkulačka použije predvolené)
+  assert.deepEqual(P.parseInitial(APARTMENTS, { byt: 'neznámy', od: '2020-01-01', do: 'x', hostia: '-2' }, today), { aptIdx: null, checkIn: null, checkOut: null, guests: null })
+  assert.equal(P.parseInitial(APARTMENTS, { od: '2026-12-05', do: '2026-12-01' }, today).checkOut, null)
+  assert.equal(P.parseInitial(APARTMENTS, { byt: ['a', 'b'] }, today).aptIdx, null)
+})

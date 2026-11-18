@@ -1,6 +1,6 @@
 'use client'
 import { useMemo, useState } from 'react'
-import { addDaysIso, checkGuestyPrice, fmtEur, fmtEur1, guestOffer, nightsBetween, nightsWord, quote } from '@/lib/price-calc'
+import { addDaysIso, availabilityLink, checkGuestyPrice, fmtEur, fmtEur1, guestOffer, nightsBetween, nightsWord, quote, reservationLink } from '@/lib/price-calc'
 import { CITY_NAMES } from '@/lib/price-calc-data'
 
 const MODEL_LABEL = { C: 'C model', S: 'Special Client', R: 'R2R' }
@@ -18,14 +18,14 @@ function Person({ i, inc, fee, on, onClick }) {
   )
 }
 
-export default function PriceCalc({ apartments, dataDate, today, defaultCheckIn, defaultCheckOut }) {
-  const start = Math.max(0, apartments.findIndex((a) => a.name.startsWith('Moskovská')))
+export default function PriceCalc({ apartments, dataDate, today, defaultCheckIn, defaultCheckOut, initial = {} }) {
+  const start = initial.aptIdx ?? Math.max(0, apartments.findIndex((a) => a.name.startsWith('Moskovská')))
   const [city, setCity] = useState('ALL')
   const [aptIdx, setAptIdx] = useState(start)
   const [search, setSearch] = useState(apartments[start].name)
-  const [checkIn, setCheckIn] = useState(defaultCheckIn)
-  const [checkOut, setCheckOut] = useState(defaultCheckOut)
-  const [guests, setGuests] = useState(2)
+  const [checkIn, setCheckIn] = useState(initial.checkIn || defaultCheckIn)
+  const [checkOut, setCheckOut] = useState(initial.checkOut || (initial.checkIn ? addDaysIso(initial.checkIn, 1) : defaultCheckOut))
+  const [guests, setGuests] = useState(Math.min(initial.guests || 2, apartments[start].cap))
   const [cleanings, setCleanings] = useState(1)
   const [taxOn, setTaxOn] = useState(true)
   const [taxRate, setTaxRate] = useState(String(apartments[start].cityTax))
@@ -124,6 +124,7 @@ export default function PriceCalc({ apartments, dataDate, today, defaultCheckIn,
           <div className="kc-chips" role="group" aria-label="Počet nocí">
             {QUICK.map((k) => <button key={k} type="button" className={`kc-chip${n === k ? ' on' : ''}`} aria-pressed={n === k} onClick={() => setNights(k)}>{k} {nightsWord(k)}</button>)}
           </div>
+          {availabilityLink(checkIn, checkOut, g) && n >= 1 && <p className="kc-n"><a className="kc-link" href={availabilityLink(checkIn, checkOut, g)}>Je byt voľný v tomto termíne? Otvoriť Voľné apartmány →</a></p>}
           <p className="kc-n" aria-live="polite">{n >= 1 ? <><b>{n} {nightsWord(n)}</b>{q.ok && q.weakPeriod ? ' · slabé obdobie' : ''}</> : <span className="kc-bad">Odchod musí byť po príchode.</span>}</p>
 
           <h2>3. Hostia</h2>
@@ -179,6 +180,7 @@ export default function PriceCalc({ apartments, dataDate, today, defaultCheckIn,
                   <p className="kc-msg">{t.hint}</p>
                   {t.key === 'weak' && <div className="kc-warn"><b>Pozor:</b> pristúpiť k tejto rezervácii, len ak ide o slabé obdobie (október, november, január, február).{!q.weakPeriod && <> <b>Tento termín nie je v slabom období.</b></>}</div>}
                   <div className="kc-acts">
+                    {reservationLink(q, t.key, checkIn, checkOut) && <a className="btn kc-book" href={reservationLink(q, t.key, checkIn, checkOut)}>Rezervovať za túto cenu →</a>}
                     <button type="button" className="btn line" onClick={() => copy(`p-${t.key}`, `${Math.round(t.total)} € spolu za ${n} ${nightsWord(n)}${q.taxOn ? ' (vrátane mestskej dane)' : ''}`)}>{copied === `p-${t.key}` ? 'Skopírované ✓' : 'Kopírovať cenu'}</button>
                     <button type="button" className="btn line" onClick={() => copy(`o-${t.key}`, guestOffer(q, t.key, checkIn, checkOut, lang))}>{copied === `o-${t.key}` ? 'Skopírované ✓' : `Text pre hosťa (${lang === 'sk' ? 'SK' : 'EN'})`}</button>
                   </div>

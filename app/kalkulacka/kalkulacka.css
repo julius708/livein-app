@@ -65,3 +65,7 @@
 .kc-empty{padding:24px;text-align:center;color:#B3261E;font-weight:700}
 @media(max-width:900px){.kc-grid{grid-template-columns:1fr}.kc-meta{align-items:flex-start}}
 @media(prefers-reduced-motion:reduce){.kc *{transition:none!important}}
+
+.kc-link{color:#173E2C;font-weight:700;text-decoration:underline;text-underline-offset:3px}
+.kc-book{background:#F46D16;color:#fff;border:0;text-decoration:none;display:inline-flex;align-items:center;padding:9px 16px;border-radius:12px;font-weight:700;min-height:42px}
+.kc-book:focus-visible{outline:3px solid #173E2C88;outline-offset:2px}
