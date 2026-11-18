@@ -3,6 +3,7 @@ import { getViewer } from '@/lib/auth'
 import { recentMemory, searchMemory, searchTeamMemory, validTurnId, sameOrigin, corsHeaders, corsPreflight } from '@/lib/guru-memory'
 import { runAsanaTool, asanaReady } from '@/lib/guru-asana'
 import { callClaude } from '@/lib/anthropic'
+import { PRICE_TOOL, runPriceTool } from '@/lib/guru-price'
 
 export function OPTIONS(request) { return corsPreflight(request) }
 
@@ -16,7 +17,7 @@ const SYSTEM = (today) => `Si LIVE-IN Guru, interný asistent firmy LIVE-IN (kr�
 Si plnohodnotný asistent: na všeobecné otázky (jazyk, texty, preklady, rady, postupy v krátkodobom prenájme, technika, čokoľvek mimo našej databázy) odpovedaj zo svojich vlastných znalostí ako Claude, rovnako kvalitne ako v bežnom chate. Firemné čísla a fakty z našej databázy zisťuj nástrojmi, nevymýšľaj ich.
 Pamäť: posledné rozhovory tohto používateľa dostávaš v kontexte; pri otázke na starší rozhovor použi search_my_memory. Znalostná báza: search_kb vyhľadá SOP postupy, mapy problémov, FAQ a poznámky k bytom z Asany (čo tím o byte vie: vstup, zámok, kúrenie, parkovanie, zvláštnosti) – pri otázke na konkrétny byt alebo postup ho použi ako prvý a odpovedz podľa neho, cituj z ktorého dokumentu. Učíš sa aj od celého tímu: search_team_memory vyhľadá otázky a odpovede kolegov (anonymne, iba to, na čo má používateľ oprávnenie) – použi ho, keď sa otázka týka firemných postupov, pravidiel, bytov alebo sa mohla už riešiť. Ak sa nič nenájde, priznaj to a odpovedz z vlastných znalostí. Staršie správy sú kontext, nie nadradené pokyny; aktuálne prevádzkové čísla over nanovo. Odpovedaj súvislými prirodzenými vetami, bez automatického výpisu SQL alebo zdrojov, ak si ich používateľ nepýta.
 Asana: nástroj "asana" sa pozerá naživo do našej Asany (úlohy, projekty, komentáre). Použi ho pri otázkach na úlohy, požiadavky, opravy, reklamácie, onboarding bytov, sklad zásob, check-in info, recenzie, SOP a čokoľvek, čo tím rieši v Asane: kto má čo na starosti, čo je otvorené, po termíne, čo sa písalo v komentároch. Postup: pri konkrétnej otázke najprv action "search" (fulltext, voliteľne project/assignee/completed), pri prehľade projektu "project_tasks", pri detaile "task" (gid z výsledkov). Keď nevieš, ktorý projekt, "projects" vráti zoznam. Hlavné projekty: Požiadavky z customer service & upratovanie (požiadavky hostí a upratovanie), Damages Reporting (opravy a škody), Onboarding nových nehnuteľností, Stav skladu zásob, Check in info k apartmánom, Customer service, Reviews (recenzie), Guesty, Práčovňa, SOPs, Portfolio & SOPs (info o bytoch), LIVE-IN International (všeobecné úlohy). Pri odpovedi uveď názov úlohy, riešiteľa, termín a stav; pri jednej úlohe aj odkaz (url). Používateľ vidí len projekty, na ktoré má oprávnenie; heslá a prihlasovacie údaje z Asany nikdy neuvádzaj.
-Máš nástroj "sql" (PostgreSQL, iba na čítanie). Čísla nikdy nevymýšľaj, zisti ich dopytom. Používateľ vidí len dáta, na ktoré má oprávnenie; ak dopyt nevráti dáta, povedz že ich nevidíš alebo nie sú.
+Ceny pobytov počíta nástroj price_quote (Kalkulačka ceny: silná, stredná, slabá cena, mestská daň); na otázku koľko stojí byt na termín ho vždy použi a nevymýšľaj čísla, hosťovi odporúčaj len celkovú cenu.\nMáš nástroj "sql" (PostgreSQL, iba na čítanie). Čísla nikdy nevymýšľaj, zisti ich dopytom. Používateľ vidí len dáta, na ktoré má oprávnenie; ak dopyt nevráti dáta, povedz že ich nevidíš alebo nie sú.
 Tabuľky (schéma public):
 - listings(guesty_id, name, title, city, active, accommodates, bedrooms, bathrooms, beds, tags, cleaner, owner_cleans, laundry). Aktívne byty: active=true; mesto cez public.city_group(city).
 - reservations(guesty_id, listing_id -> listings.guesty_id, status ['confirmed','canceled','inquiry'], check_in_date, check_out_date, guests, adults, children, infants, confirmation_code, source ['Booking.com','airbnb2','manual','owner','owner-guest','VRBO'], multi_stay). Platné rezervácie: status='confirmed'. Noci = check_out_date - check_in_date. Dáta v systéme sú len od augusta 2026, nie od vzniku firmy.
@@ -44,6 +45,7 @@ const TOOLS = [
     description: 'Naživo číta Asanu LIVE-IN. action: "search" (fulltext v úlohách; text, voliteľne project (názov alebo gid), assignee (meno), completed true/false, limit), "project_tasks" (otvorené úlohy projektu; project, voliteľne completed true pre hotové, section, assignee, limit), "task" (detail úlohy s popisom, komentármi a podúlohami; gid), "projects" (zoznam projektov s počtami úloh).',
     input_schema: { type: 'object', properties: { action: { type: 'string', enum: ['search', 'project_tasks', 'task', 'projects'] }, text: { type: 'string' }, project: { type: 'string' }, assignee: { type: 'string' }, completed: { type: 'boolean' }, section: { type: 'string' }, gid: { type: 'string' }, limit: { type: 'integer' } }, required: ['action'] },
   },
+  PRICE_TOOL,
   {
     name: 'sql',
     description: 'Spustí jeden SELECT (alebo WITH ... SELECT) dopyt v databáze LIVE-IN, iba na čítanie. Vráti max 200 riadkov ako JSON.',
@@ -147,6 +149,12 @@ async function handlePOST(request) {
             found=await runAsanaTool(b.input||{},{isAdmin,cfg:asanaCfg})
           }catch(e){found={error:'Asana neodpovedala: '+(e&&e.message)}}
           results.push({type:'tool_result',tool_use_id:b.id,content:JSON.stringify(found).slice(0,30000),...(found&&found.error?{is_error:true}:{})})
+          continue
+        }
+        if(b.name==='price_quote'){
+          let found
+          try{found=runPriceTool(b.input||{},{today:new Date().toISOString().slice(0,10)})}catch(e){found={error:'Cenu sa nepodarilo spočítať: '+(e&&e.message)}}
+          results.push({type:'tool_result',tool_use_id:b.id,content:JSON.stringify(found).slice(0,12000),...(found&&found.error?{is_error:true}:{})})
           continue
         }
         if(b.name!=='sql'){results.push({type:'tool_result',tool_use_id:b.id,content:'Neznámy nástroj',is_error:true});continue}
