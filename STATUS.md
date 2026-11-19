@@ -1,3 +1,7 @@
+## 19. 11. 2026 – Upratovanie: appka pre upratovačky a manažérku (vetva `feature/upratovanie`, nenasadené)
+- Nový modul `/upratovanie` (manažérka: týždenný plán, priradenie bytov podľa adresy, tím s limitmi, inštrukciami a cenou práce, kontrola s fotkami, nástenka, byty, náklady) a `/uprat` (upratovačka: plán, „som v byte“, checklist, fotky pred/po, poznámka, hotovo) + verejná prihláška `/uprat/prihlaska`. Dokumentácia `docs/upratovanie/README.md`.
+- Migrácia `20261119_upratovanie` **nie je aplikovaná**; bez nej appka beží v ukážkovom režime. Na schválenie: migrácia, vytváranie účtov manažérkou, verejná prihláška, odoslanie adresy do OpenStreetMap.
+
 ## 17. 11. 2026 – Vyúčtovanie: návrhy zmien kódu z chatu so schválením jedným klikom
 - Chat Pomocník vie pripraviť pull request s úpravou kódu v okruhu modulu Vyúčtovanie; nasadenie schvaľuje admin s rolou „Schvaľovateľ zmien kódu“ po zelených testoch a náhľade. Dokumentácia `docs/vyuctovanie/README.md`.
 - Funkcia je vypnutá, kým nie je vo Verceli `GH_CHANGES_TOKEN`. Migrácia `20261117_billing_changes`. Nový CI workflow `.github/workflows/ci.yml`.
