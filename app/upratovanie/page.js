@@ -4,6 +4,8 @@ import Shell from '@/components/Shell'
 import NoAccess from '@/components/NoAccess'
 import { clContext, managerData } from '@/lib/cl-server'
 import { todayBa, isYmd } from '@/lib/cl-core'
+import { rpc } from '@/lib/cl-server'
+import { isMonth, monthRange, reportModel } from '@/lib/cl-report'
 import PlanTab from '@/components/upratovanie/PlanTab'
 import TeamTab from '@/components/upratovanie/TeamTab'
 import ReviewTab from '@/components/upratovanie/ReviewTab'
@@ -38,7 +40,18 @@ export default async function UpratovaniePage({ searchParams }) {
   const tab = TABS.some(([k]) => k === sp.tab) ? sp.tab : 'plan'
   const data = await managerData(s, { date, today })
   const demo = !!data.demo
-  const Body = { plan: PlanTab, team: TeamTab, review: ReviewTab, pay: PayTab, flats: FlatsTab, settings: SettingsTab }[tab]
+  const Body = { plan: PlanTab, team: TeamTab, review: ReviewTab, flats: FlatsTab, settings: SettingsTab }[tab]
+  let pay = null
+  if (tab === 'pay') {
+    const thisMonth = today.slice(0, 7)
+    const ym = isMonth(sp.m) ? sp.m : thisMonth
+    if (demo) pay = { model: reportModel({ tasks: data.tasks, staff: data.staff, flats: Object.values(data.flats) }, thisMonth), ym: thisMonth, thisMonth }
+    else {
+      const { from, to } = monthRange(ym)
+      const r = await rpc(s, 'cl_report_data', { p_from: from, p_to: to })
+      pay = { model: reportModel(r.ok ? r : {}, ym), ym, thisMonth, error: r.ok ? null : r.error }
+    }
+  }
   return (
     <Shell me={me} user={user} isAdmin={isAdmin} active="upratovanie" hideFooter>
       <div className="up">
@@ -49,9 +62,10 @@ export default async function UpratovaniePage({ searchParams }) {
         {demo && <p className="up-banner" role="status">Ukážkový režim: databáza upratovania ešte nie je spustená, vidíš vymyslené údaje a zmeny sa neukladajú.</p>}
         {data.errors && data.errors.length > 0 && <p className="up-msg err" role="alert">Niektoré údaje sa nepodarilo načítať: {data.errors[0]}</p>}
         <nav className="up-tabs" aria-label="Sekcie upratovania">
-          {TABS.map(([k, l]) => <a key={k} href={`?tab=${k}${sp.d ? '&d=' + sp.d : ''}`} className={tab === k ? 'on' : ''} aria-current={tab === k ? 'page' : undefined}>{l}{k === 'team' && data.applications.length ? <i>{data.applications.length}</i> : null}</a>)}
+          {TABS.map(([k, l]) => <a key={k} href={`?tab=${k}${sp.d && k === 'plan' ? '&d=' + sp.d : ''}`} className={tab === k ? 'on' : ''} aria-current={tab === k ? 'page' : undefined}>{l}{k === 'team' && data.applications.length ? <i>{data.applications.length}</i> : null}</a>)}
         </nav>
-        {tab === 'board' ? <Board posts={data.posts} isManager demo={demo} /> : <Body data={data} today={today} date={date} demo={demo} />}
+        {pay && pay.error && <p className="up-msg err" role="alert">{pay.error}</p>}
+        {tab === 'board' ? <Board posts={data.posts} isManager demo={demo} /> : tab === 'pay' ? <PayTab model={pay.model} ym={pay.ym} thisMonth={pay.thisMonth} demo={demo} /> : <Body data={data} today={today} date={date} demo={demo} />}
       </div>
     </Shell>
   )

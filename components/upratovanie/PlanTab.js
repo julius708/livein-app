@@ -1,8 +1,8 @@
 'use client'
 import { useMemo, useState } from 'react'
-import { assignAction, proposeAction, applyProposalAction, setTaskPayAction } from '@/app/upratovanie/actions'
+import { assignAction, proposeAction, applyProposalAction, setTaskPayAction, addTaskAction, cancelTaskAction } from '@/app/upratovanie/actions'
 import { distanceKm, fmtKm, dayLabel, weekDays, addDays, taskView, STATUS_LABEL, payForTask, fmtEur, PAY_SOURCE_LABEL, centsToInput } from '@/lib/cl-core'
-import { useRun, Msg, Pill } from './ui'
+import { useRun, Msg, Pill, Field } from './ui'
 
 const ICON = { todo: '○', in_progress: '◐', done: '●', cancelled: '✕' }
 
@@ -83,6 +83,8 @@ export default function PlanTab({ data, today, date, demo }) {
         )}
       </section>
 
+      <AddTask data={data} today={today} demo={demo} />
+
       <section className="up-panel">
         <h2>Týždenný plán: kto kde upratuje</h2>
         <div className="up-gridwrap">
@@ -123,6 +125,28 @@ function Chip({ t, flats, onClick, on }) {
   )
 }
 
+function AddTask({ data, today, demo }) {
+  const [open, setOpen] = useState(false)
+  const [f, setF] = useState({ listing: '', name: '', date: today, note: '' })
+  const { pending, msg, run } = useRun()
+  const flats = Object.values(data.flats).sort((a, b) => String(a.listing_name).localeCompare(String(b.listing_name), 'sk'))
+  return (
+    <section className="up-panel">
+      <button type="button" className="up-person-head" aria-expanded={open} onClick={() => setOpen(!open)}><b>+ Pridať úlohu mimo Práčovne</b><small>Generálka, kancelária, byt bez balíka z Práčovne.</small></button>
+      {open && (
+        <div className="up-form">
+          <Field label="Byt z evidencie"><select value={f.listing} onChange={(e) => setF({ ...f, listing: e.target.value })}><option value="">— vlastný názov —</option>{flats.map((x) => <option key={x.listing_id} value={x.listing_id}>{x.listing_name}</option>)}</select></Field>
+          <Field label="Vlastný názov" hint="Len ak nevyberáš byt."><input maxLength="120" value={f.name} disabled={!!f.listing} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="napr. Kancelária, generálka" /></Field>
+          <Field label="Dátum"><input type="date" value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} /></Field>
+          <Field label="Poznámka pre upratovačku" wide><textarea rows="2" maxLength="500" value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })} /></Field>
+          <div className="up-row"><button className="btn" disabled={pending || demo || (!f.listing && !f.name.trim())} onClick={() => run(() => addTaskAction(f), { ok: 'Úloha je pridaná. Nájdeš ju medzi nepriradenými.', then: () => setF({ listing: '', name: '', date: today, note: '' }) })}>Pridať úlohu</button></div>
+          <Msg msg={msg} />
+        </div>
+      )}
+    </section>
+  )
+}
+
 export function TaskPanel({ task, data, staff, demo, onClose }) {
   const flat = data.flats[task.listing_id] || {}
   const v = taskView(task)
@@ -140,6 +164,7 @@ export function TaskPanel({ task, data, staff, demo, onClose }) {
         {v.people != null && <Pill>👥 {v.people} hostí</Pill>}
         {v.capsules.map((c, i) => <Pill key={i}>☕ {c.type} × {c.n}</Pill>)}
         {task.problem_text && <Pill tone="prob">⚠ problém nahlásený</Pill>}
+        {task.manual && <Pill tone="info">ručná úloha</Pill>}
       </div>
       {flat.address && <p className="up-meta">📍 {flat.address}{flat.city ? ', ' + flat.city : ''}</p>}
       {v.note && <p className="up-meta">📝 Z Práčovne: {v.note}</p>}
@@ -157,6 +182,7 @@ export function TaskPanel({ task, data, staff, demo, onClose }) {
         <label className="up-f inline"><span>Upraviť sumu (€)</span><input inputMode="decimal" value={pay} onChange={(e) => setPay(e.target.value)} placeholder="podľa sadzby" /></label>
         <button className="btn o" disabled={pending || demo} onClick={() => run(() => setTaskPayAction(task.id, pay), { ok: 'Suma uložená.' })}>Uložiť sumu</button>
       </div>
+      {task.status === 'todo' && <div className="up-row"><button className="btn o" disabled={pending || demo} onClick={() => { if (confirm('Zrušiť túto úlohu?')) run(() => cancelTaskAction(task.id, 'zrušené manažérkou'), { ok: 'Úloha je zrušená.', then: onClose }) }}>Zrušiť úlohu</button></div>}
       <Msg msg={msg} />
     </section>
   )

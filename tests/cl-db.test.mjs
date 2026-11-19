@@ -7,6 +7,7 @@ import { readFileSync, existsSync } from 'node:fs'
 const PG = '/home/user/pracovna/node_modules/@electric-sql/pglite/dist/index.js'
 const have = existsSync(PG)
 const MIG = readFileSync(new URL('../supabase/migrations/20261119_upratovanie.sql', import.meta.url), 'utf8')
+const MIG2 = readFileSync(new URL('../supabase/migrations/20261120_upratovanie_ulohy_report.sql', import.meta.url), 'utf8')
 
 const STUBS = `
 create role authenticated nologin; create role anon nologin; create role service_role nologin;
@@ -20,6 +21,7 @@ create function auth.jwt() returns jsonb language sql stable as $$ select coales
 create table public.app_users (email text primary key, name text not null, roles text[] not null default '{}', active boolean not null default true);
 create table public.config (key text primary key, value jsonb);
 create function public.is_app_admin() returns boolean language sql stable security definer as $$ select exists (select 1 from public.app_users where lower(email) = lower(auth.jwt() ->> 'email') and active and 'admin' = any(roles)) $$;
+create function public.has_app_role(r text) returns boolean language sql stable security definer as $$ select exists (select 1 from public.app_users where lower(email) = lower(auth.jwt() ->> 'email') and active and r = any(roles)) $$;
 create function public.is_active_user() returns boolean language sql stable security definer as $$ select exists (select 1 from public.app_users where lower(email) = lower(auth.jwt() ->> 'email') and active) $$;
 create table public.listings (guesty_id text primary key, name text, city text, in_scope boolean default true);
 create table public.guide_units (listing_id text primary key, address text, city text);
@@ -43,6 +45,7 @@ before(async () => {
   await db.exec(STUBS)
   await db.exec('set check_function_bodies = off')
   await db.exec(MIG)
+  await db.exec(MIG2)
   await db.exec('set check_function_bodies = on')
   await db.exec(`
     insert into public.app_users (email, name, roles) values ('admin@x.sk','Admin',array['admin']), ('boss@x.sk','Šéfka',array['cleaning']), ('a@x.sk','Anna',array['cleaning']), ('b@x.sk','Beáta',array['cleaning']), ('c@x.sk','Cecília',array['cleaning']), ('staff@x.sk','Personál',array['operations']);
@@ -199,6 +202,45 @@ test('cena práce: za hodinu / za upratovanie, cena bytu, ručná oprava; len ma
   assert.equal((await rpc('boss@x.sk', 'cl_set_task_pay', t, null)).ok, true)
   // sadzbu kolegyne upratovačka nevidí
   await as('a@x.sk'); assert.equal((await rows("select hourly_rate_cents from public.cl_staff where email = 'b@x.sk'")).length, 0); await as(null)
+})
+
+test('ručná úloha, zrušenie, report a nastavenie príjemcov', { skip: !have }, async () => {
+  await db.query("insert into public.app_users (email, name, roles) values ('bot@x.sk','Bot',array['bot']) on conflict do nothing")
+  const ok = await rpc('boss@x.sk', 'cl_add_task', null, 'Kancelária', '2026-11-25', 'generálka')
+  assert.equal(ok.ok, true)
+  const t = await one("select listing_id, manual, status, package_id from public.cl_tasks where id = $1", [ok.id])
+  assert.deepEqual({ m: t.manual, s: t.status, p: t.package_id, lid: t.listing_id.startsWith('manual:') }, { m: true, s: 'todo', p: null, lid: true })
+  // ručná úloha na byt z evidencie preberie jeho názov; duplicita (byt + deň) sa odmietne
+  const f = await rpc('boss@x.sk', 'cl_add_task', 'L3', null, '2026-11-26', null)
+  assert.equal(f.ok, true)
+  assert.equal((await one('select listing_name from public.cl_tasks where id = $1', [f.id])).listing_name, 'Byt Tri')
+  assert.equal((await rpc('boss@x.sk', 'cl_add_task', 'L3', null, '2026-11-26', null)).status, 'exists')
+  assert.equal((await rpc('boss@x.sk', 'cl_add_task', null, null, '2026-11-26', null)).status, 'bad_input') // bez názvu
+  assert.equal((await rpc('boss@x.sk', 'cl_add_task', null, 'X', '2020-01-01', null)).status, 'bad_input') // príliš stará
+  assert.ok(await fails(rpc('a@x.sk', 'cl_add_task', null, 'X', '2026-11-25', null))) // upratovačka nepridá
+  // synchronizácia ručnú úlohu nezruší (nemá balík), balíkovú bez balíka zruší
+  await rpc('boss@x.sk', 'cl_sync_tasks', '2026-11-20', '2026-12-05')
+  assert.equal((await one('select status from public.cl_tasks where id = $1', [ok.id])).status, 'todo')
+  // zrušenie: len nezačatá; opakovanie je v poriadku
+  assert.equal((await rpc('boss@x.sk', 'cl_cancel_task', ok.id, 'omyl')).ok, true)
+  assert.equal((await rpc('boss@x.sk', 'cl_cancel_task', ok.id, 'omyl')).replayed, true)
+  assert.ok(await fails(rpc('a@x.sk', 'cl_cancel_task', f.id, 'x')))
+  const l1 = (await one("select id from public.cl_tasks where listing_id = 'L1'")).id
+  assert.equal((await rpc('boss@x.sk', 'cl_cancel_task', l1, 'x')).status, 'in_progress' === (await one('select status from public.cl_tasks where id = $1', [l1])).status ? 'in_progress' : (await one('select status from public.cl_tasks where id = $1', [l1])).status)
+  // nastavenia: príjemcovia reportu len manažérka
+  assert.equal((await rpc('boss@x.sk', 'cl_save_setting', 'report', JSON.stringify({ recipients: ['a@b.sk'] }))).ok, true)
+  assert.ok(await fails(rpc('a@x.sk', 'cl_save_setting', 'report', '{}')))
+  // report: manažérka a bot áno, upratovačka nie
+  const rep = await rpc('boss@x.sk', 'cl_report_data', '2026-11-01', '2026-11-30')
+  assert.equal(rep.ok, true); assert.ok(rep.tasks.length >= 1); assert.ok(rep.staff.length >= 3); assert.deepEqual(rep.recipients, ['a@b.sk']); assert.equal(rep.sent, false)
+  assert.ok(!rep.tasks.some((x) => 'snapshot' in x)) // karta z Práčovne sa do reportu nekopíruje
+  assert.equal((await rpc('bot@x.sk', 'cl_report_data', '2026-11-01', '2026-11-30')).ok, true)
+  assert.ok(await fails(rpc('a@x.sk', 'cl_report_data', '2026-11-01', '2026-11-30')))
+  assert.equal((await rpc('boss@x.sk', 'cl_report_data', '2026-01-01', '2026-12-31')).status, 'bad_range')
+  assert.equal((await rpc('bot@x.sk', 'cl_report_mark', '2026-11')).ok, true)
+  assert.equal((await rpc('bot@x.sk', 'cl_report_data', '2026-11-01', '2026-11-30')).sent, true)
+  assert.equal((await rpc('boss@x.sk', 'cl_report_mark', 'zle')).status, 'bad_input')
+  assert.ok(await fails(rpc('a@x.sk', 'cl_report_mark', '2026-11')))
 })
 
 test('verejná prihláška: obmedzenia, robot, schválenie a účet', { skip: !have }, async () => {
