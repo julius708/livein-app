@@ -5,6 +5,9 @@ import { clContext, rpc, managerData, taskDetail } from '@/lib/cl-server'
 import { proposeAssignments } from '@/lib/cl-assign'
 import { geocode } from '@/lib/cl-geo'
 import { staffPatch, eurToCents, isYmd, todayBa } from '@/lib/cl-core'
+import { headers } from 'next/headers'
+import { siteOrigin, inviteLink, inviteEmail } from '@/lib/cl-invite'
+import { sendMail, mailReady } from '@/lib/mailer'
 
 const NO = { ok: false, error: 'Táto časť je pre manažérku upratovania.' }
 const DEMO = { ok: false, error: 'Upratovanie ešte nie je spustené v databáze (ukážkový režim). Zmeny sa zatiaľ neukladajú.' }
@@ -77,14 +80,6 @@ export async function geocodeStaffAction(email, address, city) {
 export async function decideApplicationAction(id, approve) {
   const m = await manager(); if (m.err) return m.err
   const r = await rpc(m.v.s, 'cl_decide_application', { p_id: id, p_approve: !!approve })
-  if (r.ok) refresh()
-  return r
-}
-
-/** Prihlasovací účet pre upratovačku (rovnaký postup ako v Správe appky: prvotné heslo, pri prvom prihlásení povinná zmena). Heslo sa nikde nezobrazuje. */
-export async function createAccountAction(email) {
-  const m = await manager(); if (m.err) return m.err
-  const r = await rpc(m.v.s, 'cl_create_account', { p_email: email })
   if (r.ok) refresh()
   return r
 }
@@ -172,4 +167,29 @@ export async function cancelTaskAction(taskId, reason) {
   const r = await rpc(m.v.s, 'cl_cancel_task', { p_task: taskId, p_reason: reason || '' })
   if (r.ok) refresh()
   return r
+}
+
+/**
+ * „Pridať člena“: existujúci používateľ appky sa zaradí do tímu hneď; nový dostane prístup a e-mail s odkazom na vyplnenie osobných údajov.
+ * Keď e-mail nie je nastavený (chýba RESEND_API_KEY) alebo zlyhá, vrátime odkaz, aby ho manažérka poslala sama.
+ */
+export async function inviteMemberAction({ name, email, phone }) {
+  const m = await manager(); if (m.err) return m.err
+  const r = await rpc(m.v.s, 'cl_invite', { p_name: name || null, p_email: email || '', p_phone: phone || null })
+  if (!r.ok) return r
+  refresh()
+  if (r.status === 'already') return { ok: true, status: 'already', message: 'Tento člen už v tíme je a údaje má vyplnené.' }
+  if (r.status === 'existing') return { ok: true, status: 'existing', message: `${r.name} už je v appke, pridané do tímu upratovania. Môžeš jej priraďovať byty.` }
+  const origin = siteOrigin(await headers(), process.env)
+  const link = inviteLink(origin, r.token)
+  const to = String(email).trim().toLowerCase()
+  let mailed = false
+  if (mailReady()) {
+    const res = await sendMail({ to, ...inviteEmail({ name: r.name, link, loginUrl: `${origin}/login` }) })
+    mailed = !!res.ok
+    if (!res.ok) console.error('[upratovanie] pozvánka: e-mail zlyhal', String(res.error).slice(0, 120))
+  }
+  return mailed
+    ? { ok: true, status: r.status, mailed: true, message: `${r.name} je v zozname a pozvánka s odkazom na vyplnenie údajov odišla e-mailom. Byty jej môžeš priraďovať hneď.` }
+    : { ok: true, status: r.status, mailed: false, link, message: `${r.name} je v zozname. E-mail sa nepodarilo odoslať, pošli jej tento odkaz sama:` }
 }

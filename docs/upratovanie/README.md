@@ -1,6 +1,6 @@
 # Upratovanie: appka pre upratovačky a manažérku (vetva `feature/upratovanie`)
 
-Stav: **postavené a otestované, nenasadené.** Migrácia nie je aplikovaná v produkcii, vetva nie je v `main`. Bez migrácie appka beží v ukážkovom režime (vymyslené údaje, nič sa neukladá).
+Stav: **nasadené v produkcii (19. 11. 2026)** po schválení Júliusom; migrácie `20261119`, `20261120` (ručná úloha, report, oprava synchronizácie) a `20261121` (pozvánky) sú aplikované. Bez migrácie by appka bežala v ukážkovom režime (vymyslené údaje, nič sa neukladá).
 
 ## Čo to je
 - **`/upratovanie`** (manažérka upratovania a admin): Plán (týždenná tabuľa upratovačky × dni, nepriradené byty, návrh priradenia podľa adresy), Tím (limity, inštrukcie, lokality, voľné dni, cena práce, prihlášky, prístupy), Kontrola (fotky pred/po, checklist, problémy, vrátenie do práce), Nástenka, Byty (návod na vstup, ďalší checklist, čas, cena bytu), Náklady (týždenný prehľad), Nastavenia (spoločný checklist, povinné fotky „po“).
@@ -36,3 +36,10 @@ Na upratovačku: **za upratovanie** (pevná suma) alebo **za hodinu** (čas od �
 
 ## Čo ešte nie je (nápady na ďalšie kolo)
 Zobrazenie „Upratané“ v Práčovni, push upozornenia pre upratovačky, ručné pridanie úlohy mimo Práčovne, export nákladov do Excelu, trasa medzi bytmi, nahrávanie fotky bez signálu na neskôr, preklady pre upratovačky.
+
+
+## Pridať člena, odkaz na prihlášku, čo vypĺňa upratovačka
+- **Odkaz na prihlášku** (`/uprat/prihlaska`) je navrchu stránky Upratovanie (tlačidlo „Skopírovať odkaz“) a v časti Tím. Prihlášky schvaľuje manažérka.
+- **Pridať člena** (Tím): meno, e-mail, telefón. Existujúci používateľ appky sa zaradí do tímu hneď (jeho roly sa nemenia). Nový dostane prístup (rola `cleaning`, profil upratovačky čakajúci na údaje) a e-mail s jednorazovým odkazom na vyplnenie údajov. Byty jej možno priraďovať hneď; bez adresy ju plánovač zaradí podľa záťaže, po vyplnení adresy aj podľa vzdialenosti. Bez `RESEND_API_KEY` appka ukáže odkaz na ručné poslanie.
+- **Prihlásenie bez hesla**: upratovačka zadá e-mail a vyberie prihlásenie odkazom do e-mailu (existujúci spôsob appky). Heslá sa nevytvárajú ani neposielajú; funkcia `cl_create_account` ostáva v databáze, ale appka ju už nevolá.
+- **Čo upratovačka vyplňa sama: len osobné údaje** (telefón, adresa bydliska, mesto). Počet bytov za deň a týždeň, vzdialenosť, pracovné a voľné dni, lokality, vylúčené byty, inštrukcie, cena práce, rola a aktívnosť sú výlučne v Tíme u manažérky; databázová funkcia `cl_save_my_profile` ich cez profil upratovačky nezmení ani keď ich pošle (test `správa upratovačiek`).
