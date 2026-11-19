@@ -128,3 +128,5 @@
 .up-linkbox{display:flex;flex-direction:column;gap:6px}
 .up-linkbox small{color:#66716A;font-size:12.5px}
 .up-linkurl{font-weight:800;color:#173E2C;overflow-wrap:anywhere;font-size:14px}
+
+.up-sub{margin:10px 0 2px;font-size:13px;color:#66716A;text-transform:uppercase;letter-spacing:.05em}

@@ -27,7 +27,7 @@ export default async function UpratPage({ searchParams }) {
     return (
       <Shell me={me} user={user} isAdmin={isAdmin} active="uprat" hideFooter>
         <div className="up"><p className="up-banner" role="status">Ukážkový režim: vidíš vymyslené údaje, zmeny sa neukladajú.</p>
-          <Cleaner demo today={today} open={sp.u || null} me={d.staff[2]} tasks={tasks} flats={d.flats} items={[]} photos={[]} posts={d.posts} settings={d.settings} /></div>
+          <Cleaner demo today={today} open={sp.u || null} me={d.staff[2]} tasks={tasks} flats={d.flats} entry={d.entry} items={[]} photos={[]} posts={d.posts} settings={d.settings} /></div>
       </Shell>
     )
   }
@@ -43,7 +43,7 @@ export default async function UpratPage({ searchParams }) {
   return (
     <Shell me={me} user={user} isAdmin={isAdmin} active="uprat" hideFooter>
       <div className="up">
-        <Cleaner today={today} open={sp.u || null} me={d.me || c.staff} tasks={d.tasks} flats={d.flats} items={d.items} photos={d.photos} posts={d.posts} settings={d.settings} />
+        <Cleaner today={today} open={sp.u || null} me={d.me || c.staff} tasks={d.tasks} flats={d.flats} entry={d.entry} items={d.items} photos={d.photos} posts={d.posts} settings={d.settings} />
       </div>
     </Shell>
   )

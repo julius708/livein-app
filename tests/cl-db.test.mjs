@@ -8,6 +8,7 @@ const PG = '/home/user/pracovna/node_modules/@electric-sql/pglite/dist/index.js'
 const have = existsSync(PG)
 const MIG = readFileSync(new URL('../supabase/migrations/20261119_upratovanie.sql', import.meta.url), 'utf8')
 const MIG2 = readFileSync(new URL('../supabase/migrations/20261120_upratovanie_ulohy_report.sql', import.meta.url), 'utf8')
+const MIG4 = readFileSync(new URL('../supabase/migrations/20261122_upratovanie_vstup.sql', import.meta.url), 'utf8')
 const MIG3 = readFileSync(new URL('../supabase/migrations/20261121_upratovanie_pozvanky.sql', import.meta.url), 'utf8')
 
 const STUBS = `
@@ -26,7 +27,7 @@ create function public.has_app_role(r text) returns boolean language sql stable 
 create function public.is_active_user() returns boolean language sql stable security definer as $$ select exists (select 1 from public.app_users where lower(email) = lower(auth.jwt() ->> 'email') and active) $$;
 create table public.listings (guesty_id text primary key, name text, city text, in_scope boolean default true);
 create table public.guide_units (listing_id text primary key, address text, city text);
-create table public.guide_cards (listing_id text primary key, address text, lat numeric, lng numeric);
+create table public.guide_cards (listing_id text primary key, address text, lat numeric, lng numeric, arrival jsonb, parking jsonb, address_note jsonb);
 create table public.packages (id uuid primary key default gen_random_uuid(), listing_id text not null, listing_name text not null, date date not null, target_people int, computed_items jsonb not null default '{}', note text not null default '', status text not null default 'todo', hidden boolean not null default false, updated_at timestamptz not null default now());
 alter default privileges in schema public grant all on tables to anon, authenticated;
 `
@@ -48,6 +49,7 @@ before(async () => {
   await db.exec(MIG)
   await db.exec(MIG2)
   await db.exec(MIG3)
+  await db.exec(MIG4)
   await db.exec('set check_function_bodies = on')
   await db.exec(`
     insert into public.app_users (email, name, roles) values ('admin@x.sk','Admin',array['admin']), ('boss@x.sk','Šéfka',array['cleaning']), ('a@x.sk','Anna',array['cleaning']), ('b@x.sk','Beáta',array['cleaning']), ('c@x.sk','Cecília',array['cleaning']), ('staff@x.sk','Personál',array['operations']);
@@ -298,6 +300,25 @@ test('pozvánky: nový člen, existujúci používateľ, opätovné poslanie, vy
   assert.equal(Number(fin.lat), 48.12)
   // po vyplnení už pozvánka nejde znova, člen je „already“
   assert.equal((await rpc('boss@x.sk', 'cl_invite', null, 'pozvana@x.sk', null)).status, 'already')
+})
+
+test('vstup do bytu: text pre hosťa zo Sprievodcu vidí len priradená upratovačka a manažérka', { skip: !have }, async () => {
+  await db.query(`update public.guide_cards set arrival = '{"sk":"Kód od vchodu 1234, schránka vľavo","en":"Door code 1234"}'::jsonb, parking = '{"sk":"Parkovanie vo dvore"}'::jsonb where listing_id = 'L1'`)
+  await db.query(`update public.guide_cards set arrival = '{"en":"Only English text"}'::jsonb where listing_id = 'L2'`)
+  // L1 má priradenú Annu (z testu priradenia), Beáta k L1 nemá nič
+  const asA = await rpc('a@x.sk', 'cl_entry_info', ['L1', 'L2'])
+  assert.equal(asA.ok, true)
+  assert.deepEqual(Object.keys(asA.entry), ['L1']) // L2 jej nepatrí
+  assert.deepEqual(asA.entry.L1, { arrival: 'Kód od vchodu 1234, schránka vľavo', parking: 'Parkovanie vo dvore', note: null })
+  assert.deepEqual(Object.keys((await rpc('b@x.sk', 'cl_entry_info', ['L1'])).entry), []) // cudzí byt nie
+  const asBoss = await rpc('boss@x.sk', 'cl_entry_info', ['L1', 'L2'])
+  assert.equal(asBoss.entry.L2.arrival, 'Only English text') // bez slovenčiny padne na angličtinu
+  assert.ok(await fails(rpc('staff@x.sk', 'cl_entry_info', ['L1']))) // iný používateľ appky nie
+  assert.deepEqual((await rpc('boss@x.sk', 'cl_entry_info', [])).entry, {})
+  // anon funkciu nespustí
+  await db.exec('reset role'); await db.exec('set role anon')
+  assert.ok(await fails(db.query("select public.cl_entry_info(array['L1'])")))
+  await db.exec('reset role')
 })
 
 test('synchronizácia: viac balíkov na ten istý byt a deň nespôsobí chybu', { skip: !have }, async () => {

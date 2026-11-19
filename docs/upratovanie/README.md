@@ -22,7 +22,7 @@ Na upratovačku: **za upratovanie** (pevná suma) alebo **za hodinu** (čas od �
 ## Bezpečnosť
 - Všetky zápisy idú cez funkcie v databáze s kontrolou roly (`cl_is_manager`, `cl_is_cleaner`); priamy zápis do tabuliek `cl_*` je zakázaný, čítanie podľa RLS: upratovačka vidí len svoje úlohy, svoje byty a svoj profil, manažérka všetko.
 - Fotky v súkromnom úložisku `cleaning-photos` (cesta `<id úlohy>/<súbor>`), zobrazenie cez odkazy platné hodinu. Fotka sa v telefóne zmenší (max 1600 px).
-- Návod na vstup do bytu vidí len priradená upratovačka a manažérka.
+- Vstup do bytu sa preberá zo Sprievodcu bytom (text „príchod“ a parkovanie, ten istý ako pre hosťa) cez funkciu `cl_entry_info`; vidí ho len upratovačka priradená k nedávnej alebo budúcej úlohe v tom byte a manažérka. V správe bytov je len nepovinný „Doplnok pre upratovačky“.
 
 ## Čo treba schváliť pred spustením (vedome nič z toho nie je urobené)
 1. **Migrácia `supabase/migrations/20261119_upratovanie.sql`** do produkčnej databázy (LIVE-IN Core). Pridáva len nové tabuľky `cl_*`, funkcie a súkromný bucket; nemení existujúce tabuľky ani roly. Odvolanie: zahodiť tabuľky `cl_*` a funkcie `cl_*`.
