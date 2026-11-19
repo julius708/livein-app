@@ -193,3 +193,24 @@ export async function inviteMemberAction({ name, email, phone }) {
     ? { ok: true, status: r.status, mailed: true, message: `${r.name} je v zozname a pozvánka s odkazom na vyplnenie údajov odišla e-mailom. Byty jej môžeš priraďovať hneď.` }
     : { ok: true, status: r.status, mailed: false, link, message: `${r.name} je v zozname. E-mail sa nepodarilo odoslať, pošli jej tento odkaz sama:` }
 }
+
+/** Recenzia hosťa: s kódom rezervácie sa byt a dátumy doplnia automaticky, inak treba byt a dátum príchodu. */
+export async function addReviewAction(f) {
+  const m = await manager(); if (m.err) return m.err
+  const x = f || {}
+  const num = (v) => (v === '' || v == null ? null : Number(String(v).replace(',', '.')))
+  const p = { reservation_code: String(x.code || '').trim() || null, listing_id: x.listing || null, check_in: isYmd(x.check_in) ? x.check_in : null, rating: num(x.rating), cleanliness: num(x.cleanliness), source: x.source || 'other', text: String(x.text || '').slice(0, 2000) }
+  if (p.rating == null || !(p.rating >= 1 && p.rating <= 5)) return { ok: false, error: 'Hodnotenie musí byť od 1 do 5.' }
+  if (p.cleanliness != null && !(p.cleanliness >= 1 && p.cleanliness <= 5)) return { ok: false, error: 'Čistota musí byť od 1 do 5.' }
+  if (!p.reservation_code && (!p.listing_id || !p.check_in)) return { ok: false, error: 'Zadaj kód rezervácie, alebo vyber byt a dátum príchodu.' }
+  const r = await rpc(m.v.s, 'cl_add_review', { p })
+  if (r.status === 'no_reservation') return { ok: false, error: 'Rezervácia s týmto kódom sa nenašla. Skontroluj kód, alebo vyber byt a dátum príchodu.' }
+  if (r.ok) refresh()
+  return r
+}
+export async function removeReviewAction(id) {
+  const m = await manager(); if (m.err) return m.err
+  const r = await rpc(m.v.s, 'cl_remove_review', { p_id: id })
+  if (r.ok) refresh()
+  return r
+}

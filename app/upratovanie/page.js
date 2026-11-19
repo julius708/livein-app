@@ -3,9 +3,10 @@ import { getViewer } from '@/lib/auth'
 import Shell from '@/components/Shell'
 import NoAccess from '@/components/NoAccess'
 import { clContext, managerData } from '@/lib/cl-server'
-import { todayBa, isYmd } from '@/lib/cl-core'
+import { todayBa, isYmd, addDays } from '@/lib/cl-core'
+import QualityTab from '@/components/upratovanie/QualityTab'
 import { rpc } from '@/lib/cl-server'
-import { isMonth, monthRange, reportModel } from '@/lib/cl-report'
+import { isMonth, isRangeYmd, monthRange, reportModel, rangeLabel } from '@/lib/cl-report'
 import PlanTab from '@/components/upratovanie/PlanTab'
 import TeamTab from '@/components/upratovanie/TeamTab'
 import ReviewTab from '@/components/upratovanie/ReviewTab'
@@ -19,7 +20,7 @@ import './upratovanie.css'
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Upratovanie' }
 
-const TABS = [['plan', 'Plán'], ['team', 'Tím'], ['review', 'Kontrola'], ['board', 'Nástenka'], ['flats', 'Byty'], ['pay', 'Náklady'], ['settings', 'Nastavenia']]
+const TABS = [['plan', 'Plán'], ['team', 'Tím'], ['review', 'Kontrola'], ['quality', 'Kvalita'], ['board', 'Nástenka'], ['flats', 'Byty'], ['pay', 'Náklady'], ['settings', 'Nastavenia']]
 
 export default async function UpratovaniePage({ searchParams }) {
   const sp = (await searchParams) || {}
@@ -42,15 +43,25 @@ export default async function UpratovaniePage({ searchParams }) {
   const data = await managerData(s, { date, today })
   const demo = !!data.demo
   const Body = { plan: PlanTab, team: TeamTab, review: ReviewTab, flats: FlatsTab, settings: SettingsTab }[tab]
+  let quality = null
+  if (tab === 'quality') {
+    const range = isRangeYmd(sp.from, sp.to) ? { from: sp.from, to: sp.to } : { from: addDays(today, -30), to: addDays(today, 7) }
+    if (demo) quality = { range, data: { visits: [], orphans: [] } }
+    else {
+      const r = await rpc(s, 'cl_quality', { p_from: range.from, p_to: range.to })
+      quality = { range, data: r.ok ? r : { visits: [], orphans: [] }, error: r.ok ? null : r.error }
+    }
+  }
   let pay = null
   if (tab === 'pay') {
     const thisMonth = today.slice(0, 7)
-    const ym = isMonth(sp.m) ? sp.m : thisMonth
+    const range = isRangeYmd(sp.from, sp.to) ? { from: sp.from, to: sp.to } : null
+    const ym = range ? range.from.slice(0, 7) : isMonth(sp.m) ? sp.m : thisMonth
     if (demo) pay = { model: reportModel({ tasks: data.tasks, staff: data.staff, flats: Object.values(data.flats) }, thisMonth), ym: thisMonth, thisMonth }
     else {
-      const { from, to } = monthRange(ym)
+      const { from, to } = range || monthRange(ym)
       const r = await rpc(s, 'cl_report_data', { p_from: from, p_to: to })
-      pay = { model: reportModel(r.ok ? r : {}, ym), ym, thisMonth, error: r.ok ? null : r.error }
+      pay = { model: reportModel(r.ok ? r : {}, ym, range ? { label: rangeLabel(from, to) } : {}), ym, thisMonth, range, error: r.ok ? null : r.error }
     }
   }
   return (
@@ -65,8 +76,8 @@ export default async function UpratovaniePage({ searchParams }) {
         <nav className="up-tabs" aria-label="Sekcie upratovania">
           {TABS.map(([k, l]) => <a key={k} href={`?tab=${k}${sp.d && k === 'plan' ? '&d=' + sp.d : ''}`} className={tab === k ? 'on' : ''} aria-current={tab === k ? 'page' : undefined}>{l}{k === 'team' && data.applications.length ? <i>{data.applications.length}</i> : null}</a>)}
         </nav>
-        {pay && pay.error && <p className="up-msg err" role="alert">{pay.error}</p>}
-        {tab === 'board' ? <Board posts={data.posts} isManager demo={demo} /> : tab === 'pay' ? <PayTab model={pay.model} ym={pay.ym} thisMonth={pay.thisMonth} demo={demo} /> : <Body data={data} today={today} date={date} demo={demo} />}
+        {((pay && pay.error) || (quality && quality.error)) && <p className="up-msg err" role="alert">{(pay && pay.error) || quality.error}</p>}
+        {tab === 'board' ? <Board posts={data.posts} isManager demo={demo} />   : tab === 'quality' ? <QualityTab quality={quality.data} flats={data.flats} from={quality.range.from} to={quality.range.to} demo={demo} /> : tab === 'pay' ? <PayTab model={pay.model} ym={pay.ym} thisMonth={pay.thisMonth} range={pay.range} demo={demo} /> : <Body data={data} today={today} date={date} demo={demo} />}
       </div>
     </Shell>
   )
