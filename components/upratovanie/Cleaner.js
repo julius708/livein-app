@@ -8,12 +8,12 @@ import Board from './Board'
 
 const TABS = [['today', 'Dnes'], ['week', 'Týždeň'], ['board', 'Nástenka'], ['me', 'Ja']]
 
-export default function Cleaner({ me, tasks, flats, items, photos, posts, settings, today, open, demo }) {
+export default function Cleaner({ me, tasks, flats, entry = {}, items, photos, posts, settings, today, open, demo }) {
   const [tab, setTab] = useState('today')
   const [openId, setOpenId] = useState(open)
   const task = openId ? tasks.find((t) => t.id === openId) : null
   const pick = (id) => { setOpenId(id); try { history.replaceState(null, '', id ? `?u=${id}` : '?') } catch {} ; if (typeof window !== 'undefined') window.scrollTo({ top: 0 }) }
-  if (task) return <TaskScreen key={task.id} task={task} flat={flats[task.listing_id] || {}} items={items.filter((i) => i.task_id === task.id)} photos={photos.filter((p) => p.task_id === task.id)} rules={settings.rules || {}} demo={demo} onBack={() => pick(null)} />
+  if (task) return <TaskScreen key={task.id} task={task} flat={flats[task.listing_id] || {}} entry={entry[task.listing_id] || null} items={items.filter((i) => i.task_id === task.id)} photos={photos.filter((p) => p.task_id === task.id)} rules={settings.rules || {}} demo={demo} onBack={() => pick(null)} />
   return (
     <div className="up-wrap">
       <header className="up-head"><div><h1>Ahoj, {String(me.name || '').split(' ')[0]}</h1><p>Tvoj plán upratovania. Byty a hostia sú z Práčovne.</p></div></header>
@@ -89,7 +89,7 @@ function PhotoSection({ task, kind, photos, canAdd, demo }) {
   )
 }
 
-function TaskScreen({ task, flat, items, photos, rules, demo, onBack }) {
+function TaskScreen({ task, flat, entry, items, photos, rules, demo, onBack }) {
   const v = taskView(task)
   const { pending, msg, run } = useRun()
   const [note, setNote] = useState(task.cleaner_note || '')
@@ -114,7 +114,10 @@ function TaskScreen({ task, flat, items, photos, rules, demo, onBack }) {
       </section>
       <section className="up-panel up-access">
         <h2>Ako sa dostať do bytu</h2>
-        <p className="up-text">{flat.access_note || 'Návod na vstup zatiaľ nie je vyplnený. Opýtaj sa manažérky.'}</p>
+        {entry && entry.arrival ? <p className="up-text">{entry.arrival}</p> : <p className="up-text">Vstup je rovnaký ako pre hosťa (Sprievodca bytom). Ak ho tu nevidíš, opýtaj sa manažérky.</p>}
+        {entry && entry.note && <p className="up-text">{entry.note}</p>}
+        {entry && entry.parking && <><h3 className="up-sub">Parkovanie</h3><p className="up-text">{entry.parking}</p></>}
+        {flat.access_note && <><h3 className="up-sub">Doplnok pre upratovačky</h3><p className="up-text">{flat.access_note}</p></>}
       </section>
 
       {task.status === 'todo' && (
