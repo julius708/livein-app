@@ -1,20 +1,22 @@
 'use client'
 import { useState } from 'react'
-import { saveStaffAction, geocodeStaffAction, decideApplicationAction, createAccountAction } from '@/app/upratovanie/actions'
+import { saveStaffAction, geocodeStaffAction, decideApplicationAction, inviteMemberAction } from '@/app/upratovanie/actions'
+import ApplyLink from './ApplyLink'
 import { WEEKDAYS_SHORT, centsToInput, fmtEur } from '@/lib/cl-core'
 import { useRun, Msg, Field, Pill } from './ui'
 
 export default function TeamTab({ data, demo }) {
-  const [adding, setAdding] = useState('')
-  const [role, setRole] = useState('cleaner')
+  const [add, setAdd] = useState({ name: '', email: '', phone: '' })
+  const [res, setRes] = useState(null)
   const { pending, msg, run } = useRun()
   const people = [...data.staff].sort((a, b) => (a.role === b.role ? a.name.localeCompare(b.name, 'sk') : a.role === 'manager' ? -1 : 1))
   return (
     <div className="up-wrap">
+      <section className="up-panel"><ApplyLink /></section>
       {data.applications.length > 0 && (
         <section className="up-panel">
           <h2>Nové prihlášky ({data.applications.length})</h2>
-          <p className="up-hint">Prihlásiť sa môže ktokoľvek cez verejný formulár. Po schválení vznikne používateľ s rolou „Upratovanie a pranie“ a profil upratovačky; potom jej vytvor prístup.</p>
+          <p className="up-hint">Prihlásiť sa môže ktokoľvek cez verejný formulár. Po schválení vznikne používateľ s rolou „Upratovanie a pranie“ a profil upratovačky; do appky sa prihlási e-mailom, heslo nepotrebuje.</p>
           {data.applications.map((a) => <Application key={a.id} a={a} demo={demo} />)}
         </section>
       )}
@@ -22,12 +24,14 @@ export default function TeamTab({ data, demo }) {
         <h2>Tím upratovania</h2>
         <p className="up-hint">Každá upratovačka má vlastné nastavenia: koľko bytov jej appka priradí za deň a za týždeň, ako ďaleko, v ktorých lokalitách, aké dni pracuje, vlastné inštrukcie a cenu práce. Zmeny platia pre ďalšie priradenia.</p>
         {people.map((s) => <Person key={s.email} s={s} flats={data.flats} demo={demo} />)}
-        <form className="up-add" onSubmit={(e) => { e.preventDefault(); if (adding.trim()) run(() => saveStaffAction({ email: adding, role }), { ok: 'Pridané do tímu.', then: () => setAdding('') }) }}>
-          <Field label="Pridať existujúceho používateľa appky (e-mail)"><input type="email" value={adding} onChange={(e) => setAdding(e.target.value)} placeholder="meno@firma.sk" /></Field>
-          <Field label="Rola"><select value={role} onChange={(e) => setRole(e.target.value)}><option value="cleaner">Upratovačka</option><option value="manager">Manažérka</option></select></Field>
-          <button className="btn" disabled={pending || demo || !adding.trim()}>Pridať</button>
+        <form className="up-add" onSubmit={(e) => { e.preventDefault(); if (add.email.trim()) run(() => inviteMemberAction(add), { then: (r) => { setRes(r); setAdd({ name: '', email: '', phone: '' }) } }) }}>
+          <Field label="Meno"><input value={add.name} onChange={(e) => setAdd({ ...add, name: e.target.value })} placeholder="meno a priezvisko" autoComplete="off" /></Field>
+          <Field label="E-mail"><input type="email" required value={add.email} onChange={(e) => setAdd({ ...add, email: e.target.value })} placeholder="meno@firma.sk" autoComplete="off" /></Field>
+          <Field label="Telefón"><input type="tel" value={add.phone} onChange={(e) => setAdd({ ...add, phone: e.target.value })} autoComplete="off" /></Field>
+          <button className="btn" disabled={pending || demo || !add.email.trim()}>Pridať člena</button>
         </form>
-        <p className="up-hint">Novú upratovačku, ktorá ešte nie je v appke, nechaj vyplniť prihlášku: odkaz <b>/uprat/prihlaska</b>.</p>
+        <p className="up-hint">Ak už je v appke, zaradí sa do tímu hneď. Ak je nový, dostane e-mailom pozvánku s odkazom na vyplnenie údajov (telefón, adresa) a môžeš jej priraďovať byty ešte predtým, než ich vyplní.</p>
+        {res && <p className="up-msg ok" role="status">{res.message}{res.link && <> <br /><b className="up-linkurl">{res.link}</b></>}</p>}
         <Msg msg={msg} />
       </section>
     </div>
@@ -40,7 +44,7 @@ function Application({ a, demo }) {
     <div className="up-app">
       <div><b>{a.name}</b><small>{a.phone} · {a.email}</small><small>📍 {a.address}{a.city ? ', ' + a.city : ''}</small>{a.note && <small>💬 {a.note}</small>}</div>
       <div className="up-row">
-        <button className="btn" disabled={pending || demo} onClick={() => run(() => decideApplicationAction(a.id, true), { ok: 'Schválené. Nezabudni jej vytvoriť prístup.' })}>Schváliť</button>
+        <button className="btn" disabled={pending || demo} onClick={() => run(() => decideApplicationAction(a.id, true), { ok: 'Schválené. Do appky sa prihlási e-mailom (odkaz do schránky), heslo nepotrebuje.' })}>Schváliť</button>
         <button className="btn o" disabled={pending || demo} onClick={() => run(() => decideApplicationAction(a.id, false), { ok: 'Zamietnuté.' })}>Zamietnuť</button>
       </div>
       <Msg msg={msg} />
@@ -71,6 +75,7 @@ function Person({ s, flats, demo }) {
         <b>{s.name}</b>
         <Pill tone={s.role === 'manager' ? 'info' : ''}>{s.role === 'manager' ? 'manažérka' : 'upratovačka'}</Pill>
         {!s.active && <Pill tone="prob">vypnutá</Pill>}
+        {s.pending && <Pill tone="info">čaká na vyplnenie údajov</Pill>}
         {s.role === 'cleaner' && <small>max {s.max_per_day} bytov za deň{s.max_per_week > 0 ? `, ${s.max_per_week} za týždeň` : ''}{s.max_distance_km > 0 ? `, do ${s.max_distance_km} km` : ''} · {payText}{s.lat == null ? ' · bez adresy na mape' : ''}</small>}
       </button>
       {open && (
@@ -110,7 +115,7 @@ function Person({ s, flats, demo }) {
           <label className="up-check"><input type="checkbox" checked={f.active} onChange={(e) => set('active', e.target.checked)} /> Aktívna (neaktívnej appka nič nepriraďuje)</label>
           <div className="up-row">
             <button className="btn" disabled={pending || demo} onClick={save}>Uložiť</button>
-            <AccessButton email={s.email} demo={demo} />
+            {s.pending && <ResendButton s={s} demo={demo} />}
           </div>
           <Msg msg={msg} />
         </div>
@@ -119,11 +124,13 @@ function Person({ s, flats, demo }) {
   )
 }
 
-function AccessButton({ email, demo }) {
+function ResendButton({ s, demo }) {
   const { pending, msg, run } = useRun()
+  const [link, setLink] = useState('')
   return (
     <span className="up-access">
-      <button type="button" className="btn o" disabled={pending || demo} onClick={() => run(() => createAccountAction(email), { ok: 'Prístup je pripravený. Prvé prihlásenie s prvotným heslom, potom si ho zmení.' })}>Vytvoriť prístup</button>
+      <button type="button" className="btn o" disabled={pending || demo} onClick={() => run(() => inviteMemberAction({ email: s.email, name: s.name, phone: '' }), { then: (r) => setLink(r.link || ''), ok: 'Pozvánka odoslaná znova.' })}>Poslať pozvánku znova</button>
+      {link && <small className="up-linkurl">{link}</small>}
       <Msg msg={msg} />
     </span>
   )

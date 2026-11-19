@@ -13,6 +13,7 @@ import PayTab from '@/components/upratovanie/PayTab'
 import FlatsTab from '@/components/upratovanie/FlatsTab'
 import SettingsTab from '@/components/upratovanie/SettingsTab'
 import Board from '@/components/upratovanie/Board'
+import ApplyLink from '@/components/upratovanie/ApplyLink'
 import './upratovanie.css'
 
 export const dynamic = 'force-dynamic'
@@ -57,7 +58,7 @@ export default async function UpratovaniePage({ searchParams }) {
       <div className="up">
         <header className="up-head">
           <div><h1>Upratovanie</h1><p>Plán, tím a kontrola upratovania. Byty a hostia sa preberajú z Práčovne.</p></div>
-          <a className="btn o" href="/uprat">Pohľad upratovačky</a>
+          <div className="up-row"><ApplyLink compact /><a className="btn o" href="/uprat">Pohľad upratovačky</a></div>
         </header>
         {demo && <p className="up-banner" role="status">Ukážkový režim: databáza upratovania ešte nie je spustená, vidíš vymyslené údaje a zmeny sa neukladajú.</p>}
         {data.errors && data.errors.length > 0 && <p className="up-msg err" role="alert">Niektoré údaje sa nepodarilo načítať: {data.errors[0]}</p>}

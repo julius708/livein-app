@@ -151,16 +151,15 @@ function TaskScreen({ task, flat, items, photos, rules, demo, onBack }) {
 }
 
 function Profile({ me, tasks, flats, demo }) {
-  const [f, setF] = useState({ phone: me.phone || '', address: me.address || '', city: me.city || '', work_days: me.work_days || [1, 2, 3, 4, 5, 6, 7], days_off: (me.days_off || []).join('\n') })
+  const [f, setF] = useState({ phone: me.phone || '', address: me.address || '', city: me.city || '' })
   const { pending, msg, run } = useRun()
-  const toggle = (d) => setF((x) => ({ ...x, work_days: x.work_days.includes(d) ? x.work_days.filter((y) => y !== d) : [...x.work_days, d] }))
   const sum = payrollSummary(tasks, [me], flats).list[0]
   const rate = me.pay_type === 'hourly' ? (me.hourly_rate_cents ? `${fmtEur(me.hourly_rate_cents)} za hodinu` : null) : (me.task_rate_cents ? `${fmtEur(me.task_rate_cents)} za upratovanie` : null)
   return (
     <div className="up-wrap">
       <section className="up-panel">
         <h2>Moje údaje</h2>
-        <p className="up-hint">Podľa adresy ti appka priraďuje byty v blízkosti. Adresu vidí manažérka upratovania.</p>
+        <p className="up-hint">Vypĺňaš len osobné údaje. Podľa adresy ti appka priraďuje byty v blízkosti. Adresu vidí manažérka upratovania.</p>
         <div className="up-form">
           <Field label="Telefón"><input value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} /></Field>
           <Field label="Adresa bydliska" wide><input value={f.address} onChange={(e) => setF({ ...f, address: e.target.value })} /></Field>
@@ -168,8 +167,6 @@ function Profile({ me, tasks, flats, demo }) {
           <div className="up-geo"><span>{me.lat != null ? '📍 Adresa je nájdená na mape.' : 'Adresa ešte nie je nájdená na mape, appka nevie počítať vzdialenosť.'}</span>
             <button type="button" className="btn o" disabled={pending || demo || f.address.trim().length < 4} onClick={() => run(() => geocodeMyAddressAction(f.address, f.city), { ok: 'Adresa nájdená na mape a uložená.' })}>Nájsť adresu na mape</button>
             <small>Adresa sa pošle do mapovej služby OpenStreetMap len na nájdenie súradníc.</small></div>
-          <div className="up-f wide"><span>V ktoré dni môžem pracovať</span><div className="up-days">{WEEKDAYS_SHORT.map((d, i) => <button type="button" key={d} aria-pressed={f.work_days.includes(i + 1)} className={f.work_days.includes(i + 1) ? 'on' : ''} onClick={() => toggle(i + 1)}>{d}</button>)}</div></div>
-          <Field label="Voľné dni (dovolenka, lekár)" hint="Každý dátum na nový riadok, RRRR-MM-DD." wide><textarea rows="2" value={f.days_off} onChange={(e) => setF({ ...f, days_off: e.target.value })} /></Field>
           <div className="up-row"><button className="btn" disabled={pending || demo} onClick={() => run(() => saveMyProfileAction(f), { ok: 'Uložené.' })}>Uložiť</button></div>
           <Msg msg={msg} />
         </div>
@@ -179,7 +176,8 @@ function Profile({ me, tasks, flats, demo }) {
         <p className="up-meta">Bytov za deň najviac: <b>{me.max_per_day}</b>{me.max_per_week > 0 ? <> · za týždeň: <b>{me.max_per_week}</b></> : null}{me.max_distance_km > 0 ? <> · najďalej: <b>{me.max_distance_km} km</b></> : null}</p>
         {rate && <p className="up-meta">Sadzba: <b>{rate}</b></p>}
         {sum && <p className="up-meta">Za posledné dva týždne hotové: <b>{sum.done}</b> {sum.done === 1 ? 'upratovanie' : 'upratovaní'} · {fmtEur(sum.doneCents)} <small>(orientačne, nie výplatná páska)</small></p>}
-        <p className="up-hint">Limity a inštrukcie mení manažérka.</p>
+        <p className="up-meta">Pracovné dni: <b>{(me.work_days || []).length ? me.work_days.map((d) => WEEKDAYS_SHORT[d - 1]).join(', ') : '—'}</b>{(me.days_off || []).length ? <> · voľno: <b>{me.days_off.map((d) => d.split('-').reverse().join('. ')).join(', ')}</b></> : null}</p>
+        <p className="up-hint">Toto nastavuje manažérka, ty to nemeníš. Ak potrebuješ voľno alebo zmenu, napíš jej na nástenke alebo ju zavolaj.</p>
       </section>
     </div>
   )

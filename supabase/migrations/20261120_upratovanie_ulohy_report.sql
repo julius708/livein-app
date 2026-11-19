@@ -32,9 +32,10 @@ begin
     lng = coalesce(excluded.lng, public.cl_flats.lng);
 
   with src as (
-    select p.id, p.listing_id, p.listing_name, p.date, p.target_people, p.computed_items, p.note
+    select distinct on (p.listing_id, p.date) p.id, p.listing_id, p.listing_name, p.date, p.target_people, p.computed_items, p.note
       from public.packages p
      where p.date between p_from and p_to and p.status <> 'cancelled' and not p.hidden
+     order by p.listing_id, p.date, (p.status = 'packed') desc, p.updated_at desc, p.id
   ), ins as (
     insert into public.cl_tasks (listing_id, listing_name, date, package_id, people, snapshot, pack_note)
     select s.listing_id, s.listing_name, s.date, s.id, s.target_people, s.computed_items, nullif(s.note, '') from src s

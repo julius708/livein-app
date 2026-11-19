@@ -123,3 +123,8 @@
 .up-noimg{aspect-ratio:4/3;border-radius:12px;background:#EFF1EA;display:flex;align-items:center;justify-content:center;font-size:12px;color:#66716A}
 .up-public{max-width:720px;margin:0 auto;padding:20px 16px 40px;position:relative}
 @media (prefers-reduced-motion:reduce){.up-bar i{transition:none}}
+
+/* odkaz na prihlášku */
+.up-linkbox{display:flex;flex-direction:column;gap:6px}
+.up-linkbox small{color:#66716A;font-size:12.5px}
+.up-linkurl{font-weight:800;color:#173E2C;overflow-wrap:anywhere;font-size:14px}

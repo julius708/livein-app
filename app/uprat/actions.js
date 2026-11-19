@@ -3,7 +3,6 @@ import { revalidatePath } from 'next/cache'
 import { getViewer } from '@/lib/auth'
 import { clContext, rpc } from '@/lib/cl-server'
 import { geocode } from '@/lib/cl-geo'
-import { isYmd } from '@/lib/cl-core'
 
 const NO = { ok: false, error: 'Táto časť je pre upratovačky.' }
 const DEMO = { ok: false, error: 'Upratovanie ešte nie je spustené v databáze (ukážkový režim).' }
@@ -53,13 +52,11 @@ export async function finishTaskAction(taskId, note) {
   return r
 }
 
-/** Vlastný profil: adresa, telefón, pracovné a voľné dni. Limity, inštrukcie a cenu mení len manažérka. */
+/** Vlastný profil: LEN osobné údaje (telefón, adresa). Limity, dni, lokality, inštrukcie a ceny nastavuje manažérka; databáza ich cez profil nezmení. */
 export async function saveMyProfileAction(p) {
   const m = await cleaner(); if (m.err) return m.err
   const out = {}
   for (const k of ['phone', 'address', 'city']) if (p && p[k] !== undefined) out[k] = String(p[k] || '').trim()
-  if (p && Array.isArray(p.work_days)) out.work_days = p.work_days.map(Number).filter((n) => n >= 1 && n <= 7)
-  if (p && p.days_off !== undefined) out.days_off = String(p.days_off || '').split(/[\n,;]+/).map((x) => x.trim()).filter(isYmd)
   const r = await rpc(m.v.s, 'cl_save_my_profile', { p: out })
   if (r.ok) refresh()
   return r
