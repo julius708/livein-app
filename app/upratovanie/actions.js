@@ -107,7 +107,12 @@ export async function saveSettingAction(key, value) {
   const m = await manager(); if (m.err) return m.err
   let v = value
   if (key === 'checklist') v = (Array.isArray(value) ? value : String(value || '').split('\n')).map((x) => String(x).trim()).filter(Boolean).slice(0, 60)
-  else if (key === 'rules') v = { min_after_photos: Math.min(10, Math.max(0, Math.round(Number(value && value.min_after_photos) || 0))) }
+  else if (key === 'report') {
+    const list = (Array.isArray(value) ? value : String(value || '').split(/[\n,;\s]+/)).map((x) => String(x).trim().toLowerCase()).filter(Boolean)
+    const bad = list.find((x) => !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x))
+    if (bad) return { ok: false, error: 'Neplatný e-mail: ' + bad }
+    v = { recipients: [...new Set(list)].slice(0, 10) }
+  } else if (key === 'rules') v = { min_after_photos: Math.min(10, Math.max(0, Math.round(Number(value && value.min_after_photos) || 0))) }
   else return { ok: false, error: 'Neplatné nastavenie.' }
   const r = await rpc(m.v.s, 'cl_save_setting', { p_key: key, p_value: v })
   if (r.ok) refresh()
@@ -151,4 +156,20 @@ export async function setTaskPayAction(taskId, eur) {
 export async function taskDetailAction(taskId) {
   const m = await manager(); if (m.err) return m.err
   return { ok: true, ...(await taskDetail(m.v.s, taskId)) }
+}
+
+/** Ručná úloha mimo Práčovne: byt z evidencie alebo vlastný názov (napr. generálka, kancelária). */
+export async function addTaskAction({ listing, name, date, note }) {
+  const m = await manager(); if (m.err) return m.err
+  if (!isYmd(date)) return { ok: false, error: 'Vyber dátum.' }
+  const r = await rpc(m.v.s, 'cl_add_task', { p_listing: listing || null, p_name: name || null, p_date: date, p_note: note || null })
+  if (r.status === 'exists') return { ok: false, error: 'Na tento byt a deň už úloha je.' }
+  if (r.ok) refresh()
+  return r
+}
+export async function cancelTaskAction(taskId, reason) {
+  const m = await manager(); if (m.err) return m.err
+  const r = await rpc(m.v.s, 'cl_cancel_task', { p_task: taskId, p_reason: reason || '' })
+  if (r.ok) refresh()
+  return r
 }
