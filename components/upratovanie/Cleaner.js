@@ -3,10 +3,10 @@ import { useMemo, useState } from 'react'
 import { startTaskAction, toggleItemAction, addPhotoAction, removePhotoAction, reportProblemAction, finishTaskAction, saveMyProfileAction, geocodeMyAddressAction } from '@/app/uprat/actions'
 import { browserClient } from '@/lib/browser'
 import { dayLabelLong, addDays, weekDays, taskView, STATUS_LABEL, PHOTO_KIND_LABEL, progress, WEEKDAYS_SHORT, payrollSummary, fmtEur } from '@/lib/cl-core'
-import { useRun, Msg, Field, Pill } from './ui'
+import { useRun, Msg, Field, Pill, WorkDaysPicker } from './ui'
 import Board from './Board'
 
-const TABS = [['today', 'Dnes'], ['week', 'Týždeň'], ['board', 'Nástenka'], ['me', 'Ja']]
+const TABS = [['today', 'Dnes'], ['week', 'Týždeň'], ['schedule', 'Môj rozvrh'], ['board', 'Nástenka'], ['me', 'Ja']]
 
 export default function Cleaner({ me, tasks, flats, entry = {}, items, photos, posts, settings, today, open, demo }) {
   const [tab, setTab] = useState('today')
@@ -21,6 +21,7 @@ export default function Cleaner({ me, tasks, flats, entry = {}, items, photos, p
       <nav className="up-tabs" aria-label="Sekcie">{TABS.map(([k, l]) => <button key={k} type="button" className={'up-tabbtn' + (tab === k ? ' on' : '')} aria-pressed={tab === k} onClick={() => setTab(k)}>{l}</button>)}</nav>
       {tab === 'today' && <DayList tasks={tasks.filter((t) => t.date <= addDays(today, 1) && !(t.status === 'done' && t.date < today))} flats={flats} today={today} onOpen={pick} empty="Dnes ani zajtra nemáš nič priradené." />}
       {tab === 'week' && <Week tasks={tasks} flats={flats} today={today} onOpen={pick} />}
+      {tab === 'schedule' && <Schedule me={me} today={today} demo={demo} />}
       {tab === 'board' && <Board posts={posts} isManager={false} demo={demo} />}
       {tab === 'me' && <Profile me={me} tasks={tasks} flats={flats} demo={demo} />}
     </div>
@@ -101,14 +102,19 @@ function TaskScreen({ task, flat, entry, items, photos, rules, demo, onBack }) {
   const pr = progress(list)
   const need = Number(rules.min_after_photos) || 0
   const toggle = (i) => { const next = !i.done; setLocal((l) => ({ ...l, [i.id]: next })); run(async () => { const r = await toggleItemAction(i.id, next); if (!r.ok) setLocal((l) => ({ ...l, [i.id]: i.done })); return r }) }
-  const maps = flat.address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(flat.address + (flat.city ? ', ' + flat.city : ''))}` : null
+  const addr = flat.address ? flat.address + (flat.city ? ', ' + flat.city : '') : ''
+  const hasGeo = flat.lat != null && flat.lng != null
+  const q = hasGeo ? `${flat.lat},${flat.lng}` : encodeURIComponent(addr)
+  const gmaps = addr || hasGeo ? `https://www.google.com/maps/search/?api=1&query=${q}` : null
+  const amaps = addr || hasGeo ? (hasGeo ? `https://maps.apple.com/?ll=${q}&q=${encodeURIComponent(flat.listing_name || 'Byt')}` : `https://maps.apple.com/?q=${q}`) : null
   return (
     <div className="up-wrap">
       <div className="up-row"><button className="btn o" onClick={onBack}>← Späť</button><Pill tone={task.status}>{STATUS_LABEL[task.status]}</Pill></div>
       <section className="up-panel">
         <h1>{task.listing_name}</h1>
         <p className="up-meta">{dayLabelLong(task.date)}{flat.address ? ` · 📍 ${flat.address}${flat.city ? ', ' + flat.city : ''}` : ''}</p>
-        {maps && <a className="btn o" href={maps} target="_blank" rel="noreferrer">Otvoriť v mape</a>}
+        {gmaps && <div className="up-row"><a className="btn o" href={gmaps} target="_blank" rel="noopener noreferrer">🗺 Google Mapy</a><a className="btn o" href={amaps} target="_blank" rel="noopener noreferrer">🗺 Apple Mapy</a></div>}
+        {!gmaps && <p className="up-hint">Byt nemá v systéme adresu, opýtaj sa manažéra.</p>}
         <div className="up-tags">{v.people != null && <Pill>👥 {v.people} hostí</Pill>}{v.capsules.map((c, i) => <Pill key={i}>☕ {c.type} × {c.n}</Pill>)}{flat.est_minutes ? <Pill>~{flat.est_minutes} min</Pill> : null}</div>
         {v.note && <p className="up-meta">📝 Z Práčovne: {v.note}</p>}
       </section>
@@ -179,8 +185,33 @@ function Profile({ me, tasks, flats, demo }) {
         <p className="up-meta">Bytov za deň najviac: <b>{me.max_per_day}</b>{me.max_per_week > 0 ? <> · za týždeň: <b>{me.max_per_week}</b></> : null}{me.max_distance_km > 0 ? <> · najďalej: <b>{me.max_distance_km} km</b></> : null}</p>
         {rate && <p className="up-meta">Sadzba: <b>{rate}</b></p>}
         {sum && <p className="up-meta">Za posledné dva týždne hotové: <b>{sum.done}</b> {sum.done === 1 ? 'upratovanie' : 'upratovaní'} · {fmtEur(sum.doneCents)} <small>(orientačne, nie výplatná páska)</small></p>}
-        <p className="up-meta">Pracovné dni: <b>{(me.work_days || []).length ? me.work_days.map((d) => WEEKDAYS_SHORT[d - 1]).join(', ') : '—'}</b>{(me.days_off || []).length ? <> · voľno: <b>{me.days_off.map((d) => d.split('-').reverse().join('. ')).join(', ')}</b></> : null}</p>
-        <p className="up-hint">Toto nastavuje manažérka, ty to nemeníš. Ak potrebuješ voľno alebo zmenu, napíš jej na nástenke alebo ju zavolaj.</p>
+        <p className="up-hint">Limity a ceny nastavuje manažér, ty ich nemeníš. Pracovné a voľné dni si nastavíš v záložke „Môj rozvrh“.</p>
+      </section>
+    </div>
+  )
+}
+
+/** Môj rozvrh: v ktoré dni upratovačka pracuje a jednotlivé voľné dni (dovolenka, lekár). Plánovač jej v iné dni byty nepriradí. */
+function Schedule({ me, today, demo }) {
+  const [days, setDays] = useState(me.work_days && me.work_days.length ? me.work_days : [1, 2, 3, 4, 5])
+  const [off, setOff] = useState((me.days_off || []).filter((d) => d >= today).sort())
+  const [add, setAdd] = useState('')
+  const { pending, msg, run } = useRun()
+  const addOff = () => { if (add && add >= today && !off.includes(add)) setOff([...off, add].sort()); setAdd('') }
+  return (
+    <div className="up-wrap">
+      <section className="up-panel">
+        <h2>Môj rozvrh</h2>
+        <p className="up-hint">Zaškrtni dni, kedy môžeš pracovať, a pridaj dni, kedy mať voľno (dovolenka, lekár). Appka ti v iné dni byty nepriradí. Zmenu manažér uvidí hneď.</p>
+        <div className="up-form">
+          <WorkDaysPicker value={days} onChange={setDays} label="Pracovné dni v týždni" />
+          <div className="up-f wide"><span>Voľné dni</span>
+            {off.length ? <ul className="up-items">{off.map((d) => <li key={d}>{d.split('-').reverse().map((x, i) => (i < 2 ? Number(x) : x)).join('. ')} <button type="button" className="up-link" onClick={() => setOff(off.filter((x) => x !== d))}>odstrániť</button></li>)}</ul> : <small>Žiadne naplánované voľno.</small>}
+            <div className="up-row"><input type="date" min={today} value={add} onChange={(e) => setAdd(e.target.value)} aria-label="Pridať voľný deň" /><button type="button" className="btn o" disabled={!add} onClick={addOff}>Pridať voľno</button></div>
+          </div>
+          <div className="up-row"><button className="btn" disabled={pending || demo || days.length === 0} onClick={() => run(() => saveMyProfileAction({ work_days: days, days_off: off }), { ok: 'Rozvrh je uložený.' })}>Uložiť rozvrh</button></div>
+          <Msg msg={msg} />
+        </div>
       </section>
     </div>
   )

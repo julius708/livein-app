@@ -4,6 +4,8 @@ import { SUPABASE_URL, SUPABASE_ANON } from '@/lib/env'
 import { MSG } from '@/lib/cl-server'
 import { geocode } from '@/lib/cl-geo'
 
+const days = (v) => [...new Set((Array.isArray(v) ? v : []).map(Number).filter((n) => n >= 1 && n <= 7))].sort()
+
 /** Verejná prihláška upratovačky (bez prihlásenia). Databáza overí údaje, skrytú pascu pre roboty a obmedzí počet pokusov. */
 export async function applyAction(form) {
   const f = form || {}
@@ -11,6 +13,7 @@ export async function applyAction(form) {
   const { data, error } = await c.rpc('cl_apply', {
     p_name: String(f.name || '').slice(0, 120), p_email: String(f.email || '').slice(0, 160), p_phone: String(f.phone || '').slice(0, 40),
     p_address: String(f.address || '').slice(0, 220), p_city: String(f.city || '').slice(0, 100), p_note: String(f.note || '').slice(0, 600), p_hp: String(f.website || '').slice(0, 200),
+    p_work_days: days(f.work_days),
   })
   if (error) {
     console.error('upratovanie apply', error.code, error.message)
@@ -40,7 +43,7 @@ export async function completeProfileAction(form) {
   }
   const { data, error } = await anon().rpc('cl_complete_profile', {
     p_token: f.token, p_phone: String(f.phone || '').slice(0, 40), p_address: String(f.address || '').slice(0, 220), p_city: String(f.city || '').slice(0, 100),
-    p_note: String(f.note || '').slice(0, 600), p_lat: lat, p_lng: lng, p_hp: String(f.website || '').slice(0, 200),
+    p_note: String(f.note || '').slice(0, 600), p_lat: lat, p_lng: lng, p_hp: String(f.website || '').slice(0, 200), p_work_days: days(f.work_days),
   })
   if (error) { console.error('upratovanie profile', error.code, error.message); return { ok: false, error: 'Údaje sa nepodarilo uložiť. Skús to neskôr.' } }
   if (data && data.ok) return { ok: true, mapped: lat != null }
