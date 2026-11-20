@@ -8,6 +8,10 @@ import { staffPatch, eurToCents, isYmd, todayBa } from '@/lib/cl-core'
 import { headers } from 'next/headers'
 import { siteOrigin, inviteLink, inviteEmail } from '@/lib/cl-invite'
 import { sendMail, mailReady } from '@/lib/mailer'
+import { after } from 'next/server'
+import { notifyPeople } from '@/lib/cl-notify-server'
+import { assignmentItems } from '@/lib/cl-evening'
+import { notifyOn } from '@/lib/cl-notify'
 
 const NO = { ok: false, error: 'Táto časť je pre manažérku upratovania.' }
 const DEMO = { ok: false, error: 'Upratovanie ešte nie je spustené v databáze (ukážkový režim). Zmeny sa zatiaľ neukladajú.' }
@@ -54,7 +58,7 @@ export async function applyProposalAction(items) {
   const list = (Array.isArray(items) ? items : []).slice(0, 500).map((a) => ({ task_id: a.task_id, email: a.email, reason: a.reason, km: a.km }))
   if (!list.length) return { ok: false, error: 'Nie je čo priradiť.' }
   const r = await rpc(m.v.s, 'cl_assign_bulk', { p_items: list })
-  if (r.ok) refresh()
+  if (r.ok) { refresh(); await notifyAssigned(m.v, list.map((x) => x.task_id), Object.fromEntries(list.map((x) => [x.task_id, x.email]))) }
   return r
 }
 
@@ -107,6 +111,9 @@ export async function saveSettingAction(key, value) {
     const bad = list.find((x) => !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x))
     if (bad) return { ok: false, error: 'Neplatný e-mail: ' + bad }
     v = { recipients: [...new Set(list)].slice(0, 10) }
+  } else if (key === 'notify') {
+    const b = (x) => x !== false
+    v = { assign: b(value && value.assign), evening_proposal: b(value && value.evening_proposal), evening_reminder: b(value && value.evening_reminder) }
   } else if (key === 'rules') v = { min_after_photos: Math.min(10, Math.max(0, Math.round(Number(value && value.min_after_photos) || 0))) }
   else return { ok: false, error: 'Neplatné nastavenie.' }
   const r = await rpc(m.v.s, 'cl_save_setting', { p_key: key, p_value: v })
@@ -211,6 +218,14 @@ export async function addReviewAction(f) {
 export async function removeReviewAction(id) {
   const m = await manager(); if (m.err) return m.err
   const r = await rpc(m.v.s, 'cl_remove_review', { p_id: id })
+  if (r.ok) refresh()
+  return r
+}
+
+/** Manažér označí upozornenie upratovačky ako vybavené. */
+export async function clearAlertAction(taskId) {
+  const m = await manager(); if (m.err) return m.err
+  const r = await rpc(m.v.s, 'cl_clear_alert', { p_task: taskId })
   if (r.ok) refresh()
   return r
 }

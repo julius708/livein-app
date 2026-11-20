@@ -3,6 +3,12 @@ import { revalidatePath } from 'next/cache'
 import { getViewer } from '@/lib/auth'
 import { clContext, rpc } from '@/lib/cl-server'
 import { geocode } from '@/lib/cl-geo'
+import { headers } from 'next/headers'
+import { after } from 'next/server'
+import { siteOrigin } from '@/lib/cl-invite'
+import { notifyPeople } from '@/lib/cl-notify-server'
+import { alertMessage } from '@/lib/cl-notify'
+import { todayBa } from '@/lib/cl-core'
 
 const NO = { ok: false, error: 'Táto časť je pre upratovačky.' }
 const DEMO = { ok: false, error: 'Upratovanie ešte nie je spustené v databáze (ukážkový režim).' }
@@ -70,4 +76,26 @@ export async function geocodeMyAddressAction(address, city) {
   const r = await rpc(m.v.s, 'cl_save_my_profile', { p: { address, city, lat: g.lat, lng: g.lng, geo_source: 'geocoded' } })
   if (r.ok) refresh()
   return { ...r, lat: g.lat, lng: g.lng }
+}
+
+/** Upratovačka pošle manažérom upozornenie k svojej úlohe (meškám, potrebujem pomoc, chýba tovar, nemôžem prísť); manažéri dostanú push alebo e-mail. */
+export async function alertAction(taskId, kind, text) {
+  const m = await cleaner(); if (m.err) return m.err
+  const r = await rpc(m.v.s, 'cl_task_alert', { p_task: taskId, p_kind: kind, p_text: text || '' })
+  if (!r.ok) return r
+  refresh()
+  try {
+    const { data: t } = await m.v.s.from('cl_tasks').select('listing_name, date').eq('id', taskId).maybeSingle()
+    const who = (m.c.staff && m.c.staff.name) || 'Upratovačka'
+    const msg = alertMessage({ kind, cleaner: who, flat: t ? t.listing_name : 'byt', date: t ? t.date : null, text })
+    // adresy manažérov: cez servisný prístup (upratovačka ich e-maily nevidí)
+    const { adminClientAsync } = await import('@/lib/supabase-admin')
+    const admin = await adminClientAsync()
+    const day = t ? t.date : todayBa()
+    const plan = await rpc(admin, 'cl_plan_data', { p_from: day, p_to: day })
+    const origin = siteOrigin(await headers(), process.env)
+    const items = ((plan.ok && plan.staff) || []).filter((x) => x.role === 'manager').map((x) => ({ email: x.email, ...msg }))
+    after(() => notifyPeople(items, origin))
+  } catch (e) { console.error('[upratovanie] upozornenie manažérom', String(e && e.message).slice(0, 100)) }
+  return r
 }

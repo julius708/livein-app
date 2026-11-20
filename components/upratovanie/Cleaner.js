@@ -1,39 +1,43 @@
 'use client'
-import { useMemo, useState } from 'react'
-import { startTaskAction, toggleItemAction, addPhotoAction, removePhotoAction, reportProblemAction, finishTaskAction, saveMyProfileAction, geocodeMyAddressAction } from '@/app/uprat/actions'
+import { useEffect, useMemo, useState } from 'react'
+import { startTaskAction, toggleItemAction, addPhotoAction, removePhotoAction, reportProblemAction, finishTaskAction, saveMyProfileAction, geocodeMyAddressAction, alertAction } from '@/app/uprat/actions'
 import { browserClient } from '@/lib/browser'
 import { dayLabelLong, addDays, weekDays, taskView, STATUS_LABEL, PHOTO_KIND_LABEL, progress, WEEKDAYS_SHORT, payrollSummary, fmtEur } from '@/lib/cl-core'
 import { useRun, Msg, Field, Pill, WorkDaysPicker } from './ui'
 import Board from './Board'
+import { orderStops, routeStats, travelMinutes, fmtDuration, googleRouteUrl, daySupplies, dayWorkMinutes } from '@/lib/cl-route'
+import { ALERT_LABEL, ALERT_ICON } from '@/lib/cl-notify'
 
 const TABS = [['today', 'Dnes'], ['week', 'Týždeň'], ['schedule', 'Môj rozvrh'], ['board', 'Nástenka'], ['me', 'Ja']]
 
-export default function Cleaner({ me, tasks, flats, entry = {}, items, photos, posts, settings, today, open, demo }) {
+export default function Cleaner({ me, tasks, flats, entry = {}, contacts = [], pushKey = '', items, photos, posts, settings, today, open, demo }) {
   const [tab, setTab] = useState('today')
   const [openId, setOpenId] = useState(open)
   const task = openId ? tasks.find((t) => t.id === openId) : null
   const pick = (id) => { setOpenId(id); try { history.replaceState(null, '', id ? `?u=${id}` : '?') } catch {} ; if (typeof window !== 'undefined') window.scrollTo({ top: 0 }) }
-  if (task) return <TaskScreen key={task.id} task={task} flat={flats[task.listing_id] || {}} entry={entry[task.listing_id] || null} items={items.filter((i) => i.task_id === task.id)} photos={photos.filter((p) => p.task_id === task.id)} rules={settings.rules || {}} demo={demo} onBack={() => pick(null)} />
+  if (task) return <TaskScreen key={task.id} task={task} flat={flats[task.listing_id] || {}} entry={entry[task.listing_id] || null} contacts={contacts} items={items.filter((i) => i.task_id === task.id)} photos={photos.filter((p) => p.task_id === task.id)} rules={settings.rules || {}} demo={demo} onBack={() => pick(null)} />
   return (
     <div className="up-wrap">
-      <header className="up-head"><div><h1>Ahoj, {String(me.name || '').split(' ')[0]}</h1><p>Tvoj plán upratovania. Byty a hostia sú z Práčovne.</p></div></header>
+      <OfflineBanner />
+      <header className="up-head"><div><h1>Ahoj, {String(me.name || '').split(' ')[0]}</h1><p>Tvoj plán upratovania. Byty a hostia sú z Práčovne.</p></div><Contacts contacts={contacts} /></header>
+      <NewAssigned tasks={tasks} today={today} onOpen={() => setTab('today')} />
       {me.instructions ? <section className="up-panel"><h2>Inštrukcie od manažérky</h2><p className="up-text">{me.instructions}</p></section> : null}
       <nav className="up-tabs" aria-label="Sekcie">{TABS.map(([k, l]) => <button key={k} type="button" className={'up-tabbtn' + (tab === k ? ' on' : '')} aria-pressed={tab === k} onClick={() => setTab(k)}>{l}</button>)}</nav>
-      {tab === 'today' && <DayList tasks={tasks.filter((t) => t.date <= addDays(today, 1) && !(t.status === 'done' && t.date < today))} flats={flats} today={today} onOpen={pick} empty="Dnes ani zajtra nemáš nič priradené." />}
+      {tab === 'today' && <DayList me={me} tasks={tasks.filter((t) => t.date <= addDays(today, 1) && !(t.status === 'done' && t.date < today))} flats={flats} today={today} onOpen={pick} empty="Dnes ani zajtra nemáš nič priradené." />}
       {tab === 'week' && <Week tasks={tasks} flats={flats} today={today} onOpen={pick} />}
       {tab === 'schedule' && <Schedule me={me} today={today} demo={demo} />}
       {tab === 'board' && <Board posts={posts} isManager={false} demo={demo} />}
-      {tab === 'me' && <Profile me={me} tasks={tasks} flats={flats} demo={demo} />}
+      {tab === 'me' && <Profile me={me} tasks={tasks} flats={flats} demo={demo} pushKey={pushKey} />}
     </div>
   )
 }
 
-function Card({ t, flat, today, onOpen }) {
+function Card({ t, flat, today, onOpen, n = null }) {
   const v = taskView(t)
   const late = t.date < today && t.status !== 'done'
   return (
     <button type="button" className={'up-card s-' + t.status + (late ? ' late' : '')} onClick={() => onOpen(t.id)}>
-      <span className="up-card-top"><b>{t.listing_name}</b><Pill tone={t.status}>{STATUS_LABEL[t.status]}</Pill></span>
+      <span className="up-card-top"><b>{n ? <span className="up-n">{n}</span> : null}{t.listing_name}</b><span>{t.alert_kind && <Pill tone="prob">{ALERT_ICON[t.alert_kind]} nahlásené</Pill>} <Pill tone={t.status}>{STATUS_LABEL[t.status]}</Pill></span></span>
       <span className="up-card-meta">{v.people != null ? `👥 ${v.people} hostí` : ''}{v.capsuleCount ? ` · ☕ ${v.capsuleCount} kapsúl` : ''}{flat.est_minutes ? ` · ~${flat.est_minutes} min` : ''}</span>
       {flat.address && <span className="up-card-meta">📍 {flat.address}{flat.city ? ', ' + flat.city : ''}</span>}
       {late && <span className="up-card-meta warn">Z minulého dňa, nie je dokončené</span>}
@@ -41,10 +45,75 @@ function Card({ t, flat, today, onOpen }) {
   )
 }
 
-function DayList({ tasks, flats, today, onOpen, empty }) {
+function DayList({ me, tasks, flats, today, onOpen, empty }) {
   const days = [...new Set(tasks.map((t) => t.date))].sort()
   if (!days.length) return <section className="up-panel"><p className="up-hint">{empty}</p></section>
-  return <>{days.map((d) => <section key={d} className="up-panel"><h2>{dayLabelLong(d, today)}</h2><div className="up-cards">{tasks.filter((t) => t.date === d).map((t) => <Card key={t.id} t={t} flat={flats[t.listing_id] || {}} today={today} onOpen={onOpen} />)}</div></section>)}</>
+  return <>{days.map((d) => {
+    const list = tasks.filter((t) => t.date === d)
+    const stop = (t) => ({ ...(flats[t.listing_id] || {}), id: t.id, name: t.listing_name })
+    const order = orderStops(me, list.map(stop))
+    const sorted = order.map((o) => list.find((t) => t.id === o.id))
+    return (
+      <section key={d} className="up-panel"><h2>{dayLabelLong(d, today)}</h2>
+        <DaySummary me={me} tasks={list} flats={flats} order={order} />
+        <div className="up-cards">{sorted.map((t, i) => <Card key={t.id} t={t} flat={flats[t.listing_id] || {}} today={today} onOpen={onOpen} n={list.length > 1 ? i + 1 : null} />)}</div>
+      </section>
+    )
+  })}</>
+}
+
+/** Prehľad dňa: koľko bytov, odhad práce a cesty, odkaz na trasu v mape a čo si zobrať (kapsule, bielizeň). */
+function DaySummary({ me, tasks, flats, order }) {
+  const sup = daySupplies(tasks)
+  const work = dayWorkMinutes(tasks, flats)
+  const st = routeStats(me, order, { back: true })
+  const url = googleRouteUrl(me, order)
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="up-day">
+      <p className="up-meta"><b>{tasks.length === 1 ? '1 byt' : `${tasks.length} ${tasks.length < 5 ? 'byty' : 'bytov'}`}</b> · práca ~{fmtDuration(work)}{tasks.length > 1 && st.km > 0 ? ` · cesta ~${String(st.km).replace('.', ',')} km (asi ${fmtDuration(travelMinutes(st.km))})` : ''}</p>
+      <div className="up-row">
+        {url && tasks.length > 0 && <a className="btn o" href={url} target="_blank" rel="noopener noreferrer">🧭 {tasks.length > 1 ? 'Trasa dňa v mape' : 'Navigovať'}</a>}
+        {(sup.capsules.length > 0 || sup.linen.length > 0) && <button type="button" className="btn o" aria-expanded={open} onClick={() => setOpen(!open)}>🎒 Čo si zobrať</button>}
+      </div>
+      {open && (
+        <div className="up-bring">
+          {sup.capsules.length > 0 && <div><b>Kapsule do kávovaru</b><ul>{sup.capsules.map((c) => <li key={c.label}>{c.label}: <b>{c.n}</b></li>)}</ul></div>}
+          {sup.linen.length > 0 && <div><b>Bielizeň podľa kariet z Práčovne</b><ul>{sup.linen.map((c) => <li key={c.label}>{c.label}: <b>{c.n}</b></li>)}</ul></div>}
+          <small>Súčet za všetky byty dňa. Pri každom byte je zoznam zvlášť.</small>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** Telefón na manažérov: zavolať jedným ťuknutím. */
+function Contacts({ contacts }) {
+  const withPhone = contacts.filter((c) => c.phone)
+  if (!withPhone.length) return null
+  return <div className="up-contacts">{withPhone.slice(0, 3).map((c) => <a key={c.name} className="btn o" href={`tel:${String(c.phone).replace(/[^\d+]/g, '')}`}>📞 {String(c.name).split(' ')[0]}</a>)}</div>
+}
+
+/** Pásik „máš nové upratovania“: nové od posledného odkliknutia na tomto zariadení. */
+function NewAssigned({ tasks, today, onOpen }) {
+  const [seen, setSeen] = useState(null)
+  useEffect(() => { try { setSeen(localStorage.getItem('up_seen') || '') } catch { setSeen('') } }, [])
+  if (seen === null) return null
+  const fresh = tasks.filter((t) => t.assigned_at && t.status === 'todo' && t.date >= today && (!seen || t.assigned_at > seen))
+  if (!fresh.length) return null
+  const ok = () => { try { localStorage.setItem('up_seen', new Date().toISOString()) } catch {} ; setSeen(new Date().toISOString()) }
+  return <div className="up-banner new" role="status"><b>🆕 {fresh.length === 1 ? 'Máš 1 nové upratovanie' : `Máš ${fresh.length} nových upratovaní`}</b> <span>{fresh.slice(0, 3).map((t) => t.listing_name).join(', ')}{fresh.length > 3 ? '…' : ''}</span> <button type="button" className="btn o" onClick={() => { ok(); onOpen() }}>Rozumiem</button></div>
+}
+
+/** Upozornenie, keď zariadenie stratí pripojenie: zmeny sa neuložia, kým sa nevráti signál. */
+function OfflineBanner() {
+  const [off, setOff] = useState(false)
+  useEffect(() => {
+    const u = () => setOff(!navigator.onLine)
+    u(); window.addEventListener('online', u); window.addEventListener('offline', u)
+    return () => { window.removeEventListener('online', u); window.removeEventListener('offline', u) }
+  }, [])
+  return off ? <p className="up-banner off" role="alert">Nemáš pripojenie na internet. Fajky a fotky sa neuložia, kým sa nevráti signál.</p> : null
 }
 
 function Week({ tasks, flats, today, onOpen }) {
@@ -90,7 +159,7 @@ function PhotoSection({ task, kind, photos, canAdd, demo }) {
   )
 }
 
-function TaskScreen({ task, flat, entry, items, photos, rules, demo, onBack }) {
+function TaskScreen({ task, flat, entry, contacts = [], items, photos, rules, demo, onBack }) {
   const v = taskView(task)
   const { pending, msg, run } = useRun()
   const [note, setNote] = useState(task.cleaner_note || '')
@@ -126,6 +195,15 @@ function TaskScreen({ task, flat, entry, items, photos, rules, demo, onBack }) {
         {flat.access_note && <><h3 className="up-sub">Doplnok pre upratovačky</h3><p className="up-text">{flat.access_note}</p></>}
       </section>
 
+      {(v.linen.length > 0 || v.capsules.length > 0) && (
+        <section className="up-panel"><h2>Bielizeň a výbava</h2>
+          {v.linen.length > 0 && <ul className="up-items">{v.linen.map((l, i) => <li key={i}>{l.label}: <b>{l.n}</b></li>)}</ul>}
+          {v.capsules.length > 0 && <p className="up-meta">☕ Kapsule: {v.capsules.map((c) => `${c.type} × ${c.n}`).join(', ')}</p>}
+        </section>
+      )}
+
+      {task.status !== 'done' && task.status !== 'cancelled' && <AlertBox task={task} contacts={contacts} demo={demo} />}
+
       {task.status === 'todo' && (
         <section className="up-panel"><button className="btn up-big" disabled={pending || demo} onClick={() => run(() => startTaskAction(task.id))}>{pending ? 'Chvíľu…' : '📍 Som v byte, začínam'}</button><Msg msg={msg} /></section>
       )}
@@ -159,13 +237,14 @@ function TaskScreen({ task, flat, entry, items, photos, rules, demo, onBack }) {
   )
 }
 
-function Profile({ me, tasks, flats, demo }) {
+function Profile({ me, tasks, flats, demo, pushKey }) {
   const [f, setF] = useState({ phone: me.phone || '', address: me.address || '', city: me.city || '' })
   const { pending, msg, run } = useRun()
   const sum = payrollSummary(tasks, [me], flats).list[0]
   const rate = me.pay_type === 'hourly' ? (me.hourly_rate_cents ? `${fmtEur(me.hourly_rate_cents)} za hodinu` : null) : (me.task_rate_cents ? `${fmtEur(me.task_rate_cents)} za upratovanie` : null)
   return (
     <div className="up-wrap">
+      <PushCard pushKey={pushKey} />
       <section className="up-panel">
         <h2>Moje údaje</h2>
         <p className="up-hint">Vypĺňaš len osobné údaje. Podľa adresy ti appka priraďuje byty v blízkosti. Adresu vidí manažérka upratovania.</p>
@@ -214,5 +293,58 @@ function Schedule({ me, today, demo }) {
         </div>
       </section>
     </div>
+  )
+}
+
+/** Niečo nejde? Jedným ťuknutím dá upratovačka vedieť manažérovi (push alebo e-mail): meškám, potrebujem pomoc, chýba tovar, nemôžem prísť. */
+function AlertBox({ task, contacts, demo }) {
+  const [kind, setKind] = useState(null)
+  const [text, setText] = useState('')
+  const { pending, msg, run } = useRun()
+  const phone = (contacts.find((c) => c.phone) || {}).phone
+  return (
+    <section className="up-panel">
+      <h2>Niečo nejde?</h2>
+      {task.alert_kind && <p className="up-alert">{ALERT_ICON[task.alert_kind]} Manažér už vie: {ALERT_LABEL[task.alert_kind]}{task.alert_text ? ` (${task.alert_text})` : ''}</p>}
+      <div className="up-seg" role="group" aria-label="Druh upozornenia">{Object.entries(ALERT_LABEL).map(([k, l]) => <button key={k} type="button" className={kind === k ? 'on' : ''} aria-pressed={kind === k} onClick={() => setKind(kind === k ? null : k)}>{ALERT_ICON[k]} {l}</button>)}</div>
+      {kind && (
+        <div className="up-row">
+          <input aria-label="Poznámka k upozorneniu" maxLength="300" value={text} onChange={(e) => setText(e.target.value)} placeholder={kind === 'late' ? 'Koľko minút meškáš?' : kind === 'supplies' ? 'Čo chýba?' : 'Stručne čo sa deje (nepovinné)'} />
+          <button className="btn" disabled={pending || demo} onClick={() => run(() => alertAction(task.id, kind, text), { ok: 'Manažér dostal upozornenie.', then: () => { setKind(null); setText('') } })}>Poslať manažérovi</button>
+        </div>
+      )}
+      {phone && <a className="btn o" href={`tel:${String(phone).replace(/[^\d+]/g, '')}`}>📞 Zavolať manažérovi</a>}
+      <Msg msg={msg} />
+    </section>
+  )
+}
+
+const urlB64ToU8 = (s) => { const p = '='.repeat((4 - (s.length % 4)) % 4), b = (s + p).replace(/-/g, '+').replace(/_/g, '/'), raw = atob(b); return Uint8Array.from([...raw].map((c) => c.charCodeAt(0))) }
+
+/** Upozornenia na telefón: zapnutie push na tomto zariadení (nové upratovania, večerná pripomienka). Bez zapnutia príde e-mail. */
+function PushCard({ pushKey }) {
+  const [st, setSt] = useState('unknown')
+  useEffect(() => {
+    if (!pushKey || !('serviceWorker' in navigator) || !('PushManager' in window)) { setSt('unsupported'); return }
+    navigator.serviceWorker.register('/sw.js').then(async (reg) => { const s = await reg.pushManager.getSubscription(); setSt(s ? 'on' : Notification.permission === 'denied' ? 'denied' : 'off') }).catch(() => setSt('unsupported'))
+  }, [pushKey])
+  const enable = async () => {
+    try {
+      const perm = await Notification.requestPermission(); if (perm !== 'granted') { setSt('denied'); return }
+      const reg = await navigator.serviceWorker.ready
+      const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToU8(pushKey) })
+      const j = sub.toJSON()
+      const r = await fetch('/api/push/subscription', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ endpoint: j.endpoint, keys: j.keys }) })
+      setSt(r.ok ? 'on' : 'off')
+    } catch { setSt('off') }
+  }
+  return (
+    <section className="up-panel">
+      <h2>Upozornenia</h2>
+      {st === 'on' && <p className="up-meta">🔔 Zapnuté na tomto zariadení: dostaneš upozornenie na nové upratovania a večer pripomienku na zajtra.</p>}
+      {st === 'off' && <><p className="up-hint">Zapni si upozornenia, aby ti nič neušlo: nové upratovania a večerná pripomienka na zajtra.</p><button type="button" className="btn" onClick={enable}>🔔 Zapnúť upozornenia</button></>}
+      {st === 'denied' && <p className="up-hint">Upozornenia sú v tomto zariadení zakázané. Povoľ ich v nastaveniach prehliadača alebo telefónu.</p>}
+      {(st === 'unsupported' || st === 'unknown') && <p className="up-hint">Na tomto zariadení upozornenia v appke nejdú, nové upratovania a pripomienky ti prídu e-mailom. Na iPhone najprv pridaj appku na plochu (Zdieľať → Pridať na plochu).</p>}
+    </section>
   )
 }

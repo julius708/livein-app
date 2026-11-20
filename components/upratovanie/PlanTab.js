@@ -7,6 +7,8 @@ import { useRun, Msg, Field } from './ui'
 import Modal from './Modal'
 import TaskDrawer from './TaskDrawer'
 import AutoAssign from './AutoAssign'
+import DayView from './DayView'
+import { ALERT_ICON } from '@/lib/cl-notify'
 
 const DOT = { todo: 'Čaká', in_progress: 'Prebieha', done: 'Hotovo' }
 
@@ -14,14 +16,18 @@ const DOT = { todo: 'Čaká', in_progress: 'Prebieha', done: 'Hotovo' }
  * Týždenný kalendár upratovania: upratovačky v riadkoch, dni v stĺpcoch, hore nepriradené byty.
  * Upratovanie sa dá chytiť a presunúť na inú upratovačku (v ten istý deň), alebo kliknúť pre detail a odporúčanie.
  */
-export default function PlanTab({ data, today, date, demo }) {
+export default function PlanTab({ data, today, date, demo, autoDay = null }) {
   const days = useMemo(() => weekDays(date), [date])
   const staffAll = useMemo(() => data.staff.filter((s) => s.role === 'cleaner' && s.active), [data.staff])
   const [local, setLocal] = useState({})
   useEffect(() => { setLocal({}) }, [data.tasks])
   const tasks = useMemo(() => data.tasks.map((t) => (local[t.id] !== undefined ? { ...t, cleaner_email: local[t.id] || null } : t)), [data.tasks, local])
   const [sel, setSel] = useState(null)
-  const [auto, setAuto] = useState(false)
+  const [auto, setAuto] = useState(!!autoDay && !demo)
+  const [autoRange, setAutoRange] = useState(autoDay ? [autoDay, autoDay] : null)
+  const [view, setView] = useState('week')
+  const [dayPick, setDayPick] = useState(weekDays(date).includes(today) ? today : weekDays(date)[0])
+  const [loc, setLoc] = useState('')
   const [adding, setAdding] = useState(false)
   const [drag, setDrag] = useState(null)
   const [over, setOver] = useState(null)
@@ -35,7 +41,11 @@ export default function PlanTab({ data, today, date, demo }) {
 
   const live = tasks.filter((t) => t.status !== 'cancelled')
   const inWeek = live.filter((t) => t.date >= days[0] && t.date <= days[6])
-  const match = (t) => !q || `${t.listing_name} ${(data.flats[t.listing_id] || {}).address || ''}`.toLowerCase().includes(q.toLowerCase())
+  const localities = useMemo(() => [...new Set(Object.values(data.flats).map((f) => f.city).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'sk')), [data.flats])
+  const match = (t) => (!q || `${t.listing_name} ${(data.flats[t.listing_id] || {}).address || ''}`.toLowerCase().includes(q.toLowerCase())) && (!loc || (data.flats[t.listing_id] || {}).city === loc)
+  const tomorrow = addDays(today, 1)
+  const tomorrowOpen = live.filter((t) => t.date === tomorrow && !t.cleaner_email && t.status === 'todo')
+  const alerts = live.filter((t) => t.alert_kind && t.status !== 'done')
   const unassigned = inWeek.filter((t) => !t.cleaner_email)
   const todays = live.filter((t) => t.date === today)
   const problems = live.filter((t) => t.problem_text && t.date >= addDays(today, -7))
@@ -80,7 +90,7 @@ export default function PlanTab({ data, today, date, demo }) {
       <button key={t.id} type="button" className={'up-chip s-' + t.status + (t.problem_text ? ' prob' : '') + (sel === t.id ? ' on' : '') + (drag && drag.id === t.id ? ' dragging' : '')}
         draggable={movable} onDragStart={(e) => onDragStart(e, t)} onDragEnd={() => { setDrag(null); setOver(null) }} onClick={() => setSel(t.id)}
         title={`${t.listing_name} · ${DOT[t.status] || ''}${v.people != null ? ` · ${v.people} hostí` : ''}${v.capsuleCount ? ` · ${v.capsuleCount} kapsúl` : ''}`}>
-        <span className="dot" aria-hidden="true" /><span className="nm">{t.listing_name}</span>{t.problem_text && <b aria-label="problém">!</b>}{t.status === 'done' && <b className="ok" aria-label="hotovo">✓</b>}
+        <span className="dot" aria-hidden="true" /><span className="nm">{t.listing_name}</span>{t.problem_text && <b aria-label="problém">!</b>}{t.alert_kind && t.status !== 'done' && <b aria-label="upozornenie" title="Upozornenie od upratovačky">{ALERT_ICON[t.alert_kind]}</b>}{t.status === 'done' && <b className="ok" aria-label="hotovo">✓</b>}
       </button>
     )
   }
@@ -100,8 +110,9 @@ export default function PlanTab({ data, today, date, demo }) {
           <a className="btn o" href={`?tab=plan&d=${today}`}>Dnes</a>
         </nav>
         <div className="up-toolbar-r">
+          <div className="up-seg" role="group" aria-label="Zobrazenie"><button type="button" className={view === 'week' ? 'on' : ''} aria-pressed={view === 'week'} onClick={() => setView('week')}>Týždeň</button><button type="button" className={view === 'day' ? 'on' : ''} aria-pressed={view === 'day'} onClick={() => setView('day')}>Deň a trasy</button></div>
           <button type="button" className="btn o" onClick={() => setAdding(true)}>+ Úloha</button>
-          <button type="button" className="btn" disabled={demo || !unassigned.length} onClick={() => setAuto(true)} title={unassigned.length ? '' : 'Všetko je priradené'}>✨ Rozdeliť automaticky{unassigned.length ? ` (${unassigned.length})` : ''}</button>
+          <button type="button" className="btn" disabled={demo || !unassigned.length} onClick={() => { setAutoRange(null); setAuto(true) }} title={unassigned.length ? '' : 'Všetko je priradené'}>✨ Rozdeliť automaticky{unassigned.length ? ` (${unassigned.length})` : ''}</button>
         </div>
       </div>
 
@@ -109,15 +120,19 @@ export default function PlanTab({ data, today, date, demo }) {
         <span className="up-kpi"><b>{todays.length}</b> dnes · {todays.filter((t) => t.status === 'done').length} hotových</span>
         <span className={'up-kpi' + (unassigned.length ? ' warn' : '')}><b>{unassigned.length}</b> nepriradených tento týždeň</span>
         <span className={'up-kpi' + (problems.length ? ' red' : '')}><b>{problems.length}</b> hlásených problémov</span>
+        {alerts.length > 0 && <span className="up-kpi red" title={alerts.map((t) => `${ALERT_ICON[t.alert_kind]} ${t.listing_name}`).join(', ')}><b>{alerts.length}</b> upozornení od upratovačiek</span>}
         <span className="up-kpi-sp" />
         <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Hľadať byt…" aria-label="Hľadať byt" />
+        {localities.length > 1 && <select value={loc} onChange={(e) => setLoc(e.target.value)} aria-label="Lokalita"><option value="">Všetky lokality</option>{localities.map((l) => <option key={l} value={l}>{l}</option>)}</select>}
         <select value={who} onChange={(e) => setWho(e.target.value)} aria-label="Zobraziť upratovačku"><option value="">Všetky upratovačky</option>{staffAll.map((s) => <option key={s.email} value={s.email}>{s.name}</option>)}</select>
         <label className="up-check"><input type="checkbox" checked={onlyOpen} onChange={(e) => setOnlyOpen(e.target.checked)} /> Len nehotové</label>
       </div>
 
+      {tomorrowOpen.length > 0 && !demo && <p className="up-banner" role="status">Na zajtra ({dayLabel(tomorrow)}) je <b>{tomorrowOpen.length}</b> {tomorrowOpen.length === 1 ? 'byt' : tomorrowOpen.length < 5 ? 'byty' : 'bytov'} bez upratovačky. <button type="button" className="btn o" onClick={() => { setAutoRange([tomorrow, tomorrow]); setAuto(true) }}>Navrhnúť rozdelenie</button></p>}
       {toast && <p className={'up-toast ' + (toast.ok ? 'ok' : 'err')} role="status" aria-live="polite">{toast.text}</p>}
       <p className="up-dragtip" aria-hidden="true" style={{ visibility: drag ? 'visible' : 'hidden' }}>Pusti na upratovačku v zvýraznenom stĺpci (presunúť sa dá len v ten istý deň).</p>
 
+      {view === 'day' ? <DayView day={dayPick} days={days} today={today} tasks={tasks} staffList={who ? staffAll.filter((s) => s.email === who) : staffAll} flats={data.flats} matchTask={(t) => match(t) && (!onlyOpen || t.status !== 'done')} onPickDay={setDayPick} onOpen={setSel} /> : <>
       <div className="up-calwrap">
         <div className="up-calgrid" role="grid" aria-label="Týždenný plán upratovania">
           <div className="up-corner" role="columnheader">Upratovačka</div>
@@ -159,10 +174,11 @@ export default function PlanTab({ data, today, date, demo }) {
         </div>
         {rows.length === 0 && <p className="up-hint" style={{ padding: 14 }}>Zatiaľ nie je žiadna aktívna upratovačka. Pridaj ju v časti Tím.</p>}
       </div>
+      </>}
       <p className="up-legend" aria-hidden="true"><span className="lg s-todo" />čaká <span className="lg s-in_progress" />prebieha <span className="lg s-done" />hotovo <b className="lgp">!</b> problém · šedé bunky: voľno alebo nepracuje · červené číslo: viac bytov, než má povolené</p>
 
       {task && <TaskDrawer task={task} data={data} staffList={staffAll} tasks={tasks} demo={demo} busy={pending} onAssign={assign} onClose={() => setSel(null)} />}
-      {auto && <AutoAssign date={date} from={days[0]} to={days[6]} staffList={staffAll} demo={demo} onClose={() => setAuto(false)} />}
+      {auto && <AutoAssign date={date} from={autoRange ? autoRange[0] : days[0]} to={autoRange ? autoRange[1] : days[6]} staffList={staffAll} demo={demo} onClose={() => setAuto(false)} />}
       {adding && <AddTaskModal data={data} today={today} demo={demo} onClose={() => setAdding(false)} />}
     </div>
   )

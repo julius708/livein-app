@@ -31,6 +31,14 @@
     {
       "path": "/api/cron/upratovanie-report",
       "schedule": "30 5 1 * *"
+    },
+    {
+      "path": "/api/cron/upratovanie-vecer",
+      "schedule": "0 17 * * *"
+    },
+    {
+      "path": "/api/cron/upratovanie-recenzie",
+      "schedule": "15 5 * * *"
     }
   ],
   "regions": [
