@@ -43,3 +43,10 @@ Zobrazenie „Upratané“ v Práčovni, push upozornenia pre upratovačky, ruč
 - **Pridať člena** (Tím): meno, e-mail, telefón. Existujúci používateľ appky sa zaradí do tímu hneď (jeho roly sa nemenia). Nový dostane prístup (rola `cleaning`, profil upratovačky čakajúci na údaje) a e-mail s jednorazovým odkazom na vyplnenie údajov. Byty jej možno priraďovať hneď; bez adresy ju plánovač zaradí podľa záťaže, po vyplnení adresy aj podľa vzdialenosti. Bez `RESEND_API_KEY` appka ukáže odkaz na ručné poslanie.
 - **Prihlásenie bez hesla**: upratovačka zadá e-mail a vyberie prihlásenie odkazom do e-mailu (existujúci spôsob appky). Heslá sa nevytvárajú ani neposielajú; funkcia `cl_create_account` ostáva v databáze, ale appka ju už nevolá.
 - **Čo upratovačka vyplňa sama: len osobné údaje** (telefón, adresa bydliska, mesto). Počet bytov za deň a týždeň, vzdialenosť, pracovné a voľné dni, lokality, vylúčené byty, inštrukcie, cena práce, rola a aktívnosť sú výlučne v Tíme u manažérky; databázová funkcia `cl_save_my_profile` ich cez profil upratovačky nezmení ani keď ich pošle (test `správa upratovačiek`).
+
+## Týždenný kalendár (Plán)
+- Upratovačky v riadkoch, dni v stĺpcoch, hore riadok **Nepriradené**. Bunka ukazuje len názvy bytov so stavom (čaká, prebieha, hotovo, problém); detaily sú v bočnom paneli po kliknutí.
+- **Presun myšou:** upratovanie sa dá chytiť a pustiť na inú upratovačku (alebo späť do Nepriradených) v ten istý deň; zvýrazní sa stĺpec dňa. Pred priradením appka upozorní na konflikt (voľno, deň mimo rozvrhu, vylúčený byt, limit za deň a týždeň, vzdialenosť) a manažér ho môže potvrdiť. Hotové a rozbehnuté upratovanie sa nepresúva.
+- **Bočný panel** (aj pre dotykové zariadenia, kde sa netiahne): kto upratuje s odporúčanými hore (bez konfliktu, najbližšie), cena práce, zrušenie.
+- **Rozdeliť automaticky:** návrh pre nepriradené byty týždňa v okne so súhrnom po upratovačkách; pred uložením sa dá meniť.
+- Filtre: hľadanie bytu, jedna upratovačka, len nehotové. Pri každej bunke zaťaženie 2/4 (červené pri prekročení limitu), pri upratovačke ukazovateľ týždňa.

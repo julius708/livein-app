@@ -1,189 +1,188 @@
 'use client'
-import { useMemo, useState } from 'react'
-import { assignAction, proposeAction, applyProposalAction, setTaskPayAction, addTaskAction, cancelTaskAction } from '@/app/upratovanie/actions'
-import { distanceKm, fmtKm, dayLabel, weekDays, addDays, taskView, STATUS_LABEL, payForTask, fmtEur, PAY_SOURCE_LABEL, centsToInput } from '@/lib/cl-core'
-import { useRun, Msg, Pill, Field } from './ui'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { assignAction, addTaskAction } from '@/app/upratovanie/actions'
+import { dayLabel, weekDays, addDays, taskView } from '@/lib/cl-core'
+import { assignWarnings, canMove, cellLoad, dayState, weekLoad, avatarColor } from '@/lib/cl-plan'
+import { useRun, Msg, Field } from './ui'
+import Modal from './Modal'
+import TaskDrawer from './TaskDrawer'
+import AutoAssign from './AutoAssign'
 
-const ICON = { todo: '○', in_progress: '◐', done: '●', cancelled: '✕' }
+const DOT = { todo: 'Čaká', in_progress: 'Prebieha', done: 'Hotovo' }
 
+/**
+ * Týždenný kalendár upratovania: upratovačky v riadkoch, dni v stĺpcoch, hore nepriradené byty.
+ * Upratovanie sa dá chytiť a presunúť na inú upratovačku (v ten istý deň), alebo kliknúť pre detail a odporúčanie.
+ */
 export default function PlanTab({ data, today, date, demo }) {
   const days = useMemo(() => weekDays(date), [date])
-  const staff = data.staff.filter((s) => s.role === 'cleaner' && s.active)
-  const [open, setOpen] = useState(null)
-  const [proposal, setProposal] = useState(null)
-  const [opts, setOpts] = useState({ rotation: 0.5, balance: 0.5 })
-  const { pending, msg, run } = useRun()
-  const live = data.tasks.filter((t) => t.status !== 'cancelled')
+  const staffAll = useMemo(() => data.staff.filter((s) => s.role === 'cleaner' && s.active), [data.staff])
+  const [local, setLocal] = useState({})
+  useEffect(() => { setLocal({}) }, [data.tasks])
+  const tasks = useMemo(() => data.tasks.map((t) => (local[t.id] !== undefined ? { ...t, cleaner_email: local[t.id] || null } : t)), [data.tasks, local])
+  const [sel, setSel] = useState(null)
+  const [auto, setAuto] = useState(false)
+  const [adding, setAdding] = useState(false)
+  const [drag, setDrag] = useState(null)
+  const [over, setOver] = useState(null)
+  const [q, setQ] = useState('')
+  const [who, setWho] = useState('')
+  const [onlyOpen, setOnlyOpen] = useState(false)
+  const [toast, setToast] = useState(null)
+  const { pending, run } = useRun()
+  const toastTimer = useRef(null)
+  const say = (text, ok = false) => { setToast({ text, ok }); clearTimeout(toastTimer.current); toastTimer.current = setTimeout(() => setToast(null), 5000) }
+
+  const live = tasks.filter((t) => t.status !== 'cancelled')
   const inWeek = live.filter((t) => t.date >= days[0] && t.date <= days[6])
+  const match = (t) => !q || `${t.listing_name} ${(data.flats[t.listing_id] || {}).address || ''}`.toLowerCase().includes(q.toLowerCase())
   const unassigned = inWeek.filter((t) => !t.cleaner_email)
-  const byCell = (email, day) => inWeek.filter((t) => (t.cleaner_email || '') === email && t.date === day)
   const todays = live.filter((t) => t.date === today)
   const problems = live.filter((t) => t.problem_text && t.date >= addDays(today, -7))
-  const task = open ? data.tasks.find((t) => t.id === open) : null
-  const done = (n) => todays.filter((t) => t.status === n).length
+  const rows = who ? staffAll.filter((s) => s.email === who) : staffAll
+  const task = sel ? tasks.find((t) => t.id === sel) : null
 
-  const propose = () => run(() => proposeAction({ date, from: days[0], to: days[6], options: opts }), { then: (r) => setProposal(r) })
-  const apply = () => run(() => applyProposalAction(proposal.assignments), { ok: 'Priradenie je uložené.', then: () => setProposal(null) })
+  const assign = (taskId, email) => {
+    const t = tasks.find((x) => x.id === taskId)
+    const to = email || null
+    if (!t || (t.cleaner_email || null) === to) return
+    const can = canMove(t, to)
+    if (!can.ok) { say(can.why); return }
+    const s = to ? staffAll.find((x) => x.email === to) : null
+    const warn = s ? assignWarnings({ task: t, staff: s, flat: data.flats[t.listing_id] || {}, tasks }) : []
+    if (warn.length && !confirm(`${warn.join('\n')}\n\nPriradiť aj tak?`)) return
+    const before = t.cleaner_email || ''
+    setLocal((l) => ({ ...l, [taskId]: to || '' }))
+    run(async () => {
+      const r = await assignAction(taskId, to, to ? 'ručne presunuté v kalendári' : 'zrušené v kalendári')
+      if (!r.ok) { setLocal((l) => ({ ...l, [taskId]: before })); say(r.error || 'Nepodarilo sa.') } else say(to ? `${t.listing_name} → ${s.name}` : `${t.listing_name}: priradenie zrušené`, true)
+      return r
+    })
+  }
+
+  const onDragStart = (e, t) => {
+    if (t.status === 'done' || t.status === 'cancelled') { e.preventDefault(); return }
+    e.dataTransfer.setData('text/plain', t.id)
+    e.dataTransfer.effectAllowed = 'move'
+    // zmena vzhľadu až po spustení ťahania, inak ho prehliadač zruší
+    setTimeout(() => setDrag({ id: t.id, date: t.date }), 0)
+  }
+  const dropTarget = (day, email) => ({
+    onDragOver: (e) => { if (drag && drag.date === day) { e.preventDefault(); setOver(day + '|' + email) } },
+    onDragLeave: () => setOver((o) => (o === day + '|' + email ? null : o)),
+    onDrop: (e) => { e.preventDefault(); const id = e.dataTransfer.getData('text/plain') || (drag && drag.id); setDrag(null); setOver(null); if (id && drag && drag.date === day) assign(id, email) },
+  })
+
+  const chip = (t) => {
+    const v = taskView(t)
+    const movable = t.status !== 'done' && t.status !== 'cancelled' && !demo
+    return (
+      <button key={t.id} type="button" className={'up-chip s-' + t.status + (t.problem_text ? ' prob' : '') + (sel === t.id ? ' on' : '') + (drag && drag.id === t.id ? ' dragging' : '')}
+        draggable={movable} onDragStart={(e) => onDragStart(e, t)} onDragEnd={() => { setDrag(null); setOver(null) }} onClick={() => setSel(t.id)}
+        title={`${t.listing_name} · ${DOT[t.status] || ''}${v.people != null ? ` · ${v.people} hostí` : ''}${v.capsuleCount ? ` · ${v.capsuleCount} kapsúl` : ''}`}>
+        <span className="dot" aria-hidden="true" /><span className="nm">{t.listing_name}</span>{t.problem_text && <b aria-label="problém">!</b>}{t.status === 'done' && <b className="ok" aria-label="hotovo">✓</b>}
+      </button>
+    )
+  }
+
+  const cellClass = (day, email, base) => {
+    const valid = drag && drag.date === day
+    return base + (valid ? ' drop-ok' : drag ? ' drop-no' : '') + (over === day + '|' + email ? ' drop-over' : '')
+  }
 
   return (
-    <div className="up-wrap">
-      <div className="up-stats">
-        <div className="up-stat"><span>Dnes</span><b>{todays.length}</b><small>{done('done')} hotových · {done('in_progress')} prebieha · {done('todo')} čaká</small></div>
-        <div className={'up-stat' + (unassigned.length ? ' warn' : '')}><span>Nepriradené (týždeň)</span><b>{unassigned.length}</b><small>{unassigned.length ? 'treba priradiť' : 'všetko priradené'}</small></div>
-        <div className={'up-stat' + (problems.length ? ' red' : '')}><span>Hlásené problémy</span><b>{problems.length}</b><small>za posledných 7 dní</small></div>
-        <div className="up-stat"><span>Upratovačky</span><b>{staff.length}</b><small>aktívne</small></div>
+    <div className="up-wrap up-cal">
+      <div className="up-toolbar">
+        <nav className="up-weeknav" aria-label="Týždeň">
+          <a className="btn o" href={`?tab=plan&d=${addDays(days[0], -7)}`} aria-label="Predošlý týždeň">←</a>
+          <b>{dayLabel(days[0])} – {dayLabel(days[6])}</b>
+          <a className="btn o" href={`?tab=plan&d=${addDays(days[0], 7)}`} aria-label="Ďalší týždeň">→</a>
+          <a className="btn o" href={`?tab=plan&d=${today}`}>Dnes</a>
+        </nav>
+        <div className="up-toolbar-r">
+          <button type="button" className="btn o" onClick={() => setAdding(true)}>+ Úloha</button>
+          <button type="button" className="btn" disabled={demo || !unassigned.length} onClick={() => setAuto(true)} title={unassigned.length ? '' : 'Všetko je priradené'}>✨ Rozdeliť automaticky{unassigned.length ? ` (${unassigned.length})` : ''}</button>
+        </div>
       </div>
 
-      <nav className="up-weeknav" aria-label="Týždeň">
-        <a className="btn o" href={`?tab=plan&d=${addDays(days[0], -7)}`}>← Predošlý</a>
-        <a className="btn o" href={`?tab=plan&d=${today}`}>Tento týždeň</a>
-        <b>{dayLabel(days[0])} – {dayLabel(days[6])}</b>
-        <a className="btn o" href={`?tab=plan&d=${addDays(days[0], 7)}`}>Ďalší →</a>
-      </nav>
+      <div className="up-kpis" aria-label="Prehľad">
+        <span className="up-kpi"><b>{todays.length}</b> dnes · {todays.filter((t) => t.status === 'done').length} hotových</span>
+        <span className={'up-kpi' + (unassigned.length ? ' warn' : '')}><b>{unassigned.length}</b> nepriradených tento týždeň</span>
+        <span className={'up-kpi' + (problems.length ? ' red' : '')}><b>{problems.length}</b> hlásených problémov</span>
+        <span className="up-kpi-sp" />
+        <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Hľadať byt…" aria-label="Hľadať byt" />
+        <select value={who} onChange={(e) => setWho(e.target.value)} aria-label="Zobraziť upratovačku"><option value="">Všetky upratovačky</option>{staffAll.map((s) => <option key={s.email} value={s.email}>{s.name}</option>)}</select>
+        <label className="up-check"><input type="checkbox" checked={onlyOpen} onChange={(e) => setOnlyOpen(e.target.checked)} /> Len nehotové</label>
+      </div>
 
-      <section className="up-panel">
-        <div className="up-row">
-          <h2>Návrh priradenia podľa adresy</h2>
-          <button className="btn" disabled={pending || demo || !unassigned.length} onClick={propose}>{pending ? 'Počítam…' : `Navrhnúť pre ${unassigned.length} nepriradených`}</button>
-        </div>
-        <p className="up-hint">Appka priradí byty podľa vzdialenosti od bydliska, limitov každej upratovačky (koľko bytov za deň a týždeň), voľných dní, uprednostnených lokalít a rotácie. Nič sa neuloží, kým návrh nepotvrdíš; každý riadok môžeš zmeniť.</p>
-        <div className="up-sliders">
-          <label>Rotácia: {Math.round(opts.rotation * 100)} %<input type="range" min="0" max="1" step="0.1" value={opts.rotation} onChange={(e) => setOpts({ ...opts, rotation: Number(e.target.value) })} /></label>
-          <label>Vyrovnanie záťaže: {Math.round(opts.balance * 100)} %<input type="range" min="0" max="1" step="0.1" value={opts.balance} onChange={(e) => setOpts({ ...opts, balance: Number(e.target.value) })} /></label>
-        </div>
-        <Msg msg={msg} />
-        {proposal && (
-          <div className="up-proposal">
-            <table>
-              <thead><tr><th>Deň</th><th>Byt</th><th>Upratovačka</th><th>Prečo</th></tr></thead>
-              <tbody>
-                {proposal.assignments.map((a, i) => (
-                  <tr key={a.task_id}>
-                    <td>{dayLabel(a.date)}</td><td>{a.flat}</td>
-                    <td>
-                      <select value={a.email} onChange={(e) => { const s = staff.find((x) => x.email === e.target.value); const next = proposal.assignments.slice(); next[i] = { ...a, email: s.email, name: s.name, reason: 'ručne zmenené v návrhu', km: null }; setProposal({ ...proposal, assignments: next }) }}>
-                        {staff.map((s) => <option key={s.email} value={s.email}>{s.name}</option>)}
-                      </select>
-                    </td>
-                    <td className="up-why">{a.reason}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {proposal.unassigned.length > 0 && (
-              <div className="up-unas"><b>Nepodarilo sa priradiť ({proposal.unassigned.length}):</b>
-                <ul>{proposal.unassigned.map((u) => <li key={u.task_id}>{dayLabel(u.date)} · {u.flat}: {u.reason}</li>)}</ul>
-              </div>
-            )}
-            <div className="up-row">
-              <button className="btn" disabled={pending || !proposal.assignments.length} onClick={apply}>Potvrdiť a priradiť ({proposal.assignments.length})</button>
-              <button className="btn o" onClick={() => setProposal(null)}>Zahodiť návrh</button>
+      {toast && <p className={'up-toast ' + (toast.ok ? 'ok' : 'err')} role="status" aria-live="polite">{toast.text}</p>}
+      <p className="up-dragtip" aria-hidden="true" style={{ visibility: drag ? 'visible' : 'hidden' }}>Pusti na upratovačku v zvýraznenom stĺpci (presunúť sa dá len v ten istý deň).</p>
+
+      <div className="up-calwrap">
+        <div className="up-calgrid" role="grid" aria-label="Týždenný plán upratovania">
+          <div className="up-corner" role="columnheader">Upratovačka</div>
+          {days.map((d) => (
+            <div key={d} role="columnheader" className={'up-dayhead' + (d === today ? ' today' : '') + (drag && drag.date === d ? ' drop-ok' : '')}>
+              <b>{dayLabel(d)}</b><small>{live.filter((t) => t.date === d).length} upratovaní</small>
             </div>
-          </div>
-        )}
-      </section>
+          ))}
 
-      <AddTask data={data} today={today} demo={demo} />
+          <div className="up-rowhead un" role="rowheader"><span className="av" style={{ background: '#C28A1E' }} aria-hidden="true">?</span><span><b>Nepriradené</b><small>{unassigned.length ? `${unassigned.length} čaká na priradenie` : 'všetko priradené'}</small></span></div>
+          {days.map((d) => (
+            <div key={'u' + d} role="gridcell" className={cellClass(d, '', 'up-cell un')} {...dropTarget(d, '')}>
+              {inWeek.filter((t) => t.date === d && !t.cleaner_email && match(t) && (!onlyOpen || t.status !== 'done')).map((t) => chip(t))}
+            </div>
+          ))}
 
-      <section className="up-panel">
-        <h2>Týždenný plán: kto kde upratuje</h2>
-        <div className="up-gridwrap">
-          <table className="up-grid">
-            <thead><tr><th>Upratovačka</th>{days.map((d) => <th key={d} className={d === today ? 'today' : ''}>{dayLabel(d)}</th>)}</tr></thead>
-            <tbody>
-              <tr className="un"><th>Nepriradené</th>{days.map((d) => <td key={d}>{byCell('', d).map((t) => <Chip key={t.id} t={t} flats={data.flats} onClick={() => setOpen(t.id)} on={open === t.id} />)}</td>)}</tr>
-              {staff.map((s) => {
-                const weekCount = inWeek.filter((t) => t.cleaner_email === s.email).length
+          {rows.map((s) => {
+            const wk = weekLoad(tasks, s.email, days[0])
+            const pct = s.max_per_week > 0 ? Math.min(100, Math.round((wk / s.max_per_week) * 100)) : Math.min(100, Math.round((wk / Math.max(1, (s.max_per_day || 4) * ((s.work_days || []).length || 5))) * 100))
+            return [
+              <div key={'h' + s.email} className="up-rowhead" role="rowheader">
+                <span className="av" style={{ background: avatarColor(s.email) }} aria-hidden="true">{s.name.slice(0, 1)}</span>
+                <span><b>{s.name}</b><small>{wk}{s.max_per_week > 0 ? ` / ${s.max_per_week}` : ''} tento týždeň · max {s.max_per_day}/deň</small><span className="up-bar sm" aria-hidden="true"><i style={{ width: pct + '%' }} /></span></span>
+              </div>,
+              ...days.map((d) => {
+                const st = dayState(s, d)
+                const load = cellLoad(tasks, s, d)
+                const list = inWeek.filter((t) => t.date === d && t.cleaner_email === s.email && match(t) && (!onlyOpen || t.status !== 'done'))
                 return (
-                  <tr key={s.email}>
-                    <th><span>{s.name}</span><small>{weekCount} / {s.max_per_week > 0 ? s.max_per_week : '∞'} týždeň · max {s.max_per_day} za deň</small></th>
-                    {days.map((d) => {
-                      const off = (s.days_off || []).includes(d) || (s.work_days && s.work_days.length && !s.work_days.includes(new Date(d + 'T12:00:00Z').getUTCDay() || 7))
-                      const cell = byCell(s.email, d)
-                      return <td key={d} className={off ? 'off' : cell.length > s.max_per_day ? 'over' : ''}>{off && !cell.length ? <em>voľno</em> : null}{cell.map((t) => <Chip key={t.id} t={t} flats={data.flats} onClick={() => setOpen(t.id)} on={open === t.id} />)}</td>
-                    })}
-                  </tr>
+                  <div key={s.email + d} role="gridcell" className={cellClass(d, s.email, 'up-cell') + (st !== 'ok' ? ' ' + st : '') + (load.level !== 'ok' ? ' ' + load.level : '')} {...dropTarget(d, s.email)}>
+                    {st !== 'ok' && !list.length && <em className="rest">{st === 'off' ? 'voľno' : 'nepracuje'}</em>}
+                    {list.map((t) => chip(t))}
+                    {load.n > 0 && <small className={'ld ' + load.level} title={`${load.n} z max ${load.max} bytov za deň`}>{load.n}/{load.max}</small>}
+                  </div>
                 )
-              })}
-            </tbody>
-          </table>
+              }),
+            ]
+          })}
         </div>
-      </section>
+        {rows.length === 0 && <p className="up-hint" style={{ padding: 14 }}>Zatiaľ nie je žiadna aktívna upratovačka. Pridaj ju v časti Tím.</p>}
+      </div>
+      <p className="up-legend" aria-hidden="true"><span className="lg s-todo" />čaká <span className="lg s-in_progress" />prebieha <span className="lg s-done" />hotovo <b className="lgp">!</b> problém · šedé bunky: voľno alebo nepracuje · červené číslo: viac bytov, než má povolené</p>
 
-      {task && <TaskPanel key={task.id} task={task} data={data} staff={staff} demo={demo} onClose={() => setOpen(null)} />}
+      {task && <TaskDrawer task={task} data={data} staffList={staffAll} tasks={tasks} demo={demo} busy={pending} onAssign={assign} onClose={() => setSel(null)} />}
+      {auto && <AutoAssign date={date} from={days[0]} to={days[6]} staffList={staffAll} demo={demo} onClose={() => setAuto(false)} />}
+      {adding && <AddTaskModal data={data} today={today} demo={demo} onClose={() => setAdding(false)} />}
     </div>
   )
 }
 
-function Chip({ t, flats, onClick, on }) {
-  const v = taskView(t)
-  return (
-    <button type="button" className={'up-chip s-' + t.status + (on ? ' on' : '') + (t.problem_text ? ' prob' : '')} onClick={onClick} title={t.listing_name}>
-      <i aria-hidden="true">{ICON[t.status]}</i><span>{t.listing_name}</span>
-      <small>{v.people != null ? `👥 ${v.people}` : ''}{v.capsuleCount ? ` · ☕ ${v.capsuleCount}` : ''}{t.problem_text ? ' · ⚠' : ''}</small>
-    </button>
-  )
-}
-
-function AddTask({ data, today, demo }) {
-  const [open, setOpen] = useState(false)
+function AddTaskModal({ data, today, demo, onClose }) {
   const [f, setF] = useState({ listing: '', name: '', date: today, note: '' })
   const { pending, msg, run } = useRun()
   const flats = Object.values(data.flats).sort((a, b) => String(a.listing_name).localeCompare(String(b.listing_name), 'sk'))
   return (
-    <section className="up-panel">
-      <button type="button" className="up-person-head" aria-expanded={open} onClick={() => setOpen(!open)}><b>+ Pridať úlohu mimo Práčovne</b><small>Generálka, kancelária, byt bez balíka z Práčovne.</small></button>
-      {open && (
-        <div className="up-form">
-          <Field label="Byt z evidencie"><select value={f.listing} onChange={(e) => setF({ ...f, listing: e.target.value })}><option value="">— vlastný názov —</option>{flats.map((x) => <option key={x.listing_id} value={x.listing_id}>{x.listing_name}</option>)}</select></Field>
-          <Field label="Vlastný názov" hint="Len ak nevyberáš byt."><input maxLength="120" value={f.name} disabled={!!f.listing} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="napr. Kancelária, generálka" /></Field>
-          <Field label="Dátum"><input type="date" value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} /></Field>
-          <Field label="Poznámka pre upratovačku" wide><textarea rows="2" maxLength="500" value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })} /></Field>
-          <div className="up-row"><button className="btn" disabled={pending || demo || (!f.listing && !f.name.trim())} onClick={() => run(() => addTaskAction(f), { ok: 'Úloha je pridaná. Nájdeš ju medzi nepriradenými.', then: () => setF({ listing: '', name: '', date: today, note: '' }) })}>Pridať úlohu</button></div>
-          <Msg msg={msg} />
-        </div>
-      )}
-    </section>
-  )
-}
-
-export function TaskPanel({ task, data, staff, demo, onClose }) {
-  const flat = data.flats[task.listing_id] || {}
-  const v = taskView(task)
-  const { pending, msg, run } = useRun()
-  const [pay, setPay] = useState(centsToInput(task.pay_override_cents))
-  const cleaner = data.staff.find((s) => s.email === task.cleaner_email)
-  const p = payForTask(task, cleaner, flat)
-  const ranked = staff.map((s) => ({ s, km: distanceKm(s, flat) })).sort((a, b) => (a.km == null) - (b.km == null) || a.km - b.km)
-  const set = (email) => run(() => assignAction(task.id, email), { ok: email ? 'Priradené.' : 'Priradenie zrušené.' })
-  return (
-    <section className="up-panel up-task">
-      <div className="up-row"><h2>{task.listing_name} · {dayLabel(task.date)}</h2><button className="btn o" onClick={onClose}>Zavrieť</button></div>
-      <div className="up-tags">
-        <Pill tone={task.status}>{STATUS_LABEL[task.status]}</Pill>
-        {v.people != null && <Pill>👥 {v.people} hostí</Pill>}
-        {v.capsules.map((c, i) => <Pill key={i}>☕ {c.type} × {c.n}</Pill>)}
-        {task.problem_text && <Pill tone="prob">⚠ problém nahlásený</Pill>}
-        {task.manual && <Pill tone="info">ručná úloha</Pill>}
+    <Modal title="Pridať úlohu mimo Práčovne" onClose={onClose}>
+      <p className="up-hint">Generálka, kancelária alebo byt bez balíka z Práčovne. Úloha sa objaví medzi nepriradenými.</p>
+      <div className="up-form">
+        <Field label="Byt z evidencie"><select value={f.listing} onChange={(e) => setF({ ...f, listing: e.target.value })}><option value="">— vlastný názov —</option>{flats.map((x) => <option key={x.listing_id} value={x.listing_id}>{x.listing_name}</option>)}</select></Field>
+        <Field label="Vlastný názov" hint="Len ak nevyberáš byt."><input maxLength="120" value={f.name} disabled={!!f.listing} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="napr. Kancelária, generálka" /></Field>
+        <Field label="Dátum"><input type="date" value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} /></Field>
+        <Field label="Poznámka pre upratovačku" wide><textarea rows="2" maxLength="500" value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })} /></Field>
+        <div className="up-row"><button className="btn" disabled={pending || demo || (!f.listing && !f.name.trim())} onClick={() => run(() => addTaskAction(f), { ok: 'Úloha je pridaná.', then: onClose })}>Pridať úlohu</button><button className="btn o" onClick={onClose}>Zrušiť</button></div>
+        <Msg msg={msg} />
       </div>
-      {flat.address && <p className="up-meta">📍 {flat.address}{flat.city ? ', ' + flat.city : ''}</p>}
-      {v.note && <p className="up-meta">📝 Z Práčovne: {v.note}</p>}
-      {task.problem_text && <p className="up-alert">{task.problem_text}</p>}
-      {task.cleaner_note && <p className="up-meta">💬 Poznámka upratovačky: {task.cleaner_note}</p>}
-      <label className="up-f"><span>Upratovačka</span>
-        <select value={task.cleaner_email || ''} disabled={pending || demo || task.status === 'done'} onChange={(e) => set(e.target.value)}>
-          <option value="">— nepriradené —</option>
-          {ranked.map(({ s, km }) => <option key={s.email} value={s.email}>{s.name}{km != null ? ` · ${fmtKm(km)}` : ' · bez adresy'}</option>)}
-        </select>
-        <small>Zoradené podľa vzdialenosti od bydliska. {task.assign_reason ? `Naposledy: ${task.assign_reason}.` : ''}</small>
-      </label>
-      <div className="up-row">
-        <div className="up-pay"><span>Cena práce:</span> <b>{fmtEur(p.cents)}</b> <small>({PAY_SOURCE_LABEL[p.source]}{p.minutes ? `, ${p.minutes} min` : ''})</small></div>
-        <label className="up-f inline"><span>Upraviť sumu (€)</span><input inputMode="decimal" value={pay} onChange={(e) => setPay(e.target.value)} placeholder="podľa sadzby" /></label>
-        <button className="btn o" disabled={pending || demo} onClick={() => run(() => setTaskPayAction(task.id, pay), { ok: 'Suma uložená.' })}>Uložiť sumu</button>
-      </div>
-      {task.status === 'todo' && <div className="up-row"><button className="btn o" disabled={pending || demo} onClick={() => { if (confirm('Zrušiť túto úlohu?')) run(() => cancelTaskAction(task.id, 'zrušené manažérkou'), { ok: 'Úloha je zrušená.', then: onClose }) }}>Zrušiť úlohu</button></div>}
-      <Msg msg={msg} />
-    </section>
+    </Modal>
   )
 }
