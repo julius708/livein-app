@@ -52,11 +52,13 @@ export async function finishTaskAction(taskId, note) {
   return r
 }
 
-/** Vlastný profil: LEN osobné údaje (telefón, adresa). Limity, dni, lokality, inštrukcie a ceny nastavuje manažérka; databáza ich cez profil nezmení. */
+/** Vlastný profil: osobné údaje (telefón, adresa) a vlastný rozvrh (pracovné a voľné dni). Limity, lokality, inštrukcie a ceny nastavuje manažér; databáza ich cez profil nezmení. */
 export async function saveMyProfileAction(p) {
   const m = await cleaner(); if (m.err) return m.err
   const out = {}
   for (const k of ['phone', 'address', 'city']) if (p && p[k] !== undefined) out[k] = String(p[k] || '').trim()
+  if (p && Array.isArray(p.work_days)) out.work_days = p.work_days.map(Number).filter((n) => n >= 1 && n <= 7)
+  if (p && Array.isArray(p.days_off)) out.days_off = p.days_off.map(String).filter((x) => /^\d{4}-\d{2}-\d{2}$/.test(x)).slice(0, 120)
   const r = await rpc(m.v.s, 'cl_save_my_profile', { p: out })
   if (r.ok) refresh()
   return r

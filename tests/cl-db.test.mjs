@@ -9,6 +9,7 @@ const have = existsSync(PG)
 const MIG = readFileSync(new URL('../supabase/migrations/20261119_upratovanie.sql', import.meta.url), 'utf8')
 const MIG2 = readFileSync(new URL('../supabase/migrations/20261120_upratovanie_ulohy_report.sql', import.meta.url), 'utf8')
 const MIG5 = readFileSync(new URL('../supabase/migrations/20261123_upratovanie_kvalita.sql', import.meta.url), 'utf8')
+const MIG7 = readFileSync(new URL('../supabase/migrations/20261125_upratovanie_rozvrh.sql', import.meta.url), 'utf8')
 const MIG6 = readFileSync(new URL('../supabase/migrations/20261124_upratovanie_sync_fix2.sql', import.meta.url), 'utf8')
 const MIG4 = readFileSync(new URL('../supabase/migrations/20261122_upratovanie_vstup.sql', import.meta.url), 'utf8')
 const MIG3 = readFileSync(new URL('../supabase/migrations/20261121_upratovanie_pozvanky.sql', import.meta.url), 'utf8')
@@ -55,6 +56,7 @@ before(async () => {
   await db.exec(MIG4)
   await db.exec(MIG5)
   await db.exec(MIG6)
+  await db.exec(MIG7)
   await db.exec('set check_function_bodies = on')
   await db.exec(`
     insert into public.app_users (email, name, roles) values ('admin@x.sk','Admin',array['admin']), ('boss@x.sk','Šéfka',array['cleaning']), ('a@x.sk','Anna',array['cleaning']), ('b@x.sk','Beáta',array['cleaning']), ('c@x.sk','Cecília',array['cleaning']), ('staff@x.sk','Personál',array['operations']);
@@ -180,12 +182,14 @@ test('správa upratovačiek: limity, inštrukcie, lokality, voľné dni; vlastn�
   assert.equal((await rpc('boss@x.sk', 'cl_save_staff', { email: 'nikto@x.sk' })).status, 'no_user')
   await as('a@x.sk'); assert.equal(await fails(db.query("update public.cl_staff set max_per_day = 12 where email = 'a@x.sk'")), '42501'); await as(null) // priamy zápis do tabuľky je zakázaný
   // vlastný profil: adresa, telefón, dovolenka; cudzí riadok nie
-  // upratovačka vyplní LEN osobné údaje; limity, dni, lokality, inštrukcie a ceny cez vlastný profil nezmení ani keď ich pošle
-  await rpc('a@x.sk', 'cl_save_my_profile', { address: 'Nová 5', phone: '0911', lat: 48.12, lng: 17.09, geo_source: 'geocoded', days_off: ['2026-12-01', '2026-12-02'], work_days: [1], max_per_day: 12, max_per_week: 60, max_distance_km: 200, instructions: 'hack', pay_type: 'hourly', hourly_rate_cents: 99999, task_rate_cents: 99999, role: 'manager', active: false, excluded_listings: ['L1'], preferred_localities: ['x'] })
+  // upratovačka vyplní osobné údaje a SVOJ rozvrh (pracovné a voľné dni); limity, lokality, inštrukcie, ceny, rolu ani aktívnosť cez vlastný profil nezmení ani keď ich pošle
+  await rpc('a@x.sk', 'cl_save_my_profile', { address: 'Nová 5', phone: '0911', lat: 48.12, lng: 17.09, geo_source: 'geocoded', days_off: ['2026-12-01', '2026-12-02', '2020-01-01'], work_days: [1, 3, 3, 9], max_per_day: 12, max_per_week: 60, max_distance_km: 200, instructions: 'hack', pay_type: 'hourly', hourly_rate_cents: 99999, task_rate_cents: 99999, role: 'manager', active: false, excluded_listings: ['L1'], preferred_localities: ['x'] })
   const mine = await one("select address, phone, lat, geo_source, days_off::text[] as off, work_days, max_per_day, max_per_week, max_distance_km, instructions, pay_type, hourly_rate_cents, task_rate_cents, role, active, excluded_listings, preferred_localities from public.cl_staff where email = 'a@x.sk'")
   assert.deepEqual({ a: mine.address, p: mine.phone, g: mine.geo_source }, { a: 'Nová 5', p: '0911', g: 'geocoded' })
-  assert.deepEqual({ off: mine.off, wd: mine.work_days, d: mine.max_per_day, w: mine.max_per_week, km: mine.max_distance_km, i: mine.instructions, r: mine.role, act: mine.active, x: mine.excluded_listings, pl: mine.preferred_localities }, { off: ['2026-12-24'], wd: [1, 2, 3, 4, 5], d: 3, w: 8, km: 15, i: 'Len doobeda, bez 4. poschodia', r: 'cleaner', act: true, x: ['L9'], pl: ['Petržalka', 'Ružinov'] })
+  assert.deepEqual({ off: mine.off, wd: mine.work_days, d: mine.max_per_day, w: mine.max_per_week, km: mine.max_distance_km, i: mine.instructions, r: mine.role, act: mine.active, x: mine.excluded_listings, pl: mine.preferred_localities }, { off: ['2026-12-01', '2026-12-02'], wd: [1, 3], d: 3, w: 8, km: 15, i: 'Len doobeda, bez 4. poschodia', r: 'cleaner', act: true, x: ['L9'], pl: ['Petržalka', 'Ružinov'] })
   assert.notEqual(mine.pay_type === 'hourly' && mine.hourly_rate_cents === 99999, true) // sadzbu si nenastaví
+  assert.equal((await rpc('a@x.sk', 'cl_save_my_profile', { work_days: [] })).status, 'bad_input') // aspoň jeden pracovný deň
+  assert.equal((await one("select work_days from public.cl_staff where email = 'a@x.sk'")).work_days.join(','), '1,3')
   assert.ok(await fails(rpc('staff@x.sk', 'cl_save_my_profile', { address: 'x' })))
   // upratovačka vidí svoje inštrukcie, kolegyňa nie
   await as('a@x.sk'); assert.equal((await rows('select instructions from public.cl_staff')).length, 1); await as(null)
@@ -289,8 +293,10 @@ test('pozvánky: nový člen, existujúci používateľ, opätovné poslanie, vy
   const info = (await db.query('select public.cl_invite_info($1) as r', [re.token])).rows[0].r
   assert.deepEqual(info, { ok: true, name: 'Nová Upratovačka' })
   assert.equal((await db.query('select public.cl_invite_info($1) as r', ['00000000-0000-0000-0000-000000000000'])).rows[0].r.ok, false)
-  const done = async (tok, ph, addr, hp = '') => (await db.query('select public.cl_complete_profile($1,$2,$3,$4,$5,$6,$7,$8) as r', [tok, ph, addr, 'Bratislava', 'rada robím ráno', 48.12, 17.09, hp])).rows[0].r
+  const done = async (tok, ph, addr, hp = '', wd = [1, 3, 5]) => (await db.query('select public.cl_complete_profile($1,$2,$3,$4,$5,$6,$7,$8,$9::int[]) as r', [tok, ph, addr, 'Bratislava', 'rada robím ráno', 48.12, 17.09, hp, wd])).rows[0].r
   assert.equal((await done(re.token, '12', 'Krátka 1')).status, 'invalid') // krátky telefón
+  assert.equal((await done(re.token, '0905111222', 'Dlhá ulica 12', '', [])).status, 'invalid') // bez pracovného dňa nejde
+  assert.ok(await fails(db.query('select public.cl_complete_profile($1,$2,$3,$4,$5,$6,$7,$8)', [re.token, '0905111222', 'Dlhá ulica 12', 'x', 'x', 1, 1, '']))) // stará verzia bez dní je pre anon vypnutá
   assert.equal((await done('00000000-0000-0000-0000-000000000000', '0905111222', 'Dlhá ulica 12')).status, 'invalid_token')
   assert.equal((await done(re.token, '0905111222', 'Dlhá ulica 12', 'robot')).ok, true) // robot: tvári sa, že prešlo, ale nič sa nezmení
   await db.exec('reset role')
@@ -300,9 +306,10 @@ test('pozvánky: nový člen, existujúci používateľ, opätovné poslanie, vy
   assert.equal((await done(re.token, '0905111222', 'Dlhá ulica 12')).status, 'invalid_token') // odkaz je na jedno použitie
   assert.ok(await fails(db.query('select * from public.cl_staff'))) // anon tabuľky nečíta
   await db.exec('reset role')
-  const fin = await one("select profile_done, invite_token, address, phone, lat, geo_source, note, max_per_day from public.cl_staff where email = 'pozvana@x.sk'")
+  const fin = await one("select profile_done, invite_token, address, phone, lat, geo_source, note, max_per_day, work_days from public.cl_staff where email = 'pozvana@x.sk'")
   assert.deepEqual({ d: fin.profile_done, t: fin.invite_token, a: fin.address, p: fin.phone, g: fin.geo_source, n: fin.note, m: fin.max_per_day }, { d: true, t: null, a: 'Dlhá ulica 12', p: '0905111222', g: 'geocoded', n: 'Z formulára: rada robím ráno', m: 4 })
   assert.equal(Number(fin.lat), 48.12)
+  assert.equal(fin.work_days.join(','), '1,3,5') // rozvrh zadaný pri vyplnení údajov
   // po vyplnení už pozvánka nejde znova, člen je „already“
   assert.equal((await rpc('boss@x.sk', 'cl_invite', null, 'pozvana@x.sk', null)).status, 'already')
 })
@@ -391,18 +398,20 @@ test('synchronizácia: viac balíkov na ten istý byt a deň nespôsobí chybu',
 test('verejná prihláška: obmedzenia, robot, schválenie a účet', { skip: !have }, async () => {
   const ok = ['Nová Upratovačka', 'nova@x.sk', '0905 111 222', 'Dlhá 9, Bratislava', 'Bratislava', 'mám prax']
   await as(null); await db.exec('set role anon')
-  const apply = async (...a) => (await one('select public.cl_apply($1,$2,$3,$4,$5,$6,$7) as r', [...a, ''].slice(0, 7))).r
-  assert.equal((await one('select public.cl_apply($1,$2,$3,$4,$5,$6,$7) as r', [...ok, ''])).r.ok, true)
-  assert.equal((await one('select public.cl_apply($1,$2,$3,$4,$5,$6,$7) as r', ['x', 'nova@x.sk', '1', 'a', null, null, ''])).r.status, 'invalid')
-  assert.equal((await one('select public.cl_apply($1,$2,$3,$4,$5,$6,$7) as r', [...ok, 'robot'])).r.ok, true) // robot: tvári sa, že prešlo
+  const apply = async (...a) => (await one('select public.cl_apply($1,$2,$3,$4,$5,$6,$7,$8::int[]) as r', [...a, '', [1, 2, 3]].slice(0, 8))).r
+  assert.equal((await one('select public.cl_apply($1,$2,$3,$4,$5,$6,$7,$8::int[]) as r', [...ok, '', [1, 3, 5]])).r.ok, true)
+  assert.equal((await one('select public.cl_apply($1,$2,$3,$4,$5,$6,$7,$8::int[]) as r', ['x', 'nova@x.sk', '1', 'a', null, null, '', [1]])).r.status, 'invalid')
+  assert.equal((await one('select public.cl_apply($1,$2,$3,$4,$5,$6,$7,$8::int[]) as r', [...ok, '', []])).r.status, 'invalid') // bez pracovného dňa
+  assert.ok(await fails(db.query('select public.cl_apply($1,$2,$3,$4,$5,$6,$7)', [...ok, '']))) // stará verzia bez dní je pre anon vypnutá
+  assert.equal((await one('select public.cl_apply($1,$2,$3,$4,$5,$6,$7,$8::int[]) as r', [...ok, 'robot', [1, 3, 5]])).r.ok, true) // robot: tvári sa, že prešlo
   assert.ok(apply)
   assert.ok(await fails(db.query('select * from public.cl_applications'))) // anon tabuľku nečíta
   await db.exec('reset role')
   assert.equal((await one("select count(*)::int as n from public.cl_applications where lower(email) = 'nova@x.sk'")).n, 1)
   // duplicita: tá istá adresa druhýkrát nevytvorí ďalšiu prihlášku; po 3 pokusoch za deň obmedzenie
   await db.exec('set role anon')
-  for (let i = 0; i < 3; i++) await db.query('select public.cl_apply($1,$2,$3,$4,$5,$6,$7)', [...ok, ''])
-  assert.equal((await one('select public.cl_apply($1,$2,$3,$4,$5,$6,$7) as r', [...ok, ''])).r.status, 'too_many')
+  for (let i = 0; i < 3; i++) await db.query('select public.cl_apply($1,$2,$3,$4,$5,$6,$7,$8::int[])', [...ok, '', [1, 3, 5]])
+  assert.equal((await one('select public.cl_apply($1,$2,$3,$4,$5,$6,$7,$8::int[]) as r', [...ok, '', [1, 3, 5]])).r.status, 'too_many')
   await db.exec('reset role')
   assert.equal((await one("select count(*)::int as n from public.cl_applications where lower(email) = 'nova@x.sk'")).n, 1)
   // schválenie: len manažérka; vznikne používateľ s rolou cleaning a profil upratovačky
@@ -410,6 +419,7 @@ test('verejná prihláška: obmedzenia, robot, schválenie a účet', { skip: !h
   assert.ok(await fails(rpc('a@x.sk', 'cl_decide_application', id, true)))
   const d = await rpc('boss@x.sk', 'cl_decide_application', id, true)
   assert.equal(d.approved, true)
+  assert.equal((await one("select work_days from public.cl_staff where email = 'nova@x.sk'")).work_days.join(','), '1,3,5') // rozvrh z prihlášky
   assert.deepEqual((await one("select roles from public.app_users where email = 'nova@x.sk'")).roles, ['cleaning'])
   assert.equal((await one("select role, address from public.cl_staff where email = 'nova@x.sk'")).address, 'Dlhá 9, Bratislava')
   assert.equal((await rpc('boss@x.sk', 'cl_decide_application', id, true)).replayed, true)
@@ -422,7 +432,7 @@ test('verejná prihláška: obmedzenia, robot, schválenie a účet', { skip: !h
   assert.equal(u.raw_user_meta_data.must_change_password, true)
   assert.equal((await rpc('boss@x.sk', 'cl_create_account', 'nova@x.sk')).created, false)
   // odmietnutie nič nevytvorí
-  await db.exec('set role anon'); await db.query('select public.cl_apply($1,$2,$3,$4,$5,$6,$7)', ['Iná Osoba', 'ina@x.sk', '0900123123', 'Krátka 1, Košice', null, null, '']); await db.exec('reset role')
+  await db.exec('set role anon'); await db.query('select public.cl_apply($1,$2,$3,$4,$5,$6,$7,$8::int[])', ['Iná Osoba', 'ina@x.sk', '0900123123', 'Krátka 1, Košice', null, null, '', [2, 4]]); await db.exec('reset role')
   const id2 = (await one("select id from public.cl_applications where email = 'ina@x.sk'")).id
   await rpc('boss@x.sk', 'cl_decide_application', id2, false)
   assert.equal((await one("select count(*)::int as n from public.cl_staff where email = 'ina@x.sk'")).n, 0)

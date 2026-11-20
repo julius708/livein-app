@@ -21,7 +21,7 @@ export default async function PrihlaskaPage({ searchParams }) {
     const first = String(info.name || '').split(/\s+/)[0]
     return (
       <main className="up up-public">
-        <header className="up-head"><div><img src="/logo.png" alt="LIVE-IN" height="36" /><h1>Ahoj{first ? ' ' + first : ''}, vyplň svoje údaje</h1><p>Stačí telefón a adresa bydliska. Podľa adresy ti appka priradí byty v blízkosti. Ostatné nastavenia (koľko bytov zvládaš, dni, cenu) vyplní manažérka.</p></div></header>
+        <header className="up-head"><div><img src="/logo.png" alt="LIVE-IN" height="36" /><h1>Ahoj{first ? ' ' + first : ''}, vyplň svoje údaje</h1><p>Stačí telefón, adresa bydliska a dni, kedy môžeš pracovať. Podľa adresy a dní ti appka priradí byty v blízkosti. Ostatné nastavenia (koľko bytov zvládaš, cenu) vyplní manažér.</p></div></header>
         <ProfileForm token={token} />
       </main>
     )

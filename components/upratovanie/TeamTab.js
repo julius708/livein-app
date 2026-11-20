@@ -76,7 +76,7 @@ function Person({ s, flats, demo }) {
         <Pill tone={s.role === 'manager' ? 'info' : ''}>{s.role === 'manager' ? 'manažérka' : 'upratovačka'}</Pill>
         {!s.active && <Pill tone="prob">vypnutá</Pill>}
         {s.pending && <Pill tone="info">čaká na vyplnenie údajov</Pill>}
-        {s.role === 'cleaner' && <small>max {s.max_per_day} bytov za deň{s.max_per_week > 0 ? `, ${s.max_per_week} za týždeň` : ''}{s.max_distance_km > 0 ? `, do ${s.max_distance_km} km` : ''} · {payText}{s.lat == null ? ' · bez adresy na mape' : ''}</small>}
+        {s.role === 'cleaner' && <small>max {s.max_per_day} bytov za deň{s.max_per_week > 0 ? `, ${s.max_per_week} za týždeň` : ''}{s.max_distance_km > 0 ? `, do ${s.max_distance_km} km` : ''} · pracuje {(s.work_days || []).length === 7 ? 'každý deň' : (s.work_days || []).map((d) => WEEKDAYS_SHORT[d - 1]).join(', ') || '—'} · {payText}{s.lat == null ? ' · bez adresy na mape' : ''}</small>}
       </button>
       {open && (
         <div className="up-form">
