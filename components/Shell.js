@@ -14,6 +14,7 @@ export default function Shell({ me, user, isAdmin, active = 'home', locked = fal
   const name = (me && me.name) || (user && user.email) || ''
   const items = [
     { href: '/', id: 'home', label: 'Domov', icon: '🏠' },
+    { href: '/schranka', id: 'inbox', label: 'Schránka', icon: '📥' },
     { href: '/feedback', id: 'feedback', label: 'Feedback', icon: '💬' },
     { href: '/guru', id: 'guru', label: 'Guru', icon: '🧠' },
     ...(isAdmin ? [{ href: '/admin/activity', id: 'admin', label: 'Správa', icon: '⚙️' }] : []),

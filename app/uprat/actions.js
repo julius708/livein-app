@@ -1,5 +1,6 @@
 'use server'
 import { revalidatePath } from 'next/cache'
+import { track, deliverMany } from '@/lib/core-server'
 import { getViewer } from '@/lib/auth'
 import { clContext, rpc } from '@/lib/cl-server'
 import { geocode } from '@/lib/cl-geo'
@@ -26,7 +27,7 @@ const refresh = () => { revalidatePath('/uprat'); revalidatePath('/upratovanie')
 export async function startTaskAction(id) {
   const m = await cleaner(); if (m.err) return m.err
   const r = await rpc(m.v.s, 'cl_start_task', { p_task: id })
-  if (r.ok) refresh()
+  if (r.ok) { refresh(); await track(m.v.s, 'upratovanie', 'task.start', { type: 'task', id }, {}) }
   return r
 }
 export async function toggleItemAction(id, done) {
@@ -48,13 +49,13 @@ export async function removePhotoAction(id) {
 export async function reportProblemAction(taskId, text) {
   const m = await cleaner(); if (m.err) return m.err
   const r = await rpc(m.v.s, 'cl_report_problem', { p_task: taskId, p_text: text })
-  if (r.ok) refresh()
+  if (r.ok) { refresh(); await track(m.v.s, 'upratovanie', 'task.problem', { type: 'task', id: taskId }, {}) }
   return r
 }
 export async function finishTaskAction(taskId, note) {
   const m = await cleaner(); if (m.err) return m.err
   const r = await rpc(m.v.s, 'cl_finish_task', { p_task: taskId, p_note: note || '' })
-  if (r.ok) refresh()
+  if (r.ok) { refresh(); await track(m.v.s, 'upratovanie', 'task.finish', { type: 'task', id: taskId }, {}) }
   return r
 }
 
@@ -84,6 +85,7 @@ export async function alertAction(taskId, kind, text) {
   const r = await rpc(m.v.s, 'cl_task_alert', { p_task: taskId, p_kind: kind, p_text: text || '' })
   if (!r.ok) return r
   refresh()
+  await track(m.v.s, 'upratovanie', 'task.alert', { type: 'task', id: taskId }, { kind })
   try {
     const { data: t } = await m.v.s.from('cl_tasks').select('listing_name, date').eq('id', taskId).maybeSingle()
     const who = (m.c.staff && m.c.staff.name) || 'Upratovačka'
@@ -96,6 +98,7 @@ export async function alertAction(taskId, kind, text) {
     const origin = siteOrigin(await headers(), process.env)
     const items = ((plan.ok && plan.staff) || []).filter((x) => x.role === 'manager').map((x) => ({ email: x.email, ...msg }))
     after(() => notifyPeople(items, origin))
+    await deliverMany(m.v.s, items.map((x) => x.email), { module: 'upratovanie', title: msg.title, body: msg.body, href: '/upratovanie?tab=plan', kind: 'alert' })
   } catch (e) { console.error('[upratovanie] upozornenie manažérom', String(e && e.message).slice(0, 100)) }
   return r
 }
