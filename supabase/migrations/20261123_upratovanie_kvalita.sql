@@ -20,8 +20,12 @@ alter table public.cl_reviews enable row level security;
 revoke all on public.cl_reviews from public, anon;
 revoke insert, update, delete, truncate, references, trigger on public.cl_reviews from authenticated;
 grant select on public.cl_reviews to authenticated;
-drop policy if exists cl_reviews_select on public.cl_reviews;
-create policy cl_reviews_select on public.cl_reviews for select to authenticated using (public.cl_is_manager() and removed_at is null);
+do $do$
+begin
+  if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'cl_reviews' and policyname = 'cl_reviews_select') then
+    create policy cl_reviews_select on public.cl_reviews for select to authenticated using (public.cl_is_manager() and removed_at is null);
+  end if;
+end $do$;
 
 -- zápis recenzie: s kódom rezervácie sa byt a dátumy doplnia z rezervácie, inak treba byt a dátum príchodu
 create or replace function public.cl_add_review(p jsonb) returns jsonb

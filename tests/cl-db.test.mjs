@@ -9,6 +9,7 @@ const have = existsSync(PG)
 const MIG = readFileSync(new URL('../supabase/migrations/20261119_upratovanie.sql', import.meta.url), 'utf8')
 const MIG2 = readFileSync(new URL('../supabase/migrations/20261120_upratovanie_ulohy_report.sql', import.meta.url), 'utf8')
 const MIG5 = readFileSync(new URL('../supabase/migrations/20261123_upratovanie_kvalita.sql', import.meta.url), 'utf8')
+const MIG6 = readFileSync(new URL('../supabase/migrations/20261124_upratovanie_sync_fix2.sql', import.meta.url), 'utf8')
 const MIG4 = readFileSync(new URL('../supabase/migrations/20261122_upratovanie_vstup.sql', import.meta.url), 'utf8')
 const MIG3 = readFileSync(new URL('../supabase/migrations/20261121_upratovanie_pozvanky.sql', import.meta.url), 'utf8')
 
@@ -53,6 +54,7 @@ before(async () => {
   await db.exec(MIG3)
   await db.exec(MIG4)
   await db.exec(MIG5)
+  await db.exec(MIG6)
   await db.exec('set check_function_bodies = on')
   await db.exec(`
     insert into public.app_users (email, name, roles) values ('admin@x.sk','Admin',array['admin']), ('boss@x.sk','Šéfka',array['cleaning']), ('a@x.sk','Anna',array['cleaning']), ('b@x.sk','Beáta',array['cleaning']), ('c@x.sk','Cecília',array['cleaning']), ('staff@x.sk','Personál',array['operations']);
@@ -354,6 +356,26 @@ test('kvalita: recenzia sa páruje s rezerváciou a s upratovaním pred príchod
   assert.equal((await rpc('boss@x.sk', 'cl_remove_review', a.id)).ok, true)
   assert.equal((await rpc('boss@x.sk', 'cl_quality', '2026-11-01', '2026-12-31')).visits.find((v) => v.code === 'CODE1').reviews.length, 0)
   assert.ok(await fails(rpc('a@x.sk', 'cl_remove_review', a.id)))
+})
+
+test('synchronizácia: presun balíka na iný deň nespôsobí chybu a nezruší hotovú úlohu', { skip: !have }, async () => {
+  const p1 = await pkg('L2', '2026-12-10')
+  await rpc('boss@x.sk', 'cl_sync_tasks', '2026-12-08', '2026-12-20')
+  const t1 = await one("select id, package_id from public.cl_tasks where listing_id = 'L2' and date = '2026-12-10'")
+  assert.equal(t1.package_id, p1)
+  // rezervácia sa posunula: ten istý balík je teraz o 3 dni neskôr
+  await db.query("update public.packages set date = '2026-12-13' where id = $1", [p1])
+  const r = await rpc('boss@x.sk', 'cl_sync_tasks', '2026-12-08', '2026-12-20')
+  assert.equal(r.ok, true)
+  const rs = await rows("select date::text as d, status, package_id from public.cl_tasks where listing_id = 'L2' and date in ('2026-12-10','2026-12-13') order by date")
+  assert.deepEqual(rs.map((x) => [x.d, x.status]), [['2026-12-10', 'cancelled'], ['2026-12-13', 'todo']])
+  assert.equal(rs[1].package_id, p1)
+  // balík sa presunie znova, ale úloha na novom dni už je hotová: ostane hotová, nič nepadne
+  await db.query("update public.cl_tasks set status = 'done' where listing_id = 'L2' and date = '2026-12-13'")
+  await db.query("update public.packages set date = '2026-12-15' where id = $1", [p1])
+  assert.equal((await rpc('boss@x.sk', 'cl_sync_tasks', '2026-12-08', '2026-12-20')).ok, true)
+  assert.equal((await one("select status from public.cl_tasks where listing_id = 'L2' and date = '2026-12-13'")).status, 'done')
+  assert.equal((await one("select status from public.cl_tasks where listing_id = 'L2' and date = '2026-12-15'")).status, 'todo')
 })
 
 test('synchronizácia: viac balíkov na ten istý byt a deň nespôsobí chybu', { skip: !have }, async () => {
