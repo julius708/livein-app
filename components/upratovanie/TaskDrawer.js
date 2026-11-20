@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
-import { setTaskPayAction, cancelTaskAction } from '@/app/upratovanie/actions'
+import { setTaskPayAction, cancelTaskAction, clearAlertAction } from '@/app/upratovanie/actions'
+import { ALERT_LABEL, ALERT_ICON } from '@/lib/cl-notify'
 import { distanceKm, fmtKm, dayLabelLong, taskView, STATUS_LABEL, payForTask, fmtEur, PAY_SOURCE_LABEL, centsToInput } from '@/lib/cl-core'
 import { assignWarnings, recommend, dayLoad, avatarColor } from '@/lib/cl-plan'
 import { useRun, Msg, Pill } from './ui'
@@ -32,6 +33,7 @@ export default function TaskDrawer({ task, data, staffList, tasks, demo, busy, o
       <p className="up-meta">{v.people != null ? `👥 ${v.people} hostí` : ''}{v.capsuleCount ? ` · ☕ ${v.capsuleCount} kapsúl` : ''}{flat.est_minutes ? ` · ~${flat.est_minutes} min` : ''}</p>
       {flat.address && <p className="up-meta">📍 {flat.address}{flat.city ? ', ' + flat.city : ''}</p>}
       {v.note && <p className="up-meta">📝 {v.note}</p>}
+      {task.alert_kind && <div className="up-alert">{ALERT_ICON[task.alert_kind]} Upratovačka hlási: <b>{ALERT_LABEL[task.alert_kind]}</b>{task.alert_text ? `: ${task.alert_text}` : ''} <button type="button" className="btn o" disabled={pending || demo} onClick={() => run(() => clearAlertAction(task.id), { ok: 'Označené ako vybavené.' })}>Vybavené</button></div>}
       {task.problem_text && <p className="up-alert">{task.problem_text}</p>}
       {task.cleaner_note && <p className="up-meta">💬 {task.cleaner_note}</p>}
 

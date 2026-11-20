@@ -214,3 +214,31 @@
   .up-kpis input[type=search],.up-kpis select{width:100%;max-width:none}
 }
 @media (prefers-reduced-motion:reduce){.up-cal *{transition:none!important}}
+
+/* upratovačka: trasa dňa, čo si zobrať, nové upratovania, upozornenia */
+.up-day{margin:4px 0 10px}
+.up-bring{margin-top:8px;border-radius:14px;background:#F6F8F2;padding:10px 14px;font-size:14px}
+.up-bring ul{margin:4px 0 8px 18px;padding:0}.up-bring small{color:#66716A}
+.up-contacts{display:flex;gap:6px;flex-wrap:wrap}
+.up-banner.new{background:#E3EEFB;color:#1D4F91;display:flex;gap:8px 12px;align-items:center;flex-wrap:wrap}
+.up-banner.off{background:#fbe4e2;color:#9A2B2B}
+.up-n{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#173E2C;color:#fff;font-size:12px;margin-right:8px}
+
+/* deň a trasy */
+.up-daypick{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}
+.up-daypick button{flex:0 0 auto;min-width:78px;border:1px solid #D6DCCF;background:#ffffffcc;border-radius:14px;padding:8px 10px;font:inherit;color:#233E31;cursor:pointer;display:flex;flex-direction:column;align-items:center;min-height:52px}
+.up-daypick button b{font-size:13px}.up-daypick button small{color:#66716A;font-size:11px}
+.up-daypick button.on{background:#173E2C;color:#fff;border-color:#173E2C}.up-daypick button.on small{color:#cfe3d7}
+.up-daypick button.today:not(.on){border-color:#2E9E5B}
+.up-dayview{display:flex;flex-direction:column;gap:10px}
+.up-daycard h2 small{font-weight:500;color:#66716A;font-size:12.5px}
+.up-daycard.un{background:linear-gradient(135deg,#FFF8E6,#FFFBF0)}
+.up-daycard.off,.up-daycard.rest{background:#F1F3EC}
+.up-daycard.over{box-shadow:inset 0 0 0 2px #E9A0A0}
+.up-av{width:32px;height:32px;border-radius:50%;color:#fff;font-weight:800;display:inline-flex;align-items:center;justify-content:center;font-size:14px}
+.up-stoplist{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.up-stop{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:1px solid #D6DCCF;background:#fff;border-radius:14px;padding:8px 12px;font:inherit;color:#233E31;cursor:pointer;min-height:52px}
+.up-stop .body{flex:1 1 auto;min-width:0}.up-stop b{display:block;font-size:14px}.up-stop small{display:block;color:#66716A;font-size:12px}
+.up-stop .al{flex:0 0 auto;color:#C23B3B;font-size:15px}.up-stop .st{flex:0 0 auto;color:#2E9E5B;font-weight:800}
+.up-stop.s-done{background:#F0FAF3;border-color:#A8D9B8}.up-stop.s-in_progress{background:#EEF5FD;border-color:#9DBCE6}.up-stop.prob{border-color:#E3A0A0}
+.up-stop .up-n{margin:0}.up-stop .up-n.un{background:#C28A1E}

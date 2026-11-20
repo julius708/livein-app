@@ -43,7 +43,7 @@ export default async function UpratPage({ searchParams }) {
   return (
     <Shell me={me} user={user} isAdmin={isAdmin} active="uprat" hideFooter>
       <div className="up">
-        <Cleaner today={today} open={sp.u || null} me={d.me || c.staff} tasks={d.tasks} flats={d.flats} entry={d.entry} items={d.items} photos={d.photos} posts={d.posts} settings={d.settings} />
+        <Cleaner today={today} open={sp.u || null} me={d.me || c.staff} tasks={d.tasks} flats={d.flats} entry={d.entry} contacts={d.contacts} pushKey={process.env.NEXT_PUBLIC_WEB_PUSH_PUBLIC_KEY || ''} items={d.items} photos={d.photos} posts={d.posts} settings={d.settings} />
       </div>
     </Shell>
   )

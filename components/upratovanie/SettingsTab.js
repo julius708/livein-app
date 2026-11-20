@@ -7,7 +7,9 @@ export default function SettingsTab({ data, demo }) {
   const [list, setList] = useState((data.settings.checklist || []).join('\n'))
   const [photos, setPhotos] = useState((data.settings.rules && data.settings.rules.min_after_photos) || 0)
   const [rec, setRec] = useState(((data.settings.report && data.settings.report.recipients) || []).join('\n'))
-  const a = useRun(), b = useRun(), c = useRun()
+  const nv = (data.settings && data.settings.notify) || {}
+  const [nt, setNt] = useState({ assign: nv.assign !== false, evening_proposal: nv.evening_proposal !== false, evening_reminder: nv.evening_reminder !== false })
+  const a = useRun(), b = useRun(), c = useRun(), d = useRun()
   return (
     <div className="up-wrap">
       <section className="up-panel">
@@ -22,6 +24,15 @@ export default function SettingsTab({ data, demo }) {
         <Field label="Najmenej fotiek „po“ pred dokončením" hint="0 = fotky nie sú povinné."><input type="number" min="0" max="10" value={photos} onChange={(e) => setPhotos(e.target.value)} /></Field>
         <div className="up-row"><button className="btn" disabled={b.pending || demo} onClick={() => b.run(() => saveSettingAction('rules', { min_after_photos: photos }), { ok: 'Pravidlo uložené.' })}>Uložiť pravidlo</button></div>
         <Msg msg={b.msg} />
+      </section>
+      <section className="up-panel">
+        <h2>Upozornenia</h2>
+        <p className="up-hint">Upratovačky dostanú upozornenie na telefón (ak si ho zapli v appke), inak e-mailom. Manažéri dostávajú upozornenia od upratovačiek (meškám, potrebujem pomoc, chýba tovar, nemôžem prísť) vždy.</p>
+        <label className="up-check"><input type="checkbox" checked={nt.assign} onChange={(e) => setNt({ ...nt, assign: e.target.checked })} /> Upratovačke oznámiť, keď jej pribudne byt</label>
+        <label className="up-check"><input type="checkbox" checked={nt.evening_reminder} onChange={(e) => setNt({ ...nt, evening_reminder: e.target.checked })} /> Večer pripomenúť upratovačkám, čo ich čaká zajtra</label>
+        <label className="up-check"><input type="checkbox" checked={nt.evening_proposal} onChange={(e) => setNt({ ...nt, evening_proposal: e.target.checked })} /> Večer poslať manažérom návrh rozdelenia bytov na zajtra (potvrdia ho v appke, nič sa nepriradí samo)</label>
+        <div className="up-row"><button className="btn" disabled={d.pending || demo} onClick={() => d.run(() => saveSettingAction('notify', nt), { ok: 'Upozornenia uložené.' })}>Uložiť upozornenia</button></div>
+        <Msg msg={d.msg} />
       </section>
       <section className="up-panel">
         <h2>Mesačný report e-mailom</h2>

@@ -77,7 +77,7 @@ export default async function UpratovaniePage({ searchParams }) {
           {TABS.map(([k, l]) => <a key={k} href={`?tab=${k}${sp.d && k === 'plan' ? '&d=' + sp.d : ''}`} className={tab === k ? 'on' : ''} aria-current={tab === k ? 'page' : undefined}>{l}{k === 'team' && data.applications.length ? <i>{data.applications.length}</i> : null}</a>)}
         </nav>
         {((pay && pay.error) || (quality && quality.error)) && <p className="up-msg err" role="alert">{(pay && pay.error) || quality.error}</p>}
-        {tab === 'board' ? <Board posts={data.posts} isManager demo={demo} />   : tab === 'quality' ? <QualityTab quality={quality.data} flats={data.flats} from={quality.range.from} to={quality.range.to} demo={demo} /> : tab === 'pay' ? <PayTab model={pay.model} ym={pay.ym} thisMonth={pay.thisMonth} range={pay.range} demo={demo} /> : <Body data={data} today={today} date={date} demo={demo} />}
+        {tab === 'board' ? <Board posts={data.posts} isManager demo={demo} />   : tab === 'quality' ? <QualityTab quality={quality.data} flats={data.flats} from={quality.range.from} to={quality.range.to} demo={demo} /> : tab === 'pay' ? <PayTab model={pay.model} ym={pay.ym} thisMonth={pay.thisMonth} range={pay.range} demo={demo} /> : <Body data={data} today={today} date={date} demo={demo} autoDay={sp.auto === '1' && isYmd(sp.d) ? sp.d : null} />}
       </div>
     </Shell>
   )

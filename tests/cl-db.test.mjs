@@ -9,6 +9,7 @@ const have = existsSync(PG)
 const MIG = readFileSync(new URL('../supabase/migrations/20261119_upratovanie.sql', import.meta.url), 'utf8')
 const MIG2 = readFileSync(new URL('../supabase/migrations/20261120_upratovanie_ulohy_report.sql', import.meta.url), 'utf8')
 const MIG5 = readFileSync(new URL('../supabase/migrations/20261123_upratovanie_kvalita.sql', import.meta.url), 'utf8')
+const MIG8 = readFileSync(new URL('../supabase/migrations/20261126_upratovanie_tim_pomoc.sql', import.meta.url), 'utf8')
 const MIG7 = readFileSync(new URL('../supabase/migrations/20261125_upratovanie_rozvrh.sql', import.meta.url), 'utf8')
 const MIG6 = readFileSync(new URL('../supabase/migrations/20261124_upratovanie_sync_fix2.sql', import.meta.url), 'utf8')
 const MIG4 = readFileSync(new URL('../supabase/migrations/20261122_upratovanie_vstup.sql', import.meta.url), 'utf8')
@@ -57,6 +58,7 @@ before(async () => {
   await db.exec(MIG5)
   await db.exec(MIG6)
   await db.exec(MIG7)
+  await db.exec(MIG8)
   await db.exec('set check_function_bodies = on')
   await db.exec(`
     insert into public.app_users (email, name, roles) values ('admin@x.sk','Admin',array['admin']), ('boss@x.sk','Šéfka',array['cleaning']), ('a@x.sk','Anna',array['cleaning']), ('b@x.sk','Beáta',array['cleaning']), ('c@x.sk','Cecília',array['cleaning']), ('staff@x.sk','Personál',array['operations']);
@@ -383,6 +385,63 @@ test('synchronizácia: presun balíka na iný deň nespôsobí chybu a nezruší
   assert.equal((await rpc('boss@x.sk', 'cl_sync_tasks', '2026-12-08', '2026-12-20')).ok, true)
   assert.equal((await one("select status from public.cl_tasks where listing_id = 'L2' and date = '2026-12-13'")).status, 'done')
   assert.equal((await one("select status from public.cl_tasks where listing_id = 'L2' and date = '2026-12-15'")).status, 'todo')
+})
+
+test('pomoc pre tím: upozornenia, kontakty, údaje pre večerný beh, import recenzií, nastavenie upozornení', { skip: !have }, async () => {
+  await db.query("update public.cl_staff set phone = '0900 111 000' where email = 'boss@x.sk'")
+  const t = (await one("select id from public.cl_tasks where listing_id = 'L3' and date = '2026-11-22'")).id
+  await db.query("update public.cl_tasks set status = 'todo', cleaner_email = 'b@x.sk' where id = $1", [t])
+  // upozornenie: len priradená upratovačka alebo manažér; platný druh; nie pri hotovej úlohe
+  assert.ok(await fails(rpc('a@x.sk', 'cl_task_alert', t, 'late', 'x'))) // cudzia úloha
+  assert.equal((await rpc('b@x.sk', 'cl_task_alert', t, 'zly', 'x')).status, 'bad_input')
+  assert.equal((await rpc('b@x.sk', 'cl_task_alert', t, 'late', 'Meškám 20 minút')).ok, true)
+  const al = await one('select alert_kind, alert_text, alert_at is not null as at from public.cl_tasks where id = $1', [t])
+  assert.deepEqual({ k: al.alert_kind, t: al.alert_text, at: al.at }, { k: 'late', t: 'Meškám 20 minút', at: true })
+  assert.ok(await fails(rpc('b@x.sk', 'cl_clear_alert', t))) // vybaviť môže len manažér
+  assert.equal((await rpc('boss@x.sk', 'cl_clear_alert', t)).ok, true)
+  assert.equal((await one('select alert_kind from public.cl_tasks where id = $1', [t])).alert_kind, null)
+  await db.query("update public.cl_tasks set status = 'done' where id = $1", [t])
+  assert.equal((await rpc('b@x.sk', 'cl_task_alert', t, 'help', '')).status, 'done')
+  await db.query("update public.cl_tasks set status = 'todo' where id = $1", [t])
+  // kontakty: upratovačka vidí manažérov (meno, telefón), nie telefóny kolegýň; iný používateľ nič
+  const c = await rpc('a@x.sk', 'cl_contacts')
+  assert.ok(c.some((x) => x.name === 'Šéfka' && x.phone === '0900 111 000'))
+  assert.ok(!c.some((x) => x.phone === '0901'))
+  assert.ok(await fails(rpc('staff@x.sk', 'cl_contacts')))
+  // údaje pre večerný beh: manažér a servis áno, upratovačka nie; bez tokenov pozvánok a bez karty z Práčovne
+  await db.query("insert into public.app_users (email, name, roles) values ('bot2@x.sk','Bot2',array['bot']) on conflict do nothing")
+  const pd = await rpc('boss@x.sk', 'cl_plan_data', '2026-11-20', '2026-11-30')
+  assert.equal(pd.ok, true); assert.ok(pd.tasks.length >= 1); assert.ok(pd.staff.length >= 3); assert.ok(pd.flats.length >= 3)
+  assert.ok(!pd.tasks.some((x) => 'snapshot' in x)); assert.ok(!pd.staff.some((x) => 'invite_token' in x))
+  assert.equal((await rpc('bot2@x.sk', 'cl_plan_data', '2026-11-20', '2026-11-30')).ok, true)
+  assert.ok(await fails(rpc('a@x.sk', 'cl_plan_data', '2026-11-20', '2026-11-30')))
+  assert.equal((await rpc('boss@x.sk', 'cl_plan_data', '2026-01-01', '2026-12-31')).status, 'bad_range')
+  // synchronizáciu môže spustiť aj servis (bot)
+  assert.equal((await rpc('bot2@x.sk', 'cl_sync_tasks', '2026-11-20', '2026-11-30')).ok, true)
+  // import recenzií: nová, opakovaná (len aktualizácia), podľa kódu rezervácie, neplatná sa preskočí
+  const items = [
+    { external_id: 'g1', reservation_id: 'R1', rating: 4.5, cleanliness: 4, source: 'airbnb', text: 'Pekný byt' },
+    { external_id: 'g2', confirmation_code: 'CODE2', rating: 2, source: 'booking', text: 'Špina' },
+    { external_id: 'g3', rating: 9 },
+    { external_id: '', rating: 5, listing_id: 'L1', check_in: '2026-11-01' },
+    { external_id: 'g4', listing_id: 'L2', check_in: '2026-11-10', rating: 5, source: 'google', text: 'Skvelé' },
+  ]
+  const imp = await rpc('bot2@x.sk', 'cl_import_reviews', JSON.stringify(items))
+  assert.deepEqual({ i: imp.inserted, u: imp.updated, s: imp.skipped }, { i: 3, u: 0, s: 2 })
+  const again = await rpc('bot2@x.sk', 'cl_import_reviews', JSON.stringify([{ external_id: 'g1', reservation_id: 'R1', rating: 5, cleanliness: 5, source: 'airbnb', text: 'Upravené' }]))
+  assert.deepEqual({ i: again.inserted, u: again.updated }, { i: 0, u: 1 })
+  const g1 = await one("select listing_id, check_in::text as ci, rating, text, created_by, reservation_code from public.cl_reviews where external_id = 'g1'")
+  assert.deepEqual({ l: g1.listing_id, ci: g1.ci, r: Number(g1.rating), t: g1.text, by: g1.created_by, c: g1.reservation_code }, { l: 'L1', ci: '2026-11-22', r: 5, t: 'Upravené', by: 'guesty', c: 'CODE1' })
+  assert.equal((await one("select count(*)::int as n from public.cl_reviews where external_id = 'g1'")).n, 1)
+  // zmazaná recenzia sa importom neoživí
+  await db.query("update public.cl_reviews set removed_at = now() where external_id = 'g1'")
+  await rpc('bot2@x.sk', 'cl_import_reviews', JSON.stringify([{ external_id: 'g1', reservation_id: 'R1', rating: 1, source: 'airbnb' }]))
+  assert.notEqual((await one("select removed_at from public.cl_reviews where external_id = 'g1'")).removed_at, null)
+  assert.ok(await fails(rpc('a@x.sk', 'cl_import_reviews', JSON.stringify(items))))
+  // nastavenie upozornení len manažér
+  assert.equal((await rpc('boss@x.sk', 'cl_save_setting', 'notify', JSON.stringify({ assign: true, evening_proposal: true, evening_reminder: false }))).ok, true)
+  assert.ok(await fails(rpc('a@x.sk', 'cl_save_setting', 'notify', '{}')))
+  assert.equal((await rpc('boss@x.sk', 'cl_plan_data', '2026-11-20', '2026-11-30')).settings.notify.evening_reminder, false)
 })
 
 test('synchronizácia: viac balíkov na ten istý byt a deň nespôsobí chybu', { skip: !have }, async () => {
