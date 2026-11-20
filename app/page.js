@@ -6,6 +6,8 @@ import NoAccess from '@/components/NoAccess'
 import CountUp from '@/components/CountUp'
 import PinnedNoteForm from '@/components/PinnedNoteForm'
 import FactTicker from '@/components/FactTicker'
+import { Suspense } from 'react'
+import MyDay, { MyDaySkeleton } from '@/components/MyDay'
 import TodayBoard from '@/components/TodayBoard'
 import MaintenanceBoard from '@/components/MaintenanceBoard'
 import NotesBoard from '@/components/NotesBoard'
@@ -134,6 +136,10 @@ export default async function Home({ searchParams }) {
           </div>
         </div>
       </section>
+
+      <Suspense fallback={<MyDaySkeleton />}>
+        <MyDay s={s} user={user} isAdmin={isAdmin} roles={me.roles || []} today={today} hf={hf} hw={hw} unseen={unseen} />
+      </Suspense>
 
       {!planRead && (
         <section className="plan-cta" aria-label="Nový marketingový plán">

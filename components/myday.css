@@ -1,0 +1,23 @@
+/* Môj deň: karty podľa roly na domovskej obrazovke (liquid glass ako zvyšok appky) */
+.myday{margin:18px 0 6px}
+.md-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px;margin-bottom:10px}
+.md-head h2{margin:0;font-size:22px}.md-head p{margin:0;color:#66716A;font-size:14px}
+.md-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.md-card{display:flex;flex-direction:column;gap:8px;text-decoration:none;color:#233E31;border-radius:20px;padding:14px 16px;background:linear-gradient(135deg,#ffffffcc,#ffffff66),#ffffff66;border:1px solid #ffffffd9;box-shadow:inset 0 1px 0 #fff,0 16px 36px -22px #173e2c66;min-height:150px;transition:transform .15s,box-shadow .15s}
+.md-card:hover{transform:translateY(-3px);box-shadow:inset 0 1px 0 #fff,0 22px 40px -22px #173e2c88}
+.md-card:focus-visible{outline:3px solid #7A4FB0;outline-offset:2px}
+.md-card.skel{background:#ffffff80;animation:mdpulse 1.2s ease-in-out infinite}
+.md-card.urgent{border-color:#E8A317}.md-card.red.urgent{border-color:#E3A0A0}
+.md-top{display:flex;align-items:center;gap:8px}.md-top b{font-size:14px;flex:1}
+.md-ic{font-size:18px}
+.md-dot{width:10px;height:10px;border-radius:50%;background:#E8A317;display:inline-block}
+.md-card.red .md-dot{background:#C23B3B}
+.md-big{display:flex;align-items:baseline;gap:10px}.md-big strong{font-size:38px;line-height:1;font-variant-numeric:tabular-nums}.md-big span{font-size:13.5px;color:#4F5C54;line-height:1.3}
+.md-card.amber .md-big strong{color:#8A5A00}.md-card.red .md-big strong{color:#C23B3B}.md-card.green .md-big strong{color:#17623A}.md-card.blue .md-big strong{color:#1D4F91}
+.md-stats{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12.5px;color:#66716A}.md-stats b{color:#233E31}.md-stats .hot b{color:#C23B3B}
+.md-items{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:3px;font-size:13px}
+.md-items li{display:flex;justify-content:space-between;gap:8px;border-top:1px solid #E3E7DE;padding-top:3px}.md-items em{font-style:normal;font-size:11px;font-weight:800;color:#1D4F91}
+.md-cta{margin-top:auto;font-weight:800;font-size:13.5px;color:#173E2C}
+@keyframes mdpulse{50%{opacity:.55}}
+@media (max-width:560px){.md-grid{grid-template-columns:1fr}.md-big strong{font-size:34px}}
+@media (prefers-reduced-motion:reduce){.md-card,.md-card.skel{transition:none;animation:none}}
