@@ -36,7 +36,8 @@ function WifiBox({ priv, t }) {
   const [copied, setCopied] = useState(false); const [conf, setConf] = useState({ done: false })
   const wifi = priv.wifi
   async function copy() { try { await navigator.clipboard.writeText(wifi.password); setCopied(true); setTimeout(() => setCopied(false), 2000) } catch {} }
-  async function saveConf() { const r = await confirmEmailAction(priv.confirm, { newsletter: true }); setConf({ done: !!(r && r.ok) }) }
+  const [newsletter, setNewsletter] = useState(false)
+  async function saveConf() { const r = await confirmEmailAction(priv.confirm, { newsletter }); setConf({ done: !!(r && r.ok) }) }
   return (
     <section className="gd-card wifi" id="wifi">
       <h2>📶 {t.wifi}</h2>
@@ -46,7 +47,10 @@ function WifiBox({ priv, t }) {
           <div><small>{t.password}</small><div className="pw">{wifi.password}</div></div>
           <button type="button" className="gd-btn o" onClick={copy}>{copied ? t.copied : t.copy}</button>
           {priv.confirm && !conf.done ? <div className="gd-form" style={{ marginTop: 6 }}>
-            <small style={{ color: '#58665D', fontSize: 12.5 }}>{t.terms}</small>
+            <label>
+              <input type="checkbox" checked={newsletter} onChange={(e) => setNewsletter(e.target.checked)} />
+              {' '}{t.newsletter}
+            </label>
             <button type="button" className="gd-btn line" onClick={saveConf}>{t.confirm}</button>
           </div> : conf.done ? <p>{t.saved}</p> : null}
         </div>
