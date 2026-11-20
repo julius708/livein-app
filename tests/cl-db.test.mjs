@@ -8,6 +8,7 @@ const PG = '/home/user/pracovna/node_modules/@electric-sql/pglite/dist/index.js'
 const have = existsSync(PG)
 const MIG = readFileSync(new URL('../supabase/migrations/20261119_upratovanie.sql', import.meta.url), 'utf8')
 const MIG2 = readFileSync(new URL('../supabase/migrations/20261120_upratovanie_ulohy_report.sql', import.meta.url), 'utf8')
+const MIG5 = readFileSync(new URL('../supabase/migrations/20261123_upratovanie_kvalita.sql', import.meta.url), 'utf8')
 const MIG6 = readFileSync(new URL('../supabase/migrations/20261124_upratovanie_sync_fix2.sql', import.meta.url), 'utf8')
 const MIG4 = readFileSync(new URL('../supabase/migrations/20261122_upratovanie_vstup.sql', import.meta.url), 'utf8')
 const MIG3 = readFileSync(new URL('../supabase/migrations/20261121_upratovanie_pozvanky.sql', import.meta.url), 'utf8')
@@ -28,6 +29,7 @@ create function public.has_app_role(r text) returns boolean language sql stable 
 create function public.is_active_user() returns boolean language sql stable security definer as $$ select exists (select 1 from public.app_users where lower(email) = lower(auth.jwt() ->> 'email') and active) $$;
 create table public.listings (guesty_id text primary key, name text, city text, in_scope boolean default true);
 create table public.guide_units (listing_id text primary key, address text, city text);
+create table public.reservations (guesty_id text primary key, listing_id text, status text, check_in_date date, check_out_date date, guests int, confirmation_code text, source text);
 create table public.guide_cards (listing_id text primary key, address text, lat numeric, lng numeric, arrival jsonb, parking jsonb, address_note jsonb);
 create table public.packages (id uuid primary key default gen_random_uuid(), listing_id text not null, listing_name text not null, date date not null, target_people int, computed_items jsonb not null default '{}', note text not null default '', status text not null default 'todo', hidden boolean not null default false, updated_at timestamptz not null default now());
 alter default privileges in schema public grant all on tables to anon, authenticated;
@@ -51,6 +53,7 @@ before(async () => {
   await db.exec(MIG2)
   await db.exec(MIG3)
   await db.exec(MIG4)
+  await db.exec(MIG5)
   await db.exec(MIG6)
   await db.exec('set check_function_bodies = on')
   await db.exec(`
@@ -245,7 +248,7 @@ test('ručná úloha, zrušenie, report a nastavenie príjemcov', { skip: !have 
   assert.ok(!rep.tasks.some((x) => 'snapshot' in x)) // karta z Práčovne sa do reportu nekopíruje
   assert.equal((await rpc('bot@x.sk', 'cl_report_data', '2026-11-01', '2026-11-30')).ok, true)
   assert.ok(await fails(rpc('a@x.sk', 'cl_report_data', '2026-11-01', '2026-11-30')))
-  assert.equal((await rpc('boss@x.sk', 'cl_report_data', '2026-01-01', '2026-12-31')).status, 'bad_range')
+  assert.equal((await rpc('boss@x.sk', 'cl_report_data', '2025-01-01', '2026-12-31')).status, 'bad_range')
   assert.equal((await rpc('bot@x.sk', 'cl_report_mark', '2026-11')).ok, true)
   assert.equal((await rpc('bot@x.sk', 'cl_report_data', '2026-11-01', '2026-11-30')).sent, true)
   assert.equal((await rpc('boss@x.sk', 'cl_report_mark', 'zle')).status, 'bad_input')
@@ -321,6 +324,38 @@ test('vstup do bytu: text pre hosťa zo Sprievodcu vidí len priradená upratova
   await db.exec('reset role'); await db.exec('set role anon')
   assert.ok(await fails(db.query("select public.cl_entry_info(array['L1'])")))
   await db.exec('reset role')
+})
+
+test('kvalita: recenzia sa páruje s rezerváciou a s upratovaním pred príchodom; report a oprávnenia', { skip: !have }, async () => {
+  // L1: upratovanie 2026-11-22 (Anna, hotové v teste toku) a hosť, ktorý prichádza 22. 11.
+  await db.query("insert into public.reservations values ('R1','L1','confirmed','2026-11-22','2026-11-25',2,'CODE1','airbnb'), ('R2','L3','confirmed','2026-12-10','2026-12-12',3,'CODE2','booking'), ('R3','L1','canceled','2026-11-23','2026-11-24',1,'CODE3','airbnb')")
+  const t = (await one("select id from public.cl_tasks where listing_id = 'L1'")).id
+  await db.query("update public.cl_tasks set status = 'done', started_at = '2026-11-22T08:00:00Z', finished_at = '2026-11-22T10:00:00Z' where id = $1", [t])
+  const a = await rpc('boss@x.sk', 'cl_add_review', { reservation_code: 'CODE1', rating: 2, cleanliness: 1.5, source: 'airbnb', text: 'Špinavá kúpeľňa' })
+  assert.equal(a.ok, true)
+  assert.equal((await rpc('boss@x.sk', 'cl_add_review', { reservation_code: 'NEEXISTUJE', rating: 5 })).status, 'no_reservation')
+  assert.equal((await rpc('boss@x.sk', 'cl_add_review', { reservation_code: 'CODE1', rating: 7 })).status, 'bad_input')
+  assert.equal((await rpc('boss@x.sk', 'cl_add_review', { rating: 4 })).status, 'bad_input') // bez rezervácie treba byt a dátum
+  assert.equal((await rpc('boss@x.sk', 'cl_add_review', { listing_id: 'L2', check_in: '2026-11-10', rating: 5, source: 'google' })).ok, true) // bez rezervácie v zozname
+  assert.ok(await fails(rpc('a@x.sk', 'cl_add_review', { reservation_code: 'CODE1', rating: 5 })))
+  const q = await rpc('boss@x.sk', 'cl_quality', '2026-11-01', '2026-12-31')
+  assert.equal(q.ok, true)
+  assert.equal(q.visits.length, 2) // zrušená rezervácia sa nepočíta
+  const v1 = q.visits.find((v) => v.code === 'CODE1')
+  assert.deepEqual({ flat: v1.flat, cleaner: v1.cleaning.cleaner, status: v1.cleaning.status, rev: v1.reviews.length, r: Number(v1.reviews[0].rating) }, { flat: 'Byt Jedna', cleaner: 'Anna', status: 'done', rev: 1, r: 2 })
+  assert.ok(v1.cleaning.items_total >= 13 && v1.cleaning.photos_after >= 0)
+  assert.equal(q.visits.find((v) => v.code === 'CODE2').cleaning?.task_id, undefined) // L3 má úlohu 22. 11., hosť prichádza 10. 12.: mimo okna 10 dní, čiže bez priradeného upratovania
+  assert.equal(q.orphans.length, 1) // recenzia bez rezervácie
+  assert.ok(await fails(rpc('a@x.sk', 'cl_quality', '2026-11-01', '2026-12-31')))
+  assert.equal((await rpc('boss@x.sk', 'cl_quality', '2025-01-01', '2026-12-31')).status, 'bad_range')
+  // report obsahuje checklist, fotky a recenziu
+  const rep = await rpc('boss@x.sk', 'cl_report_data', '2026-11-01', '2026-12-31')
+  const rt = rep.tasks.find((x) => x.id === t)
+  assert.equal(Number(rt.review_rating), 2); assert.equal(rt.review_text, 'Špinavá kúpeľňa'); assert.ok('items_total' in rt && 'photos_before' in rt && 'photos_issue' in rt)
+  // odstránenie recenzie: preč z kvality aj z reportu
+  assert.equal((await rpc('boss@x.sk', 'cl_remove_review', a.id)).ok, true)
+  assert.equal((await rpc('boss@x.sk', 'cl_quality', '2026-11-01', '2026-12-31')).visits.find((v) => v.code === 'CODE1').reviews.length, 0)
+  assert.ok(await fails(rpc('a@x.sk', 'cl_remove_review', a.id)))
 })
 
 test('synchronizácia: presun balíka na iný deň nespôsobí chybu a nezruší hotovú úlohu', { skip: !have }, async () => {

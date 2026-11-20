@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { monthRange, prevMonth, monthLabel, reportFileName, reportModel, reportSheets, reportEmail, isMonth } from '../lib/cl-report.js'
+import { monthRange, prevMonth, monthLabel, reportFileName, reportModel, reportSheets, reportEmail, isMonth, isRangeYmd, rangeLabel, rangeFileName } from '../lib/cl-report.js'
 import { buildXlsx } from '../lib/xlsx-lite.js'
 
 const data = {
@@ -55,4 +55,28 @@ test('e-mail: predmet, text aj html obsahujú mesiac, súčet a upozornenie na o
   assert.match(e.text, /Hotových upratovaní: 3/); assert.match(e.text, /orientačné/)
   assert.ok(e.html.includes('An&lt;na&gt;') && !e.html.includes('An<na>'))
   assert.ok(e.html.includes('65,00'))
+})
+
+test('obdobie od-do: kontrola, popis a názov súboru', () => {
+  assert.ok(isRangeYmd('2026-11-01', '2026-11-15') && isRangeYmd('2026-11-15', '2026-11-15'))
+  assert.ok(!isRangeYmd('2026-11-15', '2026-11-01') && !isRangeYmd('2026-11-01', '2027-12-31') && !isRangeYmd('x', '2026-11-01') && !isRangeYmd(null, null))
+  assert.equal(rangeLabel('2026-11-01', '2026-11-15'), '1. 11. 2026 – 15. 11. 2026')
+  assert.equal(rangeFileName('2026-11-01', '2026-11-15'), 'Upratovanie_2026-11-01_2026-11-15.xlsx')
+  assert.equal(rangeFileName('2026-11-01', '2026-11-15', 'Beáta Čierna'), 'Upratovanie_2026-11-01_2026-11-15_Beata-Cierna.xlsx')
+})
+
+test('export jednej upratovačky: filter, checklist, fotky a recenzia hosťa v hárku Úlohy; priemer recenzií v súhrne', () => {
+  const d = { ...data, tasks: data.tasks.map((t) => (t.id === '1' ? { ...t, items_total: 14, items_done: 12, photos_before: 2, photos_after: 3, photos_issue: 1, review_rating: 2, review_text: 'Špinavá kúpeľňa' } : t.id === '2' ? { ...t, items_total: 14, items_done: 14, photos_before: 1, photos_after: 1, review_rating: 5, review_text: '' } : t)) }
+  const all = reportModel(d, '2026-11', { label: '1. 11. 2026 – 15. 11. 2026' })
+  const anna = all.cleaners.find((c) => c.name === 'Anna')
+  assert.deepEqual({ n: anna.ratings, sum: anna.ratingSum, low: anna.lowRatings }, { n: 1, sum: 2, low: 1 })
+  const one = reportModel(d, '2026-11', { cleaner: 'a@x', label: 'x' })
+  assert.equal(one.rows.length, 1); assert.equal(one.who, 'Anna'); assert.equal(one.total.doneCents, 2000)
+  const sh = reportSheets(one)
+  assert.equal(sh[0].rows[2].length, 11) // súhrn má stĺpce recenzií
+  const head = sh[1].rows[0].map((c) => c.v)
+  const row = sh[1].rows[1]
+  assert.equal(row[head.indexOf('Checklist')], '12 / 14'); assert.equal(row[head.indexOf('Fotky po')], 3); assert.equal(row[head.indexOf('Fotky problém')], 1)
+  assert.equal(row[head.indexOf('Recenzia hosťa')], 2); assert.equal(row[head.indexOf('Text recenzie')], 'Špinavá kúpeľňa')
+  assert.equal(buildXlsx(sh).readUInt32LE(0), 0x04034b50)
 })
