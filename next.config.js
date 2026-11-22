@@ -5,7 +5,7 @@ module.exports = {
   // Dokumentácia appiek ide do znalostnej bázy Guru (cron guru-kb číta docs/**.md zo súborového systému)
   outputFileTracingIncludes: { '/api/cron/guru-kb': ['./docs/**/*.md'] },
   // Zjednotenie appiek: moduly bežia pod jednou doménou (app.live-in.international/<modul>)
-  // a hlavná appka ich proxuje na ich vlastné nasadenia. Cesta /cs = Customer Service (basePath '/cs'), /ring = Vstupy hostí (basePath '/ring'), /pracovna = Práčovňa (basePath '/pracovna'), /kb = Znalostná báza (basePath '/kb'), /zaradenie = Zaradenie bytov (basePath '/zaradenie').
+  // a hlavná appka ich proxuje na ich vlastné nasadenia. Cesta /cs = Customer Service (basePath '/cs'), /ring = Vstupy hostí (basePath '/ring'), /pracovna = Práčovňa (basePath '/pracovna'), /zaradenie = Zaradenie bytov (basePath '/zaradenie').
   async rewrites() {
     return [
       { source: '/cs', destination: 'https://cs.live-in.international/cs' },
@@ -14,8 +14,6 @@ module.exports = {
       { source: '/ring/:path*', destination: 'https://livein-ring.vercel.app/ring/:path*' },
       { source: '/pracovna', destination: 'https://pracovna.live-in.international/pracovna' },
       { source: '/pracovna/:path*', destination: 'https://pracovna.live-in.international/pracovna/:path*' },
-      { source: '/kb', destination: 'https://livein-kb.vercel.app/kb' },
-      { source: '/kb/:path*', destination: 'https://livein-kb.vercel.app/kb/:path*' },
       { source: '/zaradenie', destination: 'https://livein-zaradenie.vercel.app/zaradenie' },
       { source: '/zaradenie/:path*', destination: 'https://livein-zaradenie.vercel.app/zaradenie/:path*' },
     ];
