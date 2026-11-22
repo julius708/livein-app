@@ -1,7 +1,7 @@
 // Spoločný kód pre všetky appky LIVE-IN: zdroj je táto (hlavná) appka, ostatné appky dostanú rovnaké kópie.
 //   node tools/sync-shared.mjs          prepíše kópie v susedných repozitároch (../livein-cs, ../livein-ring)
 //   node tools/sync-shared.mjs --check  nič nezapíše, skončí chybou, ak sa niektorá kópia líši (použité aj v teste)
-// Appky Znalosti a Zaradenie sa tu nesynchronizujú: pripájajú sa do hlavnej appky a ich kópie zaniknú.
+// Znalostná báza je už priamo v hlavnej appke. Zaradenie ostáva samostatné (potrebuje kľúče Higgsfield), preto dostáva rovnaké kópie.
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -38,6 +38,7 @@ export function appsMenuSource(hubSource, apps) {
 const read = (p) => readFileSync(p, 'utf8')
 const TARGETS = [
   { name: 'cs', dir: resolve(ROOT, '../livein-cs'), files: [['lib/guru-widget-core.js', 'lib/guru-widget-core.js'], ['components/GuruWidget.js', 'components/GuruWidget.js'], ['app/guru/guru-widget.css', 'app/guru-widget.css']], menu: 'app/AppsMenu.js' },
+  { name: 'zaradenie', dir: resolve(ROOT, '../livein-zaradenie'), files: [['lib/guru-widget-core.js', 'lib/guru-widget-core.js'], ['components/GuruWidget.js', 'components/GuruWidget.js'], ['app/guru/guru-widget.css', 'app/guru-widget.css']], menu: 'components/AppsMenu.js' },
   { name: 'ring', dir: resolve(ROOT, '../livein-ring'), files: [['lib/guru-widget-core.js', 'lib/guru-widget-core.js'], ['components/GuruWidget.js', 'components/GuruWidget.js'], ['app/guru/guru-widget.css', 'app/guru-widget.css']], menu: 'components/AppsMenu.js' },
 ]
 
