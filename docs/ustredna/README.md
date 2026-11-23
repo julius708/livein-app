@@ -185,13 +185,15 @@ Ak ústredňa neodpovedá, nástroj skončí chybou a výslovne napíše, že ud
 
 | Premenná | Na čo | Stav |
 |---|---|---|
-| `HQ_AGENT_TOKENS` | JSON mapa `{"agent:codex":"<token>", "agent:claude-code":"<token>"}`; token aspoň 24 znakov | v produkcii nenastavené |
+| `HQ_AGENT_TOKENS` | JSON mapa `{"agent:codex":"sha256:<odtlačok>", "agent:claude-code":"sha256:<odtlačok>"}`; na serveri sú len odtlačky tokenov (token sám aspoň 24 znakov) | v produkcii nastavené 23. 11. 2026 |
 | `SLACK_BOT_TOKEN`, `HQ_SLACK_CHANNEL` | hlásenie udalostí do vlákna v #ai-tim (predvolený kanál `C0C9HG8B42C`) | nenastavené |
 | `SLACK_SIGNING_SECRET` | overenie prijímača `/api/hq/slack` | nenastavené |
 | `ASANA_TOKEN` | vytváranie úloh v Asane (už ho používa Údržba) | pre ústredňu neoverené |
 | `HQ_LOCAL_STORE` | cesta k lokálnemu registru v súbore; funguje len mimo produkcie | len lokálne |
 
-Tokeny pripraví človek jedným príkazom: `node tools/ustredna/token-setup.mjs`. Skript vytvorí token pre Codex a pre Claude Code, uloží ich do `~/.config/livein-ustredna/{codex,claude-code}.env` (čitateľné len pre daného používateľa, formát pre `--env`) a hodnotu pre `HQ_AGENT_TOKENS` dá do schránky. Tokeny nevypisuje a nikam neposiela; do Vercelu ich vkladá človek. Existujúce tokeny bez `--rotate` neprepíše.
+Tokeny pripraví jeden príkaz: `node tools/ustredna/token-setup.mjs`. Skript vytvorí token pre Codex a pre Claude Code, uloží ich do `~/.config/livein-ustredna/{codex,claude-code}.env` (čitateľné len pre daného používateľa, formát pre `--env`) a hodnotu pre `HQ_AGENT_TOKENS` zapíše do `server-hodnota.json` v tom istom priečinku. Na server idú len odtlačky (`sha256:<hex>`): token z nich získať nejde a odtlačok sám ako token neplatí (`actorFromToken` v `lib/hq-core.js`). Skript tokeny nevypisuje a nikam neposiela; existujúce bez `--rotate` neprepíše. Pôvodný tvar s tokenmi priamo v premennej server stále prijíma.
+
+**Pravidelný zber** (od 23. 11. 2026): naplánovaná úloha v aplikácii Claude na počítači s diskom a Codexom (`ustredna-zber`) trikrát denne obnoví zoznam rutín Claude, prečíta posledné stránky #ai-tim, spojí ich so starším súhrnom (`slack-roles.mjs --merge`) a spustí `~/.config/livein-ustredna/zber.sh`, ktorý pošle prehľad agentov a index trezoru pod tokenom `agent:claude-code`. Beží len vtedy, keď je aplikácia otvorená; zmeškaný beh sa dobehne po spustení.
 
 Agenti v produkcii zapisujú cez servisný účet (`SUPABASE_SERVICE_ROLE_KEY` alebo `CRM_BOT_EMAIL`/`CRM_BOT_PASSWORD` s rolou `bot`).
 

@@ -1,18 +1,19 @@
 #!/usr/bin/env node
-// Pripraví tokeny agentov pre ústredňu. Spúšťa ho človek na svojom počítači, raz.
-// Tokeny vzniknú tu, uložia sa do súborov len pre tohto používateľa a hodnota pre server sa skopíruje do schránky.
-// Skript tokeny NEVYPISUJE a nikam ich neposiela. Na server (Vercel → Environment Variables → HQ_AGENT_TOKENS) ich vloží človek.
+// Pripraví tokeny agentov pre ústredňu. Spúšťa sa raz na počítači, kde agenti bežia.
+// Tokeny vzniknú tu a uložia sa do súborov len pre tohto používateľa. Na server ide len ich odtlačok (sha256), nie token:
+// kto pozná hodnotu na serveri, token z nej nezíska a odtlačok sám ako token neplatí (lib/hq-core.js, actorFromToken).
+// Skript tokeny NEVYPISUJE a nikam ich neposiela. Hodnotu pre server (HQ_AGENT_TOKENS) uloží do súboru server-hodnota.json.
 //
 //   node tools/ustredna/token-setup.mjs                 vytvorí tokeny pre Codex a Claude Code
-//   node tools/ustredna/token-setup.mjs --rotate        nahradí existujúce (staré prestanú platiť po uložení novej hodnoty na serveri)
+//   node tools/ustredna/token-setup.mjs --rotate        nahradí existujúce (staré prestanú platiť po nasadení novej hodnoty na serveri)
 //   --dir <priečinok>   kam uložiť súbory (predvolene ~/.config/livein-ustredna)
 //   --url <adresa>      adresa ústredne (predvolene https://app.live-in.international)
-//   --no-clipboard      hodnotu pre server neskopíruje, uloží ju do súboru vercel-hodnota.txt v tom istom priečinku
+//   --clipboard         hodnotu pre server skopíruje aj do schránky
 //   --open <adresa>     po skončení otvorí túto stránku v prehliadači (nastavenia premenných vo Verceli)
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { randomBytes } from 'node:crypto'
+import { randomBytes, createHash } from 'node:crypto'
 import { spawnSync } from 'node:child_process'
 
 const args = process.argv.slice(2), opt = {}
@@ -32,24 +33,22 @@ try { fs.chmodSync(dir, 0o700) } catch { /* cudzí priečinok: práva súborov n
 const map = {}
 for (const [actor, file] of Object.entries(ACTORS)) {
   const token = randomBytes(32).toString('base64url')
-  map[actor] = token
+  map[actor] = 'sha256:' + createHash('sha256').update(token).digest('hex')   // na server ide len odtlačok
   const f = path.join(dir, file)
   fs.writeFileSync(f, `HQ_URL=${url}\nHQ_TOKEN=${token}\n`, { mode: 0o600 })
   fs.chmodSync(f, 0o600)
 }
 const value = JSON.stringify(map)
-let where
-const clip = opt['no-clipboard'] === 'true' ? null : spawnSync('pbcopy', { input: value })
-if (clip && clip.status === 0) where = 'je v schránke (Cmd+V)'
-else { const f = path.join(dir, 'vercel-hodnota.txt'); fs.writeFileSync(f, value + '\n', { mode: 0o600 }); fs.chmodSync(f, 0o600); where = `je v súbore ${f} (po vložení na server ho zmaž)` }
+const out = path.join(dir, 'server-hodnota.json')
+fs.writeFileSync(out, value + '\n', { mode: 0o600 }); fs.chmodSync(out, 0o600)
+const clip = opt.clipboard === 'true' ? spawnSync('pbcopy', { input: value }) : null
 
 console.log(`Tokeny sú pripravené v ${dir} (${Object.values(ACTORS).join(', ')}). Čítať ich vie len tvoj účet na tomto počítači.`)
+console.log(`Hodnota pre server je v súbore ${out}${clip && clip.status === 0 ? ' a v schránke' : ''}. Obsahuje len odtlačky tokenov, nie tokeny.`)
 console.log('')
-console.log('Ostáva jeden krok, ktorý vieš urobiť len ty:')
-console.log('  1. Vercel → projekt appky → Settings → Environment Variables → Add')
-console.log('  2. Key: HQ_AGENT_TOKENS · Environment: Production')
-console.log(`  3. Value: ${where}`)
-console.log('  4. Save. Hodnota začne platiť od najbližšieho nasadenia.')
+console.log('Na serveri: Vercel → projekt appky → Settings → Environment Variables')
+console.log('  Key: HQ_AGENT_TOKENS · Environment: Production · Value: obsah súboru server-hodnota.json')
+console.log('  Hodnota začne platiť od najbližšieho nasadenia.')
 console.log('')
-console.log('Token nikam nepíš: ani do Slacku, ani do chatu, ani do repozitára.')
+console.log('Samotný token nikam nepíš: ani do Slacku, ani do chatu, ani do repozitára.')
 if (opt.open && /^https:\/\/vercel\.com\//.test(opt.open)) spawnSync('open', [opt.open])

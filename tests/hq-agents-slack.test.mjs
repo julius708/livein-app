@@ -1,7 +1,7 @@
 // Testy čítania uložených výpisov Slacku: vymyslené správy, žiadne skutočné mená ani e-maily.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { parseSlack, signature, summarizeSlack } from '../lib/hq-agents-slack.js'
+import { parseSlack, signature, summarizeSlack, mergeSlack } from '../lib/hq-agents-slack.js'
 
 const CHANNEL = `Channel: #ai-tim (C000TEST)
 
@@ -86,4 +86,14 @@ test('označenie pilotu: zmienka inej roly nie je výstup pomenovanej roly', () 
   assert.equal(s.hits.filter((h) => h.role === 'GROK-HUB').length, 0)
   const own = summarizeSlack(THREAD + '\n\n--- Reply 3 of 3 ---\nFrom: Skúšobný Účet <ucet@example.test> (U0AAA)\nTime: 2026-11-20 14:00:00 CET\nMessage TS: 1795179600.000001\n[Grok Hub] TEST GROK HUB · GH-PILOT-20261120-01 | syntetický výstup\n*Sent using* Cursor\n', { marker: 'GH-PILOT-20261120-01' })
   assert.deepEqual(own.hits.filter((h) => h.role === 'GROK-HUB').map((h) => [h.via, h.ts]), [['Cursor', '1795179600.000001']])
+})
+
+test('spojenie so starším zberom: novší čas ostáva, rola bez nového hlásenia sa nestratí', () => {
+  const prev = { roles: [{ role: 'A1', runtime: 'Claude', last: '2026-11-10T08:00:00.000Z', count: 9, name: 'Atlas' }, { role: 'P8', runtime: 'Claude', last: '2026-11-16T11:55:00.000Z', count: 1 }, { role: 'A19', runtime: 'GPT', last: '2026-11-22T09:00:00.000Z', count: 2 }], coverage: 'staré' }
+  const fresh = { roles: [{ role: 'A1', runtime: 'Claude', last: '2026-11-23T07:59:00.000Z', count: 3 }, { role: 'A19', runtime: 'GPT', last: '2026-11-21T09:00:00.000Z', count: 1 }, { role: 'GROK-HUB', runtime: 'Grok', last: '2026-11-23T10:00:00.000Z', count: 1, name: 'Grok Hub' }], coverage: 'Slack #ai-tim: 40 správ od 20. 11. do 23. 11.' }
+  const m = mergeSlack(prev, fresh)
+  assert.deepEqual(m.roles.map((r) => [r.role, r.runtime, r.last.slice(0, 10), r.count, r.name || '']), [['A1', 'Claude', '2026-11-23', 3, 'Atlas'], ['A19', 'GPT', '2026-11-22', 1, ''], ['GROK-HUB', 'Grok', '2026-11-23', 1, 'Grok Hub'], ['P8', 'Claude', '2026-11-16', 1, '']])
+  assert.match(m.coverage, /^Slack #ai-tim: 40 správ.* Pri 1 rolách bez hlásenia v tomto období/)
+  assert.deepEqual(mergeSlack(null, fresh).roles.length, 3)
+  assert.equal(mergeSlack(null, fresh).coverage, fresh.coverage)
 })
