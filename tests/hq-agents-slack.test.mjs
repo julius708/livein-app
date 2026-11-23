@@ -97,3 +97,12 @@ test('spojenie so starším zberom: novší čas ostáva, rola bez nového hlás
   assert.deepEqual(mergeSlack(null, fresh).roles.length, 3)
   assert.equal(mergeSlack(null, fresh).coverage, fresh.coverage)
 })
+
+test('podpis so šípkou: adresát za šípkou nie je autor správy', () => {
+  assert.deepEqual(signature('[Claude Code → Grok Hub] **Zadanie od Júliusa**'), { text: 'Claude Code → Grok Hub', role: null })
+  assert.equal(signature('[Grok Hub → A19] prosím o podklad').role, 'GROK-HUB')
+  assert.equal(signature('[A19 -> Grok Hub] podklad').role, 'A19')
+  const s = summarizeSlack('=== Message from Skúšobný Účet <ucet@example.test> (U0AAA) at 2026-11-23 14:13:57 CET ===\nMessage TS: 1795439637.932699\n[Claude Code → Grok Hub] Zadanie\n*Sent using* <@U0BOT1|Claude>\n')
+  assert.deepEqual(s.roles, [])   // správa adresovaná Grok Hubu sa nepočíta ako jeho hlásenie
+  assert.equal(s.stats.unsigned, 1)
+})
