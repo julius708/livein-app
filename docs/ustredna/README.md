@@ -108,6 +108,26 @@ Stav 13. 11. 2026: nasadené v produkcii (`main` `b43993d`), prvý prehľad agen
 Meno roly sa berie z Brainu (nadpis `Agenti/<ID>/00_Index.md`); meno z prehľadu sa použije len tam, kde ho Brain nemá.
 Zistenie 13. 11. 2026: priečinky rolí v trezore (`Agenti/<ID>/`) nikto nemenil od 19. 10. Roly Claude si denne píšu učenie do výstupov (11 rolí, 9 za posledné 3 dni). Zadania automatizácií Codexu odkazujú na súbory v `/Users/…/Live-in/Pracovna`, `Knowledge_base` a `Databaza_vedomosti`, ktoré po presune na zdieľaný disk na tej ceste nie sú; priečinky rolí Codexu sa nemenili od 22.–24. 10.
 
+### Rola mimo číselného radu (GROK-HUB)
+
+Zoznam rolí sa nikde „neregistruje“: rola sa objaví, keď o nej existuje dôkaz. Súbor `Agenti/00_REGISTER.md` ani `00_DASHBOARD.md` ústredňa na zoznam rolí nečíta.
+
+- Rola sa zobrazí z **trezoru**, ak je v `Agenti/<ID>/` aspoň jedna poznámka `.md` (`<ID>` najviac 12 znakov, písmená, číslice a pomlčka) a index trezoru je znova nahraný. Prázdny priečinok ani dokumenty Google (`.gdoc`) nestačia. Meno roly je z nadpisu `00_Index.md` („Grok Hub · GROK-HUB“).
+- Rozvrhy, výstupy a hlásenia sa k role priradia len vtedy, keď jej ID pozná `roleOf` v `lib/hq-agents.js`. Číselné roly (A1, P3, …) pozná podľa vzoru; pomenované sú v `NAMED_ROLES`. GROK-HUB tam je so zápismi `Grok Hub`, `GROK_HUB`, `GROK-HUB` (Slack, priečinok výstupov, trezor) a s prostredím `Grok`.
+- Prostredie pomenovanej roly je údaj z jej mena, nie overená identita. Slack pri Grok Hube ukazuje odoslanie cez Cursor; súbory na disku zapisuje účet človeka.
+- Nová pomenovaná rola = jeden riadok v `NAMED_ROLES` + test. Oprávnenia, tokeny ani databáza sa nemenia; zapisovať do registra práce rola nevie (to vedia len vykonávatelia v `lib/hq-core.js`).
+
+**Skúška toku (pilot).** Označenie pilotu (napr. `GH-PILOT-20261120-01`) musí byť v hlásení podpísanom rolou a v súbore v jej priečinku. Zmienka inej roly sa nepočíta.
+
+```bash
+node tools/ustredna/pilot-check.mjs --id GH-PILOT-20261120-01 --role GROK-HUB \
+  --outputs "<Disk>/Live-in/Vystupy_agentov" --outputs "<Disk>/…/Zrkadlo_Obsidian/Vystupy_agentov" \
+  --vault "<Disk>/Live-in/Live-in International" --slack <uložený výpis vlákna> --snapshot <prehľad z produkcie>
+```
+
+Kroky a čo je dôkaz: vstup do roly (z ústredne neoveriteľný, vždy `?`) → hlásenie v #ai-tim podpísané rolou → súbor v priečinku roly → (nepovinne) poznámka v `Agenti/<ID>/` → rola v prehľade, ktorý má produkcia a ktorý vznikol až po výstupe pilotu. Lokálny model (`~`) ukazuje, čo by ústredňa zobrazila po zbere; dôkazom nie je. Výsledok je `CHÝBA DÔKAZ`, `NEOVERENÉ` alebo `DOLOŽENÉ`; posledný skript sám nevydá, lebo vstup nevidí.
+Výpis Slacku pripraví relácia Claude cez konektor; `tools/ustredna/slack-roles.mjs` z neho urobí `slack.json` pre zberný skript (ukladá len podpis roly, cez čo bola správa poslaná a čas).
+
 ## Prehľad pre vedenie
 
 Úvod ukazuje: výnosy mesiaca (len účtu s prístupom do Ekonomiky), noci oproti vlaňajšku, portfólio oproti cieľu, nové leady za 7 dní, čo čaká na rozhodnutie, dnešnú prevádzku, obchod, rast a AI tím. Čo sa nenačíta, je „–“.

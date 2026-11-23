@@ -1,7 +1,7 @@
 // Ústredňa – agenti: zoznam rolí sa skladá z dôkazov. Rozvrh sám osebe nikdy neznamená, že rola dodáva.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { roleOf, rruleText, cronText, sanitizeAgents, brainByRole, buildAgents, AGENTS_VERSION } from '../lib/hq-agents.js'
+import { roleOf, namedRole, rruleText, cronText, sanitizeAgents, brainByRole, buildAgents, AGENTS_VERSION } from '../lib/hq-agents.js'
 
 const NOW = Date.parse('2026-11-12T22:00:00Z')
 const h = (n) => new Date(NOW - n * 3600e3).toISOString()
@@ -158,5 +158,50 @@ test('zber výstupov spočíta súbory učenia zvlášť a spojí priečinky tej
     assert.equal(out.A11.last, d(0).toISOString())
     assert.equal(out.A11.learnLast, d(1).toISOString())
     assert.deepEqual([out.A27.learn, out.A27.learnLast], [0, null])
+  } finally { fs.rmSync(root, { recursive: true, force: true }) }
+})
+
+test('pomenovaná rola: rôzne zápisy mena dajú jedno ID a číselné roly ostávajú', () => {
+  for (const t of ['[Grok Hub] Prvé použitie', 'GROK_HUB', 'GROK-HUB', 'grok hub', 'Grok Hub – súhrn 08:00']) assert.equal(roleOf(t), 'GROK-HUB', t)
+  for (const t of ['Grok Hubert', 'MyGrokHub', 'hub', 'Grok']) assert.equal(roleOf(t), null, t)
+  assert.equal(roleOf('[A19/Codex] TEST GROK HUB · GH-PILOT-20261120-01'), 'A19')   // platí prvá rola v texte
+  assert.equal(roleOf('Grok Hub pre A1'), 'GROK-HUB')
+  assert.deepEqual(['GROK_HUB', 'GROK-HUB', 'Grok Hub', 'GROK_HUB_stare', 'A11'].map(namedRole), ['GROK-HUB', 'GROK-HUB', 'GROK-HUB', null, null])
+})
+
+test('pomenovaná rola s prostredím Grok: dôkazy sa nepripíšu GPT ani Claude', () => {
+  const ix = { syncedAt: h(0), notes: [{ path: 'Agenti/GROK-HUB/2026-11-20_GH-PILOT.md', title: 'Pilot', mtime: h(2) }, { path: 'Agenti/A19/2026-10-19_Poznamka.md', title: 'Poznámka', mtime: h(30 * 24) }] }
+  const raw = {
+    schedules: [{ runtime: 'Grok', role: 'GROK-HUB', name: 'Grok Hub – súhrn 08:00', every: 'denne 08:00', active: true, lastRun: h(5) }, { runtime: 'Mistral', role: 'A1', name: 'neznáme prostredie', every: '', active: true }],
+    outputs: [{ runtime: 'Grok', role: 'GROK-HUB', where: 'Disk · Vystupy_agentov', files: 4, last: h(3) }],
+    slack: [{ runtime: 'Grok', role: 'GROK-HUB', last: h(1), count: 2 }],
+    asks: [{ role: 'GROK-HUB', at: h(1), text: 'Skúšobné rozhodnutie pilotu?', context: '' }],
+  }
+  const s = snap(raw)
+  assert.deepEqual(s.schedules.map((x) => x.runtime), ['Grok'])                // neznáme prostredie vypadne, Grok ostáva
+  const v = buildAgents(s, ix, NOW)
+  const r = v.roles.find((x) => x.id === 'GROK-HUB')
+  assert.equal(r.state, 'delivering')
+  assert.equal(r.name, 'Grok Hub')                                             // bez 00_Index.md sa použije meno pomenovanej roly
+  assert.deepEqual([!!r.grok, r.gpt, r.claude], [true, null, null])
+  assert.deepEqual([r.grok.active, r.grok.files, r.grok.lastWhere, r.grok.last], [1, 4, 'Slack #ai-tim', h(1)])
+  assert.equal(r.brain.notes, 1)
+  assert.equal(v.totals.brainLast, h(2))
+  assert.equal(v.totals.brainLastGpt, h(30 * 24))                              // zápis Groka neposunie dátum GPT
+  assert.deepEqual([v.totals.gpt.roles, v.totals.claude.roles], [0, 0])        // čerstvý zápis Groka mimo podpriečinka Claude sa nepočíta ako rola GPT
+  assert.equal(v.asks[0].name, 'Grok Hub')
+  assert.ok(v.roles.findIndex((x) => x.id === 'GROK-HUB') > v.roles.findIndex((x) => x.id === 'A19'))   // pomenované roly sú za číselnými
+})
+
+test('zber výstupov: priečinok GROK_HUB patrí role GROK-HUB s prostredím Grok', async () => {
+  const fs = await import('node:fs'), os = await import('node:os'), path = await import('node:path')
+  const { scanOutputs } = await import('../lib/hq-agents-fs.js')
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'hq-named-'))
+  const put = (rel) => { const f = path.join(root, rel); fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, 'x') }
+  put('GROK_HUB/latest.md'); put('GROK_HUB/2026-11-20_GROK-HUB_GH-PILOT.md'); put('GROK_HUB_stare/x.md'); put('A7/latest.md'); put('GROK/x.md')
+  try {
+    const out = Object.fromEntries(scanOutputs(root, { runtime: 'Claude', where: 'Disk' }).map((o) => [o.role, o]))
+    assert.deepEqual(Object.keys(out).sort(), ['A7', 'GROK-HUB'])
+    assert.deepEqual([out['GROK-HUB'].runtime, out['GROK-HUB'].files, out.A7.runtime], ['Grok', 2, 'Claude'])
   } finally { fs.rmSync(root, { recursive: true, force: true }) }
 })
