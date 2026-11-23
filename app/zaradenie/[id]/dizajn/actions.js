@@ -53,7 +53,7 @@ function creditsUsed(rooms) { return rooms.flatMap((r) => r.designs).filter((d) 
 export async function generatePair(prev, formData) {
   const { s } = await ctx()
   const unitId = String(formData.get('unit_id') || ''), roomId = String(formData.get('room_id') || '')
-  if (!hfConfigured()) return { ok: false, error: 'Higgsfield nie je pripojený (HF_API_KEY).' }
+  if (!hfConfigured()) return { ok: false, error: 'Higgsfield nie je pripojený.' }
   const [{ data: u }, { data: rooms }] = await Promise.all([s.rpc('onb_unit_get', { p_id: unitId }), s.rpc('onb_rooms', { p_unit_id: unitId })])
   if (!u || !u.id) return { ok: false, error: 'Byt sa nenašiel.' }
   if (!u.budget_eur) return { ok: false, error: 'Najprv zadaj rozpočet na zariadenie bytu.' }

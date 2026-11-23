@@ -29,7 +29,7 @@ export default async function DesignPage({ params }) {
   return (
     <OnbShell me={me} active="home" intro={{ eyebrow: `${u.city || ''} · ${TYPES[u.unit_type]}`, title: `Dizajn: ${u.address}`, text: `Nafoť miestnosti, vyber štýl, appka pripraví dva návrhy. Vybrané: ${chosen}/${list.length} miestností (${pct} %).`, aside: <Link className="li-shortcut" href={`/zaradenie/${u.id}`}>← Checklist bytu</Link> }}>
       {error && <p className="msg err">{error.message}</p>}
-      {!hfConfigured() && <p className="msg err">Higgsfield nie je pripojený: chýba HF_API_KEY vo Verceli.</p>}
+      {!hfConfigured() && <p className="msg err">Higgsfield nie je pripojený.</p>}
       <div className="bar"><i style={{ width: `${pct}%` }} /></div>
       <DesignBoard unit={u} rooms={list} pending={pending} isAdmin={isAdmin} creditsPerImage={CREDITS_PER_IMAGE} items={items || []} />
     </OnbShell>
