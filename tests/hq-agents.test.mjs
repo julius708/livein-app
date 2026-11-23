@@ -167,6 +167,9 @@ test('pomenovaná rola: rôzne zápisy mena dajú jedno ID a číselné roly ost
   assert.equal(roleOf('[A19/Codex] TEST GROK HUB · GH-PILOT-20261120-01'), 'A19')   // platí prvá rola v texte
   assert.equal(roleOf('Grok Hub pre A1'), 'GROK-HUB')
   assert.deepEqual(['GROK_HUB', 'GROK-HUB', 'Grok Hub', 'GROK_HUB_stare', 'A11'].map(namedRole), ['GROK-HUB', 'GROK-HUB', 'GROK-HUB', null, null])
+  // boti založení v Grok Bote: priečinok podľa ID aj podpis podľa mena dajú tú istú rolu a nepomýlia sa s Grok Hubom
+  assert.deepEqual(['GROK-INBOX', 'GROK_FIN', 'Grok Financie', 'GROK-SALES', 'Grok Obchod', 'GROK-FOCUS', 'Grok Úzke miesto', 'GROK-QA', 'Grok Kontrolór'].map(namedRole), ['GROK-INBOX', 'GROK-FIN', 'GROK-FIN', 'GROK-SALES', 'GROK-SALES', 'GROK-FOCUS', 'GROK-FOCUS', 'GROK-QA', 'GROK-QA'])
+  assert.deepEqual(['[Grok Inbox] 7:00', '[Grok Kontrolór] dnes mlčali', 'Grok Finančník', 'Grok QAnon'].map(roleOf), ['GROK-INBOX', 'GROK-QA', null, null])
 })
 
 test('pomenovaná rola s prostredím Grok: dôkazy sa nepripíšu GPT ani Claude', () => {
