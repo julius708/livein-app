@@ -1,5 +1,6 @@
 'use server'
 import { revalidatePath } from 'next/cache'
+import { track, deliverMany } from '@/lib/core-server'
 import { getViewer } from '@/lib/auth'
 import { clContext, rpc, managerData, taskDetail } from '@/lib/cl-server'
 import { proposeAssignments } from '@/lib/cl-assign'
@@ -26,10 +27,31 @@ async function manager() {
 }
 const refresh = () => revalidatePath('/upratovanie')
 
+/** Prvé priradenie: push alebo e-mail (ak je zapnuté) a vždy správa do schránky; chyba upozornenia nikdy nezhodí priradenie. */
+async function notifyAssigned(v, taskIds, byEmail) {
+  try {
+    const ids = [...new Set((taskIds || []).filter(Boolean))]
+    const emails = ids.map((id) => byEmail[id]).filter(Boolean)
+    if (!emails.length) return
+    const [{ data: tasks }, { data: sets }] = await Promise.all([
+      v.s.from('cl_tasks').select('id, listing_name, date').in('id', ids),
+      v.s.from('cl_settings').select('key, value').eq('key', 'notify'),
+    ])
+    const settings = { notify: sets && sets[0] ? sets[0].value : {} }
+    const items = assignmentItems(tasks || [], byEmail)
+    if (!items.length) return
+    for (const it of items) await deliverMany(v.s, [it.email], { module: 'upratovanie', title: it.title, body: it.body, href: '/uprat', kind: 'task' })
+    if (notifyOn(settings, 'assign')) {
+      const origin = siteOrigin(await headers(), process.env)
+      after(() => notifyPeople(items, origin))
+    }
+  } catch (e) { console.error('[upratovanie] upozornenie o priradení', String(e && e.message).slice(0, 100)) }
+}
+
 export async function assignAction(taskId, email, reason) {
   const m = await manager(); if (m.err) return m.err
   const r = await rpc(m.v.s, 'cl_assign', { p_task: taskId, p_email: email || null, p_reason: reason || (email ? 'ručne manažérkou' : null), p_distance: null, p_auto: false })
-  if (r.ok) refresh()
+  if (r.ok) { refresh(); if (email) await notifyAssigned(m.v, [taskId], { [taskId]: email }); await track(m.v.s, 'upratovanie', 'task.assign', { type: 'task', id: taskId }, { to: email || null }) }
   return r
 }
 
@@ -58,7 +80,7 @@ export async function applyProposalAction(items) {
   const list = (Array.isArray(items) ? items : []).slice(0, 500).map((a) => ({ task_id: a.task_id, email: a.email, reason: a.reason, km: a.km }))
   if (!list.length) return { ok: false, error: 'Nie je čo priradiť.' }
   const r = await rpc(m.v.s, 'cl_assign_bulk', { p_items: list })
-  if (r.ok) { refresh(); await notifyAssigned(m.v, list.map((x) => x.task_id), Object.fromEntries(list.map((x) => [x.task_id, x.email]))) }
+  if (r.ok) { refresh(); await notifyAssigned(m.v, list.map((x) => x.task_id), Object.fromEntries(list.map((x) => [x.task_id, x.email]))); await track(m.v.s, 'upratovanie', 'task.assign', { type: 'bulk', id: list.length }, { n: list.length }) }
   return r
 }
 
@@ -84,7 +106,7 @@ export async function geocodeStaffAction(email, address, city) {
 export async function decideApplicationAction(id, approve) {
   const m = await manager(); if (m.err) return m.err
   const r = await rpc(m.v.s, 'cl_decide_application', { p_id: id, p_approve: !!approve })
-  if (r.ok) refresh()
+  if (r.ok) { refresh(); await track(m.v.s, 'upratovanie', 'application.decide', { type: 'application', id }, { approve: !!approve }) }
   return r
 }
 
@@ -141,7 +163,7 @@ export async function removePostAction(id) {
 export async function reopenAction(taskId, reason) {
   const m = await manager(); if (m.err) return m.err
   const r = await rpc(m.v.s, 'cl_reopen', { p_task: taskId, p_reason: reason || '' })
-  if (r.ok) refresh()
+  if (r.ok) { refresh(); await track(m.v.s, 'upratovanie', 'task.reopen', { type: 'task', id: taskId }, {}) }
   return r
 }
 
@@ -172,7 +194,7 @@ export async function addTaskAction({ listing, name, date, note }) {
 export async function cancelTaskAction(taskId, reason) {
   const m = await manager(); if (m.err) return m.err
   const r = await rpc(m.v.s, 'cl_cancel_task', { p_task: taskId, p_reason: reason || '' })
-  if (r.ok) refresh()
+  if (r.ok) { refresh(); await track(m.v.s, 'upratovanie', 'task.cancel', { type: 'task', id: taskId }, {}) }
   return r
 }
 

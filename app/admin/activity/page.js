@@ -1,6 +1,8 @@
 import {redirect} from 'next/navigation'
 import {getViewer} from '@/lib/auth'
 import ActivityRefresh from './refresh'
+import {recentEvents} from '@/lib/core-server'
+import {eventLabel,moduleLabel} from '@/lib/core'
 const apps={app:'LIVE-IN domov',pracovna:'Práčovňa',cs:'Zákaznícky servis',ring:'Vstupy hostí',ekonomika:'Ekonomika'}
 const pages={home:'Prehľad',guru:'Guru',feedback:'Feedback',password:'Heslo',users:'Ľudia a práva',settings:'Nastavenia',feedback_admin:'Správa feedbacku',activity:'Aktivita',apartments:'Byty',knowledge:'Znalosti',team:'Tím',audit:'Audit',apartment_detail:'Detail bytu',history:'História',packing_history:'História balenia',status:'Stav',entrances:'Vstupy',overview:'Prehľad',bank:'Banka',forecast:'Výhľad',compare:'Porovnanie',map:'Mapa',insights:'Zistenia'}
 const FMT=new Intl.DateTimeFormat('sk-SK',{dateStyle:'short',timeStyle:'short',timeZone:'Europe/Bratislava'})
@@ -8,7 +10,7 @@ const dt=value=>{const d=new Date(value);return Number.isFinite(d.getTime())?FMT
 export const dynamic='force-dynamic'
 export default async function Activity(){
  const {s,isAdmin}=await getViewer();if(!isAdmin)redirect('/')
- const events=await s.rpc('livein_activity_events'), data=events.data||{}
+ const [events,work]=await Promise.all([s.rpc('livein_activity_events'),recentEvents(s,{limit:60})]), data=events.data||{}
  const rows=data.recent_usage||[], total=data.usage_total||0
  const summary=Object.entries(apps).map(([id,name])=>({id,name,views:0,people:0,...(data.usage_apps||[]).find(a=>a.app===id)}))
  const err=events.error
@@ -23,6 +25,7 @@ export default async function Activity(){
   <section className="card li-section"><h2>Prehľad aplikácií</h2><p className="li-privacy">Meranie otvorení sa začína nasadením tejto verzie. Otvorená stránka nepotvrdzuje odvedenú prácu. Ring používa zdieľanú reláciu; osobu z nej neurčujeme.</p><div className="li-table"><table><thead><tr><th>Aplikácia</th><th>Otvorenia</th><th>Účty</th><th>Naposledy použitá</th></tr></thead><tbody>{summary.map(a=><tr key={a.id}><td>{a.name}</td><td>{events.error?'—':a.views}</td><td>{a.id==='ring'?'Zdieľané':a.people}</td><td>{a.last?dt(a.last):'Zatiaľ bez záznamu'}</td></tr>)}</tbody></table></div></section>
   <section className="card li-section"><h2>Posledné otvorené sekcie</h2>{!rows.length?<p className="li-empty">{events.error?'Údaje nie sú dostupné.':'Záznamy sa objavia po použití aplikácií.'}</p>:<div className="li-table"><table><thead><tr><th>Čas</th><th>Účet</th><th>Aplikácia</th><th>Sekcia</th></tr></thead><tbody>{rows.slice(0,30).map((r,i)=><tr key={i}><td>{dt(r.last_seen)}</td><td>{r.actor}</td><td>{apps[r.app]}</td><td>{pages[r.page]||r.page}</td></tr>)}</tbody></table></div>}</section>
   <section className="card li-section"><h2>Zaznamenané pracovné udalosti</h2><p className="li-privacy">Posledných 20 udalostí z existujúceho auditu. Môžu zahŕňať automatizáciu a neúspešné pokusy; nejde o hodnotenie výkonu človeka.</p>{events.error?<p className="li-empty">Audit teraz nie je dostupný.</p>:!events.data?.recent?.length?<p className="li-empty">Za posledných 30 dní nie sú udalosti.</p>:<div className="li-table"><table><thead><tr><th>Čas</th><th>Aplikácia</th><th>Autor</th><th>Udalosť</th></tr></thead><tbody>{events.data.recent.map((e,i)=><tr key={i}><td>{dt(e.at)}</td><td>{apps[e.app]}</td><td>{e.actor}</td><td>{e.action}</td></tr>)}</tbody></table></div>}</section>
+  <section className="card li-section"><h2>Kto čo urobil v appke</h2><p className="li-privacy">Spoločný záznam práce zo všetkých častí (upratovanie a ďalšie). Zapisuje sa sám pri každej zmene a nedá sa upraviť ani zmazať.</p>{!work.length?<p className="li-empty">Záznamy sa objavia po prvých zmenách.</p>:<table><thead><tr><th>Kedy</th><th>Kto</th><th>Čo urobil</th><th>Časť</th></tr></thead><tbody>{work.map(e=><tr key={e.id}><td>{dt(e.at)}</td><td>{e.actor_email}</td><td>{eventLabel(e.event)}</td><td>{moduleLabel(e.module)}</td></tr>)}</tbody></table>}</section>
   <p className="li-privacy">Otvorenia sú zhrnuté po účte, sekcii a dni; opakované otvorenia do 30 sekúnd zlučujeme. Zobrazené dáta k {dt(new Date())}.</p>
  </>
 }
