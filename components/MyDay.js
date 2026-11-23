@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { loadMyDay } from '@/lib/myday-server'
+import { homeFacts, homeWork, myMentions } from '@/lib/home-data'
 import { buildCards, daySummary } from '@/lib/myday'
 import './myday.css'
 
@@ -11,7 +12,11 @@ export function MyDaySkeleton() {
 /** Môj deň: karty podľa roly, najnaliehavejšie hore. Zlyhanie načítania nikdy nezhodí domovskú stránku. */
 export default async function MyDay(props) {
   let cards = []
-  try { cards = buildCards(await loadMyDay(props), { roles: props.roles, isAdmin: props.isAdmin }) } catch { cards = [] }
+  try {
+    const [hf, hw, mm] = await Promise.all([homeFacts(props.s), homeWork(props.s), myMentions(props.s, props.user.email)])
+    const unseen = mm.filter((m) => !m.seen_at).map((m) => m.note_id)
+    cards = buildCards(await loadMyDay({ ...props, hf, hw, unseen }), { roles: props.roles, isAdmin: props.isAdmin })
+  } catch { cards = [] }
   return <MyDayView cards={cards} />
 }
 
