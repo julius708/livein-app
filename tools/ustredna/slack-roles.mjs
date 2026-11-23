@@ -5,7 +5,7 @@
 //   node tools/ustredna/slack-roles.mjs --out slack.json <výpis> [<výpis> …]
 //   node tools/ustredna/slack-roles.mjs --marker GH-PILOT-20261120-01 <výpis> …      vypíše aj správy s týmto označením
 import fs from 'node:fs'
-import { summarizeSlack } from '../../lib/hq-agents-slack.js'
+import { summarizeSlack, mergeSlack } from '../../lib/hq-agents-slack.js'
 
 const args = process.argv.slice(2), opt = {}, files = []
 for (let i = 0; i < args.length; i++) { if (args[i].startsWith('--')) { const k = args[i].slice(2); opt[k] = args[i + 1] && !args[i + 1].startsWith('--') ? args[++i] : 'true' } else files.push(args[i]) }
@@ -17,4 +17,7 @@ console.log(sum.coverage)
 console.log(`bez podpisu roly: ${sum.stats.unsigned}`)
 for (const r of sum.roles) console.log(r.role.padEnd(9), (r.runtime || '?').padEnd(7), r.last.slice(0, 16), String(r.count).padStart(3), r.name || '')
 if (opt.marker) { console.log(`--- správy s označením ${opt.marker}: ${sum.hits.length}`); for (const h of sum.hits) console.log(h.at.slice(0, 16), (h.role || 'bez roly').padEnd(9), `podpis „${h.signature}“`, `cez ${h.via || '?'}`, `účet ${h.account}`, `ts ${h.ts || '–'}`) }
-if (opt.out) { fs.writeFileSync(opt.out, JSON.stringify({ roles: sum.roles, coverage: sum.coverage })); console.log('Uložené do ' + opt.out) }
+// --merge <starší slack.json>: roly, ktoré v týchto výpisoch nie sú, ostanú zo staršieho zberu (pravidelný zber číta len posledné dni)
+let result = { roles: sum.roles, coverage: sum.coverage }
+if (opt.merge && opt.merge !== 'true' && fs.existsSync(opt.merge)) { try { result = mergeSlack(JSON.parse(fs.readFileSync(opt.merge, 'utf8')), result); console.log(`Spojené so starším zberom: spolu ${result.roles.length} rolí.`) } catch { console.error('Starší súhrn sa nedal prečítať, použije sa len nový.') } }
+if (opt.out) { fs.writeFileSync(opt.out, JSON.stringify(result)); console.log('Uložené do ' + opt.out) }

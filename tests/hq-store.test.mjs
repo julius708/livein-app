@@ -4,6 +4,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import { createHash } from 'node:crypto'
 import { localStore } from '../lib/hq-local.js'
 import { appendOp, listTasks, getTask, listSources, markSource, listQuarantine, linkTask, registerReady, listActors } from '../lib/hq-store.js'
 import { actorFromToken, actorFromViewer, attentionOf, queueFor, actorBoard, buildEvent, mergeActors, mergeSources, ACTORS, WORKSPACE, sourceFor, recentEvents } from '../lib/hq-core.js'
@@ -25,6 +26,12 @@ test('identita: prihlásený admin a token agenta; telo požiadavky identitu neu
   assert.equal(actorFromToken('zly-token-zly-token-zly-token-1', TOKENS), null)
   assert.equal(actorFromToken('kratky', { 'agent:codex': 'kratky' }), null)
   assert.equal(actorFromToken('n'.repeat(32), { 'agent:neznamy': 'n'.repeat(32) }), null)   // token bez registrovaného vykonávateľa
+  // server môže poznať len odtlačok tokenu: token platí, odtlačok sám ako token nie, poškodený odtlačok neplatí vôbec
+  const digest = 'sha256:' + createHash('sha256').update(TOKENS['agent:codex']).digest('hex')
+  assert.equal(actorFromToken(TOKENS['agent:codex'], { 'agent:codex': digest }).id, 'agent:codex')
+  assert.equal(actorFromToken(digest, { 'agent:codex': digest }), null)
+  assert.equal(actorFromToken(TOKENS['agent:claude-code'], { 'agent:codex': digest }), null)
+  assert.equal(actorFromToken('sha256:' + 'z'.repeat(64), { 'agent:codex': 'sha256:' + 'z'.repeat(64) }), null)
   const s = localStore()
   const r = await appendOp(s, 'assign', { ...base, actorId: 'person:forged', workspaceId: 'other', source: 'forged' }, { actor: ceo, now: NOW })
   const t = await getTask(s, r.taskId)
