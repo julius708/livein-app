@@ -319,7 +319,10 @@ test('pozvánky: nový člen, existujúci používateľ, opätovné poslanie, vy
 test('vstup do bytu: text pre hosťa zo Sprievodcu vidí len priradená upratovačka a manažérka', { skip: !have }, async () => {
   await db.query(`update public.guide_cards set arrival = '{"sk":"Kód od vchodu 1234, schránka vľavo","en":"Door code 1234"}'::jsonb, parking = '{"sk":"Parkovanie vo dvore"}'::jsonb where listing_id = 'L1'`)
   await db.query(`update public.guide_cards set arrival = '{"en":"Only English text"}'::jsonb where listing_id = 'L2'`)
-  // L1 má priradenú Annu (z testu priradenia), Beáta k L1 nemá nič
+  // L1 má priradenú Annu (z testu priradenia); funkcia pozerá na skutočný dnešok, preto úlohu na čas testu posunieme na dnes (test nezávisí od dátumu spustenia)
+  const own = await one("select id, to_char(date, 'YYYY-MM-DD') as d from public.cl_tasks where listing_id = 'L1' and cleaner_email = 'a@x.sk' order by date limit 1")
+  await db.query('update public.cl_tasks set date = current_date where id = $1', [own.id])
+  try {
   const asA = await rpc('a@x.sk', 'cl_entry_info', ['L1', 'L2'])
   assert.equal(asA.ok, true)
   assert.deepEqual(Object.keys(asA.entry), ['L1']) // L2 jej nepatrí
@@ -333,6 +336,10 @@ test('vstup do bytu: text pre hosťa zo Sprievodcu vidí len priradená upratova
   await db.exec('reset role'); await db.exec('set role anon')
   assert.ok(await fails(db.query("select public.cl_entry_info(array['L1'])")))
   await db.exec('reset role')
+  } finally {
+    await db.exec('reset role')
+    await db.query('update public.cl_tasks set date = $2::date where id = $1', [own.id, own.d])
+  }
 })
 
 test('kvalita: recenzia sa páruje s rezerváciou a s upratovaním pred príchodom; report a oprávnenia', { skip: !have }, async () => {

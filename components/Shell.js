@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Suspense } from 'react'
 import UsageTracker from '@/components/UsageTracker'
 import { initials } from '@/lib/auth'
 import FeedbackForm from '@/components/FeedbackForm'
@@ -27,7 +28,7 @@ export default function Shell({ me, user, isAdmin, active = 'home', locked = fal
       <header className="li-masthead">
         <div className="li-masthead-inner">
           <a className="li-brand-link" href="/" aria-label="Domov"><img src="/logo.png" alt="LIVE-IN" /><span className="li-product">Tímový priestor</span></a>
-          {!locked && <AppsNav me={me} current={active === 'home' ? 'home' : active} />}
+          {!locked && <Suspense fallback={null}><AppsNav me={me} current={active === 'home' ? 'home' : active} /></Suspense>}
           {!locked && (
             <nav className="li-nav" aria-label="Hlavná navigácia">
               {items.map((i) => <Link key={i.id} href={i.href} aria-current={active === i.id ? 'page' : undefined} className={active === i.id ? 'on' : ''}>{i.label}</Link>)}
@@ -37,15 +38,15 @@ export default function Shell({ me, user, isAdmin, active = 'home', locked = fal
           <div className="who">
             <div className="av" aria-hidden="true">{initials(name)}</div>
             <div className="nm">{name}<small>{me && me.title ? me.title : (user ? user.email : '')}</small></div>
-            {!locked && <MentionBadge />}
+            {!locked && <Suspense fallback={null}><MentionBadge /></Suspense>}
             {!locked && <RefreshButton />}
             <form action="/auth/signout" method="post"><button className="out" type="submit">Odhlásiť</button></form>
           </div>
         </div>
       </header>
-      {!locked && <NewsBand />}
+      {!locked && <Suspense fallback={null}><NewsBand /></Suspense>}
       <main id="workspace-content" className={"wrap li-main-workspace" + (isAdmin ? " li-admin" : "")}>
-        {active !== "home" && <div className="li-trail"><Link href="/">LIVE-IN domov</Link><span>{items.find(i => i.id === active)?.label || (active === "ideas" ? "Nápady na obsah" : active === "testy" ? "Testy osobnosti" : active === "ekonomika" ? "Ekonomika" : active === "plan" ? "Marketingový plán 2027" : active === "crm" ? "CRM" : active === "udrzba" ? "Údržba" : active === "sprievodca" ? "Sprievodca bytom" : active === "kb" ? "Znalostná báza" : active === "upratovanie" ? "Upratovanie" : active === "uprat" ? "Moje upratovanie" : active === "kluce" ? "Kľúče" : active === "investicie" ? "Investičné nehnuteľnosti" : active === "vyuctovanie" ? "Vyúčtovanie majiteľom" : active === "newsletter" ? "Newsletter" : "Tímový priestor")}</span></div>}
+        {active !== "home" && <div className="li-trail"><Link href="/">LIVE-IN domov</Link><span>{items.find(i => i.id === active)?.label || (active === "ideas" ? "Nápady na obsah" : active === "testy" ? "Testy osobnosti" : active === "ekonomika" ? "Ekonomika" : active === "plan" ? "Marketingový plán 2027" : active === "crm" ? "CRM" : active === "udrzba" ? "Údržba" : active === "sprievodca" ? "Sprievodca bytom" : active === "kb" ? "Znalostná báza" : active === "zaradenie" ? "Zaradenie bytov" : active === "upratovanie" ? "Upratovanie" : active === "uprat" ? "Moje upratovanie" : active === "kluce" ? "Kľúče" : active === "investicie" ? "Investičné nehnuteľnosti" : active === "vyuctovanie" ? "Vyúčtovanie majiteľom" : active === "newsletter" ? "Newsletter" : "Tímový priestor")}</span></div>}
         {children}
         {!locked && me && <UsageTracker />}
         {/* Guru ako živý asistent na každej stránke, len pre prihlásených aktívnych členov tímu (na stránke /guru je veľký chat) */}
