@@ -7,6 +7,7 @@ import NoAccess from '@/components/NoAccess'
 import MyDay, { MyDaySkeleton } from '@/components/MyDay'
 import HomeBody, { HomeBodySkeleton } from '@/components/HomeBody'
 import HomeGroups from '@/components/HomeGroups'
+import OfficeCountdown from '@/components/OfficeCountdown'
 import { todayBA } from '@/lib/maintenance'
 import { PLAN_KEY } from '@/lib/plan-2027'
 import { moduleUrls } from '@/lib/home-data'
@@ -48,7 +49,7 @@ export default async function Home({ searchParams }) {
     <Shell me={me} user={user} isAdmin={isAdmin} active="home">
      <div className="home">
       {sp && sp.heslo === 'ok' && <div className="msg ok" style={{ marginTop: 16 }}>Heslo je uložené. Odteraz sa prihlasuješ novým heslom.</div>}
-      <section className="hero2">
+      <section className="hero2 has-cd">
         <div className="slides" aria-hidden="true">
           {PHOTOS.map((id, i) => <img key={id} src={`${CDN}${id}.jpg`} alt="" loading={i === 0 ? 'eager' : 'lazy'} />)}
         </div>
@@ -63,6 +64,7 @@ export default async function Home({ searchParams }) {
             {me.scope_city && <span className="chip o">📍 {me.scope_city}</span>}
           </div>
         </div>
+        <OfficeCountdown />
       </section>
 
       <Suspense fallback={<MyDaySkeleton />}>

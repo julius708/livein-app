@@ -1,0 +1,41 @@
+/* Odpočítavanie do otvorenia kancelárie v úvodnej dlaždici */
+.hero2.has-cd{align-items:stretch;justify-content:space-between;gap:20px}
+.hero2.has-cd .in{align-self:flex-end}
+.oc{position:relative;align-self:center;flex:0 0 auto;margin:22px 26px 22px 0;padding:16px 20px 14px;border-radius:22px;color:#fff;
+  background:linear-gradient(135deg,rgba(10,30,21,.62),rgba(10,30,21,.38));border:1px solid rgba(255,255,255,.22);
+  box-shadow:0 18px 44px -20px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.28);backdrop-filter:blur(14px) saturate(150%);-webkit-backdrop-filter:blur(14px) saturate(150%);
+  min-width:290px;overflow:hidden;isolation:isolate}
+.oc-skel{height:120px}
+.oc-glow{position:absolute;z-index:-1;inset:-40% -20% auto auto;width:240px;height:240px;border-radius:50%;background:radial-gradient(circle,rgba(244,109,22,.55),rgba(244,109,22,0) 65%);animation:oc-pulse 3.2s ease-in-out infinite}
+.oc-label{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#FFD2AE}
+.oc-label i{width:9px;height:9px;border-radius:50%;background:#F46D16;box-shadow:0 0 0 0 rgba(244,109,22,.7);animation:oc-ping 1.8s ease-out infinite}
+.oc-date{margin-top:2px;font-size:13px;color:#DDE7DF}
+.oc-cells{display:flex;gap:8px;margin-top:12px}
+.oc-cell{flex:1;min-width:56px;text-align:center;padding:9px 4px 7px;border-radius:14px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16)}
+.oc-cell b{display:block;font-size:clamp(28px,3.4vw,40px);line-height:1;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.01em;text-shadow:0 2px 18px rgba(244,109,22,.55)}
+.oc-cell span{display:block;margin-top:5px;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#C8D6CB}
+.oc-cell:first-child b{color:#FFD2AE}
+.oc-sec{animation:oc-tick .35s cubic-bezier(.22,.8,.2,1)}
+.oc-bar{margin-top:12px;height:5px;border-radius:99px;background:rgba(255,255,255,.16);overflow:hidden}
+.oc-bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#FFD08A,#F46D16);box-shadow:0 0 12px rgba(244,109,22,.8);transition:width 1s linear}
+.oc-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.oc-last{border-color:rgba(244,109,22,.75);animation:oc-throb 1.6s ease-in-out infinite}
+.oc-last .oc-cell b{color:#FFD2AE}
+.oc-open{text-align:center;padding:22px 26px}
+.oc-open-t{margin-top:6px;font-size:22px;font-weight:800;line-height:1.2}
+.oc-open .oc-label{justify-content:center}
+@keyframes oc-pulse{0%,100%{opacity:.55;transform:scale(1)}50%{opacity:1;transform:scale(1.12)}}
+@keyframes oc-ping{0%{box-shadow:0 0 0 0 rgba(244,109,22,.7)}70%,100%{box-shadow:0 0 0 10px rgba(244,109,22,0)}}
+@keyframes oc-tick{0%{transform:translateY(-14%);opacity:.45}100%{transform:none;opacity:1}}
+@keyframes oc-throb{0%,100%{box-shadow:0 18px 44px -20px rgba(0,0,0,.65),0 0 0 0 rgba(244,109,22,.45),inset 0 1px 0 rgba(255,255,255,.28)}50%{box-shadow:0 18px 44px -20px rgba(0,0,0,.65),0 0 0 8px rgba(244,109,22,0),inset 0 1px 0 rgba(255,255,255,.28)}}
+@media (max-width:900px){
+  .hero2.has-cd{flex-direction:column;align-items:stretch;gap:0}
+  .hero2.has-cd .in{align-self:stretch;padding-bottom:12px}
+  .oc{align-self:stretch;margin:0 16px 16px;min-width:0;padding:12px 14px 12px}
+  .oc-cells{margin-top:8px;gap:6px}
+  .oc-cell{padding:6px 2px 5px;min-width:0}
+  .oc-cell b{font-size:24px}
+  .oc-cell span{font-size:9.5px;margin-top:3px}
+  .oc-bar{margin-top:9px}
+}
+@media (prefers-reduced-motion:reduce){.oc-glow,.oc-label i,.oc-sec,.oc-last{animation:none}.oc-bar i{transition:none}}
