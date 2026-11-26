@@ -10,6 +10,8 @@ module.exports = {
   // a hlavná appka ich proxuje na ich vlastné nasadenia. Cesta /cs = Customer Service (basePath '/cs'), /ring = Vstupy hostí (basePath '/ring'), /pracovna = Práčovňa (basePath '/pracovna').
   async rewrites() {
     return [
+      // most k Higgsfieldu v pôvodnom nasadení Zaradenia (kľúč ostáva tam), volá ho len hlavná appka s tokenom prihláseného
+      { source: '/zaradenie/api/hf/bridge', destination: 'https://livein-zaradenie.vercel.app/zaradenie/api/hf/bridge' },
       { source: '/cs', destination: 'https://cs.live-in.international/cs' },
       { source: '/cs/:path*', destination: 'https://cs.live-in.international/cs/:path*' },
       { source: '/ring', destination: 'https://livein-ring.vercel.app/ring' },
