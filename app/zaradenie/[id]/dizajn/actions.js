@@ -74,7 +74,7 @@ export async function generatePair(prev, formData) {
       const r = await hfSubmit(MODEL, submitArgs(prompt, signed.data.signedUrl), hook)
       reqId = r.request_id || r.id || null
       if (!reqId) { status = 'failed'; err = `Neznáma odpoveď: ${JSON.stringify(r).slice(0, 200)}` }
-    } catch (e) { status = 'failed'; err = e.message; firstErr = firstErr || e.message }
+    } catch (e) { status = 'failed'; err = e.message; firstErr = firstErr || e.message; console.error('[zaradenie] Higgsfield', String(e.message).slice(0, 300)) }
     await s.rpc('onb_design_add', { p: { unit_id: unitId, room_id: roomId, style: u.design_style, variant, round, prompt, model: MODEL, request_id: reqId, status, credits: status === 'failed' ? 0 : CREDITS_PER_IMAGE } })
   }
   back(unitId)

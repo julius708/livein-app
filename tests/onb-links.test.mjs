@@ -24,3 +24,11 @@ test('webhook Higgsfieldu: verejná cesta a adresa na hlavnej doméne', () => {
 test('Zaradenie používa spoločné prihlásenie hlavnej appky', () => {
   for (const f of files) assert.doesNotMatch(readFileSync(f, 'utf8'), /@supabase\/ssr|lib\/supabase'/, f)
 })
+
+test('most k Higgsfieldu ide cez hlavnú doménu: rewrite a verejná cesta', () => {
+  assert.match(readFileSync('next.config.js', 'utf8'), /source: '\/zaradenie\/api\/hf\/bridge'/)
+  assert.match(readFileSync('middleware.js', 'utf8'), /'\/zaradenie\/api\/hf\/bridge'/)
+  const lib = readFileSync('lib/onb-higgsfield.js', 'utf8')
+  assert.match(lib, /BRIDGE = process\.env\.HF_BRIDGE_URL \|\| 'https:\/\/app\.live-in\.international\//)
+  assert.doesNotMatch(lib, /const BRIDGE = [^\n]*vercel\.app/)
+})
